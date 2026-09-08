@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Progress Bar</title>
+  <style>
+    :root {
+      --fill-primary: #FCD34D;
+      --fill-accent: #0BA5EC;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --border-strong: #D1D5DB;
+      --neutral-100: #F9FAFB;
+      --gray-300: #D1D5DB;
+      --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+      --dur-base: 300ms;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--neutral-100);
+      padding: 40px;
+    }
+
+    .debug-section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    pre {
+      background: var(--neutral-100);
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      margin: 12px 0;
+    }
+
+    .canvas-viewport-demo {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      background-color: var(--neutral-100);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    /* Barra de progresso durante carregamento */
+    .canvas-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60px;
+      background: rgba(10, 13, 18, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 20;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .canvas-progress[hidden] {
+      display: none !important;
+    }
+
+    .canvas-progress-bar {
+      width: 90%;
+      max-width: 400px;
+      height: 3px;
+      background: var(--border-strong);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .canvas-progress-bar::after {
+      content: "";
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--fill-accent), var(--fill-primary));
+      width: 0%;
+      border-radius: 999px;
+      box-shadow: 0 0 8px var(--fill-accent);
+      animation: carregandoBarra 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes carregandoBarra {
+      0% { width: 0%; }
+      50% { width: 65%; }
+      100% { width: 95%; }
+    }
+
+    .canvas-progress-label {
+      font-size: 12px;
+      line-height: 16px;
+      color: var(--text-muted);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: var(--fill-accent);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 12px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+
+    .log-entry {
+      margin: 4px 0;
+      padding: 2px 0;
+      border-bottom: 1px solid #333;
+    }
+
+    .log-entry.error { color: #f48771; }
+    .log-entry.success { color: #89d185; }
+    .log-entry.info { color: #9cdcfe; }
+
+    .status {
+      background: var(--neutral-100);
+      padding: 12px;
+      border-radius: 4px;
+      margin: 12px 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Debug - Barra de Progresso</h1>
+
+  <div class="debug-section">
+    <h2>1️⃣ Teste de CSS</h2>
+    <p>Verifique se os elementos e estilos estão carregados corretamente.</p>
+    <button onclick="testarCSS()">Testar CSS</button>
+    <div id="css-log" class="log"></div>
+  </div>
+
+  <div class="debug-section">
+    <h2>2️⃣ Teste de JavaScript</h2>
+    <p>Verifique se o objeto progressoControl está funcionando.</p>
+    <button onclick="testarJS()">Testar JavaScript</button>
+    <div id="js-log" class="log"></div>
+  </div>
+
+  <div class="debug-section">
+    <h2>3️⃣ Demonstração Visual</h2>
+    <div class="canvas-viewport-demo" id="demo">
+      <div class="canvas-progress" id="canvasProgress" hidden>
+        <div class="canvas-progress-bar" id="canvasProgressBar"></div>
+        <div class="canvas-progress-label">Carregando painéis do quadro...</div>
+      </div>
+      <span>Canvas Demo Area</span>
+    </div>
+    <div style="margin-top: 12px;">
+      <button onclick="mostrarBarra()">Mostrar Barra</button>
+      <button onclick="esconderBarra()">Esconder Barra</button>
+      <button onclick="resetarBarra()">Reset</button>
+    </div>
+    <div id="visual-log" class="log"></div>
+  </div>
+
+  <div class="debug-section">
+    <h2>4️⃣ Status do Carregamento</h2>
+    <div id="status" class="status">
+      <strong>Aguardando testes...</strong>
+    </div>
+  </div>
+
+  <script>
+    // Objeto para log
+    var logs = {
+      css: [],
+      js: [],
+      visual: []
+    };
+
+    function addLog(type, category, message) {
+      var emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+      var entry = emoji + ' ' + message;
+      logs[category].push(entry);
+      renderLogs();
+    }
+
+    function renderLogs() {
+      document.getElementById('css-log').innerHTML = logs.css.map(l => '<div class="log-entry">' + l + '</div>').join('');
+      document.getElementById('js-log').innerHTML = logs.js.map(l => '<div class="log-entry">' + l + '</div>').join('');
+      document.getElementById('visual-log').innerHTML = logs.visual.map(l => '<div class="log-entry">' + l + '</div>').join('');
+    }
+
+    function testarCSS() {
+      logs.css = [];
+      addLog('info', 'css', 'Verificando elementos HTML...');
+
+      var container = document.getElementById('canvasProgress');
+      if (!container) {
+        addLog('error', 'css', 'canvasProgress não encontrado!');
+        return;
+      }
+      addLog('success', 'css', 'canvasProgress encontrado');
+
+      var bar = document.getElementById('canvasProgressBar');
+      if (!bar) {
+        addLog('error', 'css', 'canvasProgressBar não encontrado!');
+        return;
+      }
+      addLog('success', 'css', 'canvasProgressBar encontrado');
+
+      // Verificar estilos
+      var styles = window.getComputedStyle(container);
+      addLog('info', 'css', 'position: ' + styles.position);
+      addLog('info', 'css', 'zIndex: ' + styles.zIndex);
+
+      var barStyles = window.getComputedStyle(bar);
+      addLog('info', 'css', 'bar.height: ' + barStyles.height);
+      addLog('info', 'css', 'bar.background: ' + barStyles.background);
+
+      // Verificar animação
+      var afterStyles = window.getComputedStyle(bar, '::after');
+      var animation = getComputedStyle(bar, '::after').animation || 'Não encontrada';
+      addLog('info', 'css', 'Animação definida no CSS');
+      addLog('success', 'css', 'CSS Verificado ✓');
+    }
+
+    function testarJS() {
+      logs.js = [];
+      addLog('info', 'js', 'Verificando objeto progressoControl...');
+
+      if (!window.ProgressoBoard) {
+        addLog('error', 'js', 'window.ProgressoBoard não existe!');
+        return;
+      }
+      addLog('success', 'js', 'window.ProgressoBoard encontrado');
+
+      if (typeof window.ProgressoBoard.mostrar !== 'function') {
+        addLog('error', 'js', 'Método mostrar() não existe');
+        return;
+      }
+      addLog('success', 'js', 'Método mostrar() existe');
+
+      if (typeof window.ProgressoBoard.esconder !== 'function') {
+        addLog('error', 'js', 'Método esconder() não existe');
+        return;
+      }
+      addLog('success', 'js', 'Método esconder() existe');
+
+      addLog('info', 'js', 'Testando chamada de mostrar()...');
+      try {
+        window.ProgressoBoard.mostrar();
+        addLog('success', 'js', 'mostrar() executado sem erros');
+      } catch (e) {
+        addLog('error', 'js', 'Erro em mostrar(): ' + e.message);
+        return;
+      }
+
+      addLog('success', 'js', 'JavaScript OK ✓');
+    }
+
+    function mostrarBarra() {
+      logs.visual = [];
+      addLog('info', 'visual', 'Chamando mostrar()...');
+      try {
+        window.ProgressoBoard.mostrar();
+        addLog('success', 'visual', 'Barra exibida, animação iniciada');
+      } catch (e) {
+        addLog('error', 'visual', 'Erro: ' + e.message);
+      }
+    }
+
+    function esconderBarra() {
+      logs.visual = [];
+      addLog('info', 'visual', 'Chamando esconder()...');
+      try {
+        window.ProgressoBoard.esconder();
+        addLog('success', 'visual', 'Barra completando 100% e desaparecendo...');
+        setTimeout(() => {
+          addLog('success', 'visual', 'Barra desapareceu');
+        }, 400);
+      } catch (e) {
+        addLog('error', 'visual', 'Erro: ' + e.message);
+      }
+    }
+
+    function resetarBarra() {
+      logs.visual = [];
+      addLog('info', 'visual', 'Resetando...');
+
+      var bar = document.getElementById('canvasProgressBar');
+      var container = document.getElementById('canvasProgress');
+
+      if (bar) {
+        bar.style.animation = 'none';
+        bar.style.width = '0%';
+      }
+
+      if (container) {
+        container.hidden = true;
+      }
+
+      addLog('success', 'visual', 'Resetado para estado inicial');
+    }
+
+    // Testar ao carregar a página
+    window.addEventListener('load', function() {
+      console.log('✅ Página carregada');
+      var status = document.getElementById('status');
+      status.innerHTML = '<strong>✅ Pronto para testes</strong><p>Use os botões acima para testar cada componente.</p>';
+    });
+
+    // Verificação instantânea
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.ProgressoBoard) {
+        console.log('✅ progressoControl disponível');
+      } else {
+        console.log('❌ progressoControl NÃO está disponível');
+      }
+    });
+  </script>
+</body>
+</html>

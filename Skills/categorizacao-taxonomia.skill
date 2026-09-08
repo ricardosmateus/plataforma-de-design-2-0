@@ -1,0 +1,382 @@
+# Skill — Classificação e Recorte por Taxonomia
+
+## Objetivo
+
+Transformar uma idéia finalizada em conhecimento consultável da
+empresa. São duas perguntas, e a skill responde as duas:
+
+1. **De que esta idéia fala?** → uma pasta (`assunto`) e até três
+   tags (`tags`), de um vocabulário fechado.
+2. **O que exatamente ela diz sobre cada um desses temas?** → os
+   **recortes**: o conteúdo dos quadros partido por tema, sem
+   mistura, cada trecho com o caminho de volta para o quadro onde
+   foi escrito.
+
+A segunda existe porque a primeira, sozinha, para no meio do
+caminho. "Mercado, Estratégia e Concorrentes" é um rótulo: ele diz
+que o assunto está ali dentro, e devolve à pessoa o trabalho de
+reler a atividade inteira separando na cabeça o que é de cada tema
+— exatamente o trabalho que a classificação existia para poupar.
+
+## Momento de Execução
+
+Executar **exclusivamente** quando uma idéia entra no status
+`"finalizado"` — e quando o texto de uma idéia já finalizada muda.
+
+### Regra crítica: sair de "finalizado"
+
+Quando uma idéia **sai de "finalizado"** (volta para "ideias" ou
+"andamento"), na **mesma escrita** que muda o status:
+
+- `assunto := null`
+- `tags := []`
+- `taxonomiaManual := false`
+- **os recortes são apagados**
+
+Os recortes entram nessa regra porque são a projeção mais exposta
+que a idéia tem: o texto dela aparece numa página de tema da
+empresa. Apagá-los "logo depois" abriria uma janela em que
+`/empresas/:id/temas/Concorrentes` ainda serviria o parágrafo de uma
+idéia que a pessoa acabou de retirar de lá.
+
+## Fluxo
+
+```
+idéia → "finalizado"
+   │
+   ├─ 1. CLASSIFICAR ────── título + descrição → {assunto, tags}
+   │                        (grava; pasta e arestas do grafo)
+   │
+   └─ 2. RECORTAR ───────── registros dos quadros das tarefas
+                            → cada bloco apontado a UM tema
+                            (grava; páginas de tema)
+```
+
+As duas etapas rodam em segundo plano, fora do caminho da resposta:
+mover um card é gesto de interface e não pode esperar o modelo nem
+falhar porque o modelo falhou. Idéia sem classificação apenas não
+aparece no mapa ainda; idéia classificada sem recortes é um estado
+válido — a página do tema mostra o que existe.
+
+---
+
+## Etapa 1 — Classificar
+
+**Arquivos:** `api/src/ia/taxonomia.ts` (chamada e ciclo),
+`api/src/ia/taxonomia-vocabulario.ts` (vocabulário e leitura)
+
+**Entrada:** título + descrição da idéia
+**Saída:** `{"assunto":"<categoria>","tags":["<categoria>"]}`
+**max_tokens:** 120 · prompt de sistema em cache ephemeral
+
+O vocabulário é **fechado**. Um modelo livre para inventar categoria
+produz "Concorrentes", "Concorrência" e "Análise de concorrentes"
+como três pastas diferentes, e o mapa perde o sentido em algumas
+semanas. O que vem fora da lista é descartado na leitura, não
+corrigido depois na tela.
+
+### Falha: nem toda igual
+
+- **`ok`** → grava.
+- **`fora-da-taxonomia` / `vazio`** (o modelo respondeu, e o que veio
+  não serve) → apaga assunto, tags **e recortes**. A idéia cai no
+  balde "Sem categoria", visível, com botão de tentar de novo.
+- **`rede` / `recusa-http` / `sem-ia`** (não houve resposta) → **não
+  mexe em nada**. Um soluço de conexão não pode esvaziar as pastas
+  nem as páginas de tema de ninguém.
+
+### `taxonomiaManual`
+
+Pasta corrigida por uma pessoa não é sobrescrita pela IA — nem
+quando o texto muda, nem quando a idéia volta para "finalizado".
+Discordar em silêncio de uma correção explícita é a forma mais
+rápida de alguém parar de confiar na tela.
+
+Corrigir a pasta à mão **redispara o recorte**: os temas mudaram, e
+os recortes antigos apontam para os antigos. Sem isso a correção
+valeria pela metade — pasta certa no mapa, texto no tema errado.
+
+---
+
+## Etapa 2 — Recortar por tema
+
+**Arquivos:** `api/src/ia/recortes.ts` (chamada, custo e gravação),
+`api/src/ia/recortes-leitura.ts` (leitura da resposta, pura)
+
+### A decisão central: o modelo ROTULA, ele não ESCREVE
+
+O caminho óbvio seria pedir "devolva o texto de Concorrentes". É o
+caminho errado, por três motivos que aparecem todos na tela:
+
+1. **Ele reescreveria.** O que a página mostra deixaria de ser o que
+   a pessoa escreveu no quadro, e o botão "Editar no quadro" levaria
+   a um texto que não bate com o que ela acabou de ler.
+2. **Ele poderia inventar.** Um resumo plausível de um concorrente
+   que não está no material é indistinguível de um verdadeiro.
+3. **Ele poderia repetir** o mesmo parágrafo em dois temas — que é
+   precisamente a mistura que esta etapa existe para acabar.
+
+Então o modelo recebe os blocos **já numerados** e devolve só
+números e temas:
+
+```
+{"blocos":[{"n":1,"c":"Concorrentes"},{"n":4,"c":"Mercado"}]}
+```
+
+O texto é montado no servidor, a partir do banco. Com isso:
+
+- o trecho é literalmente o registro de origem, sempre;
+- **inventar é impossível** — não há campo de texto na resposta;
+- **misturar é impossível** — um `n` vale uma vez, e a `UNIQUE` em
+  `registro_id` recusa a violação mesmo se a resposta insistir;
+- a saída é minúscula, e a chamada custa quase nada — o que importa
+  porque isto roda sozinho, em todo o volume.
+
+### O que entra
+
+Um **bloco = um registro** de um quadro de uma tarefa da idéia. Não
+parágrafo, não frase: o registro é a unidade que a pessoa criou,
+move e edita. Recortar abaixo dele produziria trechos que não
+existem em lugar nenhum para serem corrigidos.
+
+Ficam de fora:
+
+- quadros cujo título casa com **"perguntas em aberto"** — são o que
+  a pesquisa *não* respondeu; recortá-las faria uma pergunta aparecer
+  na página como se fosse achado;
+- blocos com menos de **40 caracteres** (`MINIMO_UTIL`) — pedaço
+  solto de quadro, não trecho que se lê;
+- tudo além de **80 blocos** (`TETO_BLOCOS`) — teto para uma
+  atividade patológica não virar um prompt de 50 mil tokens rodando
+  sem ninguém olhando.
+
+**max_tokens:** 2048 · prompt de sistema em cache ephemeral
+
+### Regras que a leitura da resposta faz valer
+
+- só as categorias que **aquela idéia** tem em `assunto` + `tags`;
+  tema que a classificação não atribuiu não ganha recorte;
+- bloco repetido fica com a **primeira** atribuição;
+- item malformado é descartado sozinho, sem derrubar os bons;
+- lista cortada no meio (`max_tokens`) tem os itens completos
+  recuperados — a chamada já foi paga.
+
+Testes: `api/testes/recortes.test.ts` (13 casos, sem banco nem rede).
+
+### Gravação
+
+Troca atômica: `deleteMany` + `createMany` na mesma transação. Sem
+ela existiria uma janela — curta, e exatamente durante a leitura mais
+provável, logo depois de finalizar — em que a página do tema abriria
+vazia.
+
+Depois da gravação o status é relido: a idéia pode ter saído de
+"finalizado" durante a chamada ao modelo, e a limpeza que roda no
+`status` não viu os recortes que acabaram de nascer.
+
+---
+
+## Custo
+
+Ambas as etapas reservam antes de chamar e acertam pelo custo real
+depois (IA-CUSTO-002/003), como o assistente. Sem saldo, a etapa
+**não acontece** — não há requisição HTTP para devolver um 402.
+
+As duas cobram sob o tipo **`classificacao`**, de propósito: o
+recorte é o custo de classificar aquela idéia, e a pergunta que
+chega depois ("quanto custou classificar?") deve ter uma resposta
+só.
+
+---
+
+## Taxonomia v2 — vocabulário fechado
+
+| Domínio | Categorias |
+|---|---|
+| **Descoberta** | Personas, Concorrentes, Mercado, Benchmark, Pesquisa Qualitativa, Pesquisa Quantitativa |
+| **Produto** | Funcionalidades, MVP, Roadmap, Requisitos, Backlog |
+| **Experiência** | Jornada do Usuário, UX, UI, Design System, Acessibilidade |
+| **Negócio** | Estratégia, KPIs, Posicionamento |
+| **Tecnologia** | APIs, IA, Arquitetura, Integrações |
+
+Fonte única: `api/src/ia/taxonomia-vocabulario.ts`.
+
+### Toda categoria nova exige uma introdução em `tema.html`
+
+**Pré-requisito, não melhoria opcional:** uma categoria só está
+pronta para uso depois de ter as duas coisas — entrada em
+`TAXONOMIA` (classificação) **e** entrada em `DESCRICOES`, no topo
+de `js/tema.js` (apresentação). Adicionar só a primeira deixa a
+categoria classificável e navegável, mas com a página de tema muda.
+
+O motivo é o mesmo em toda a Etapa 2: o nome de uma categoria,
+sozinho, não diz o que ela cobre **nesta** taxonomia. "Mercado" pode
+ser tamanho de mercado, pode ser canais de venda, pode ser o preço
+que o cliente aceita pagar — três leituras plausíveis, e só uma é a
+que esta empresa usa. Quem chega a `/temas/Mercado` pelo grafo ou por
+uma tag lê os trechos sem ter perguntado "o que exatamente entra
+aqui?", e é essa pergunta que o parágrafo, logo abaixo do divisor do
+breadcrumb, responde ANTES do primeiro trecho.
+
+```
+<h1>… nome da empresa …</h1>
+──────────────────────────── divisor
+Voltar › Sobre a empresa › Mercado    (breadcrumb)
+──────────────────────────── divisor
+Mercado                                ← subtítulo: o NOME da categoria
+O contexto econômico e competitivo em que a empresa atua:
+tamanho, tendências, demanda e oportunidades de crescimento.
+                                        ← a introdução (a frase)
+[trechos…]
+```
+
+A introdução é as DUAS linhas juntas, não só a frase: um `<h2>` com o
+nome da categoria — a mesma grafia canônica que já aparece no
+breadcrumb, um degrau abaixo do `<h1>` (que é o nome da EMPRESA, não
+do tema, e continua sendo o elemento de maior peso da página) —
+seguido do parágrafo que a explica. O nome sozinho, sem a frase,
+deixaria a pessoa sabendo QUE está em "Mercado" sem saber O QUE essa
+categoria cobre aqui; a frase sozinha, sem o nome em destaque, faria
+a categoria perder o "título de seção" que separa visualmente a
+introdução dos trechos abaixo.
+
+**Onde:** `js/tema.js`, objeto `DESCRICOES` — chave é o nome exato
+da categoria (o mesmo literal de `TAXONOMIA`), valor é a frase da
+introdução. Uma entrada única serve para as duas coisas: a CHAVE vira
+o `<h2>` (com a grafia canônica, nunca a da URL), o VALOR vira o
+parágrafo. Não existe uma segunda lista para o subtítulo — cadastrar
+a categoria em `DESCRICOES` já resolve as duas linhas de uma vez. A
+leitura é tolerante a acento e caixa (mesma função `normalizar` do
+backend) para achar a entrada certa a partir de uma URL antiga ou
+digitada à mão, mas a chave escrita ali deve ser a forma canônica.
+
+**Regras da frase:**
+
+- define o termo **dentro desta taxonomia**, não a definição de
+  dicionário — "o que uma pessoa encontra ao abrir isto", não "o que
+  a palavra significa em geral";
+- uma frase, no máximo duas; isto é orientação antes do texto, não
+  o texto;
+- sem jargão que por sua vez precise de explicação.
+
+**Categoria sem entrada não quebra a página** — `mostrarIntro` cai
+em `elIntro.hidden = true` e o bloco inteiro (subtítulo + parágrafo)
+simplesmente não aparece; não existe estado de "só o nome, sem a
+frase". Isso existe para a ausência nunca virar erro em produção, mas
+não é licença: uma categoria sem introdução é a skill executada pela
+metade, e deve ser tratada como pendência, não como estado válido.
+
+---
+
+## As quatro projeções do mesmo dado
+
+| Projeção | Rota | Responde |
+|---|---|---|
+| Pastas | `GET /empresas/:id/sobre` | em que categorias há conhecimento |
+| Grafo | `GET /empresas/:id/grafo` | o que se liga a quê |
+| Tema | `GET /empresas/:id/temas/:categoria` | o que foi escrito sobre isto |
+| **Leitura guiada** | `GET /empresas/:id/temas/:categoria/sintese` | **em que ordem faz sentido ler isto** |
+
+A antiga **lista completa** (`conhecimento.js`) saiu: ela enumerava
+títulos, e a página de tema enumera o texto. Manter as duas era
+oferecer duas listas parecidas para perguntas diferentes, e a que
+respondia menos ficava no caminho.
+
+A quarta projeção — **leitura guiada** — não substitui o Tema: é uma
+segunda vista sobre os MESMOS recortes, reagrupados por assunto em
+vez de por tarefa de origem, com alternador entre as duas na mesma
+tela. Camada aditiva por cima da base de recortes que esta skill já
+mantém — ver `Skills/enriquecimento-tema.skill`.
+
+Recuperação: `POST /empresas/:id/reclassificar` cobre as duas formas
+de uma finalizada estar incompleta — **sem pasta** (a classificação
+não rodou ou falhou) e **sem recortes** (foi finalizada antes de os
+recortes existirem, então a página do tema abre vazia). Enfileira 20
+por chamada e devolve `restantes`: cada idéia custa crédito, e um
+botão que dispara 400 chamadas de uma vez gasta o saldo de alguém sem
+que essa pessoa tivesse como avaliar quanto ia custar.
+
+A página de tema (`tema.html`) **não chama o modelo**: é leitura de
+tabela. Abrir um tema é instantâneo e não custa crédito — que é o
+que permite navegar entre temas sem pensar duas vezes.
+
+### Pasta é CATEGORIA, não `assunto`
+
+`/sobre` conta `assunto` **e** `tags`: uma idéia classificada como
+"Mercado, Estratégia e Concorrentes" produz **três** pastas.
+
+Antes contava só o `assunto`, e a tela se contradizia — a mesma idéia
+desenhava três nós no grafo (`/grafo` sempre tratou os dois iguais) e
+uma pasta na lista ao lado. Com as páginas de tema virou um beco:
+existia `/temas/Concorrentes` com texto dentro e nenhuma pasta para
+clicar e chegar lá.
+
+A distinção entre pasta principal e menção não se perde: vive no
+painel do grafo ("Nesta pasta" × "Mencionam como tag") e em
+`principais`, que desempata a ordenação da lista.
+
+Consequência aceita: as contagens somadas passam a exceder o número
+de idéias, porque uma idéia toca até quatro categorias. Não há total
+na tela para contradizer, e "quantas idéias falam disto" é a leitura
+certa de uma pasta.
+
+### Onde se entra num tema
+
+- **"Acessar pasta"**, na lista de pastas (`sobre-empresa-semana2.js`);
+- **"Ler o que foi escrito sobre X"**, no painel do grafo
+  (`grafo-painel.js`).
+
+O nome da pasta continua abrindo o **painel**, que é o mapa. Entrar
+na pasta abre o **texto**. São perguntas diferentes e cada uma tem o
+seu botão.
+
+### O link de volta
+
+Cada bloco da página termina em **"Editar no quadro"**, apontando
+para `board.html` com os quatro ids (`BOARD-ACESSO-003`). Um bloco
+por tarefa de origem, porque o link é por quadro: fundir duas
+tarefas sob um link só mandaria a pessoa ao lugar errado na metade
+das vezes.
+
+O `projeto` do link é o da **idéia**, nunca o da barra de endereço —
+um tema cruza os projetos da empresa.
+
+---
+
+## Pontos-Chave
+
+✅ Só idéias "finalizado" são classificadas e recortadas
+✅ Sair de "finalizado" apaga pasta, tags **e recortes**, na mesma escrita
+✅ O modelo rotula blocos; o texto vem do banco — não há como inventar
+✅ Um bloco, um tema — garantido pela `UNIQUE`, não pela boa vontade
+✅ Todo trecho tem caminho de volta para o quadro onde foi escrito
+✅ Falha de rede preserva; falha de conteúdo apaga
+✅ Ler um tema não chama o modelo e não custa crédito
+✅ Toda categoria tem uma introdução em `tema.html` — pré-requisito, não opcional
+
+## Checklist
+
+- [x] Migration: `assunto` + `tags` em Ideia
+- [x] Migration: `taxonomia_manual` em Ideia
+- [x] Migration: `recortes_taxonomia` (+ FK em Ideia e Tarefa, CASCADE)
+- [x] `api/src/ia/taxonomia.ts` — classificar
+- [x] `api/src/ia/recortes.ts` — recortar por tema
+- [x] `api/src/ia/recortes-leitura.ts` — leitura pura, testável
+- [x] `api/src/rotas/ideias.ts` — disparadores (status, edição, correção manual)
+- [x] `api/src/rotas/grafo.ts` — `/sobre`, `/grafo`, `/temas/:categoria`
+- [x] `tema.html` + `js/tema.js` — a página de leitura
+- [x] `js/tema.js` (`DESCRICOES`) — introdução por categoria, as 23
+      atuais cobertas; toda categoria futura entra aqui junto com
+      `TAXONOMIA`, nunca depois
+- [x] Entradas: tag na lista, "Acessar pasta", painel do grafo
+- [x] `POST /empresas/:id/reclassificar` — a rota que o botão do
+      balde chamava desde sempre e que nunca existiu (404)
+- [x] `sem_recortes` em `/sobre` — sem contar, não havia como
+      oferecer os trechos a quem já tinha tudo classificado
+- [x] `src/projetos/catalogo.ts` — o rótulo do tipo de projeto saiu
+      de dentro de `rotas/projetos.ts` para as duas rotas lerem a
+      mesma fonte (PROJ-CRIA-002)
+- [x] Testes: 18 casos do vocabulário + 13 da leitura dos recortes
+- [x] Balde "Sem categoria" — finalizada sem pasta não some em silêncio
+- [x] Escala: zoom/pan + teto de nós no grafo
+- [ ] Webhook no lugar do polling de 5s

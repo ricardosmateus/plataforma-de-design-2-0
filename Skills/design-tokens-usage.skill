@@ -1,0 +1,378 @@
+# Design Tokens Usage Skill
+
+**Descrição:** Guia de utilização de tokens de design ao criar, editar ou revisar páginas da Plataforma de Design 2.0. Valida conformidade com o sistema de design e oferece refatorações automáticas.
+
+---
+
+## 🎯 Objetivo
+
+Garantir que toda página desenvolvida:
+- ✅ Use tokens semânticos em vez de cores hardcoded
+- ✅ Siga a hierarquia CDS (Base → Theme → Purpose)
+- ✅ Respeite roles semânticas (primary, accent, success, warning, danger, pro)
+- ✅ Passe em WCAG AA de contraste
+- ✅ Seja preparada para dark mode
+
+---
+
+## 📋 Checklist de Desenvolvimento
+
+### Antes de começar
+
+- [ ] Consulte `tokens.json` para cores, sizing, shadows disponíveis
+- [ ] Verifique o showcase de tokens (botão "Design tokens" em `minhas-empresas.html`)
+- [ ] Releia a seção "Purpose/Semantic" em `TOKENS.md`
+
+### Durante o desenvolvimento
+
+#### Cores
+- [ ] **Nenhuma cor hardcoded** — use `var(--{property}-{role})` em CSS
+  - ❌ `background: #0ba5ec;`
+  - ✅ `background: var(--fill-accent);`
+- [ ] **Texto sobre fundo colorido** — sempre use `--text-on-{role}`
+  - ❌ `<button style="background: var(--fill-primary); color: black;">`
+  - ✅ `<button style="background: var(--fill-primary); color: var(--text-on-primary);">`
+- [ ] **Borders e divisores** — use `var(--border)` ou `var(--border-strong)`
+- [ ] **Fundo de página** — use `var(--surface-0)`, `var(--surface-1)` ou `var(--surface-2)`
+
+#### Espaçamento & Raios
+- [ ] **Raios** — use `var(--radius)` (8px padrão), `var(--radius-lg)` (12px para cards)
+  - ❌ `border-radius: 12px;`
+  - ✅ `border-radius: var(--radius-lg);`
+- [ ] **Gaps & padding** — use múltiplos de 8px (8px, 16px, 24px, 32px)
+
+#### Acessibilidade
+- [ ] **Focus rings** — `button:focus-visible` já inclusos (WCAG AA)
+- [ ] **Contraste** — mínimo 4.5:1 para AA, 7:1 para AAA
+  - Use o showcase de tokens para validar
+- [ ] **Sem apenas cor** — não sinalize estado com cor única, inclua ícone/texto
+
+#### Animações
+- [ ] **Transições** — use `transition: {property} var(--dur-base) var(--ease-out);`
+  - ✅ `transition: background var(--dur-base) var(--ease-out);`
+- [ ] Não use valores hardcoded (`150ms`, `300ms`, `ease-out`)
+
+### Após desenvolvimento (antes de commit)
+
+#### Auditoria de tokens
+```bash
+# 1. Verifique se há cores hardcoded
+grep -r "#[0-9a-f]\{3,6\}" seu-arquivo.html
+
+# 2. Verifique se há hardcoded px radius
+grep -r "border-radius: [0-9]" seu-arquivo.css
+
+# 3. Verifique if ha hardcoded durations
+grep -r "[0-9]*ms\|[0-9]*s" seu-arquivo.css
+```
+
+#### Refatoração automática
+Procure por padrões comuns:
+
+**Padrão 1: Background + color hardcoded**
+```html
+<!-- Antes -->
+<button style="background: #0ba5ec; color: white;">
+  Ação
+</button>
+
+<!-- Depois -->
+<button style="background: var(--fill-accent); color: var(--text-on-accent);">
+  Ação
+</button>
+```
+
+**Padrão 2: Border-radius hardcoded**
+```css
+/* Antes */
+.card { border-radius: 12px; }
+
+/* Depois */
+.card { border-radius: var(--radius-lg); }
+```
+
+**Padrão 3: Shadow hardcoded**
+```css
+/* Antes */
+.card { box-shadow: 0 12px 16px rgba(0,0,0,0.08); }
+
+/* Depois */
+.card { box-shadow: var(--shadow-lg); }
+```
+
+**Padrão 4: Transição hardcoded**
+```css
+/* Antes */
+.button { transition: background 300ms ease-out; }
+
+/* Depois */
+.button { transition: background var(--dur-base) var(--ease-out); }
+```
+
+---
+
+## 🎨 Tokens Disponíveis — Referência Rápida
+
+### Text (Texto)
+```css
+--text-primary       /* Principal sobre fundo claro */
+--text-secondary     /* Suportador/secundário */
+--text-muted         /* Placeholder, captions */
+--text-disabled      /* Desabilitado */
+```
+
+### Surface (Superfícies)
+```css
+--surface-0    /* Canvas/página (fundo) */
+--surface-1    /* Card in-flow */
+--surface-2    /* Panel/modal */
+```
+
+### Roles Semânticas (Cores de Significado)
+
+#### Primary (Amarelo — identidade visual)
+```css
+--fill-primary        /* Sólido (buttons) */
+--fill-primary-hover  /* Hover */
+--bg-primary          /* Suave (badges) */
+--text-primary        /* Texto colorido */
+--text-on-primary     /* Texto sobre fill */
+```
+
+#### Accent (Azul — ações secundárias)
+```css
+--fill-accent
+--fill-accent-hover
+--bg-accent
+--text-accent
+--text-on-accent
+```
+
+#### Success (Verde — confirmações)
+```css
+--fill-success
+--fill-success-hover
+--bg-success
+--text-success
+--text-on-success
+```
+
+#### Warning (Amber — alertas)
+```css
+--fill-warning
+--fill-warning-hover
+--bg-warning
+--text-warning
+--text-on-warning
+```
+
+#### Danger (Vermelho — destrutivo)
+```css
+--fill-danger
+--bg-danger
+--text-danger
+--text-on-danger
+```
+
+#### Pro (Roxo — premium)
+```css
+--fill-pro
+--fill-pro-hover
+--bg-pro
+--text-pro
+--text-on-pro
+```
+
+### Border & Shadow
+```css
+--border           /* Hairline padrão */
+--border-strong    /* Ênfase */
+
+--shadow-xs        /* Subtil */
+--shadow-lg        /* Elevado (cards) */
+--shadow-menu      /* Menus/dropdowns */
+```
+
+### Focus (Acessibilidade)
+```css
+--focus-ring       /* 2px solid azul */
+--focus-offset     /* 2px */
+```
+
+### Radius
+```css
+--radius           /* 8px (padrão) */
+--radius-lg        /* 12px (cards) */
+--radius-panel     /* 32px (panel) */
+```
+
+### Motion
+```css
+--dur-fast         /* 150ms (rápido) */
+--dur-base         /* 300ms (padrão) */
+--dur-slow         /* 500ms (lento) */
+
+--ease-out         /* cubic-bezier(0.16, 1, 0.3, 1) */
+--ease-in-out      /* cubic-bezier(0.4, 0, 0.2, 1) */
+```
+
+---
+
+## 💡 Exemplos de Uso
+
+### HTML/CSS
+```html
+<div style="background: var(--fill-primary); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+  <h2 style="color: var(--text-primary); margin-bottom: 16px;">Título</h2>
+  <p style="color: var(--text-secondary); margin-bottom: 24px;">Descrição</p>
+  <button style="
+    background: var(--fill-accent);
+    color: var(--text-on-accent);
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    transition: background var(--dur-base) var(--ease-out);
+  " onmouseover="this.style.background='var(--fill-accent-hover)'">
+    Ação
+  </button>
+</div>
+```
+
+### React/JSX (Tailwind)
+```jsx
+export function Card() {
+  return (
+    <div className="bg-surface-1 border border-border rounded-lg shadow-lg p-6">
+      <h2 className="text-primary font-600 mb-4">Título</h2>
+      <p className="text-secondary mb-6">Descrição</p>
+      <button className="bg-fill-accent text-text-on-accent px-6 py-3 rounded-md hover:bg-fill-accent-hover transition-all duration-base ease-out">
+        Ação
+      </button>
+    </div>
+  );
+}
+```
+
+### Sass/SCSS
+```scss
+@import 'tokens.scss';
+
+.card {
+  background: $surface-1;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-lg;
+  padding: 24px;
+
+  .title {
+    color: $text-primary;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .description {
+    color: $text-secondary;
+    margin-bottom: 24px;
+  }
+
+  .button {
+    background: $fill-accent;
+    color: $text-on-accent;
+    padding: 12px 24px;
+    border-radius: $radius;
+    border: none;
+    cursor: pointer;
+    transition: background $dur-base $ease-out;
+
+    &:hover {
+      background: $fill-accent-hover;
+    }
+
+    &:focus-visible {
+      outline: $focus-ring;
+      outline-offset: $focus-offset;
+    }
+  }
+}
+```
+
+---
+
+## 🔗 Sincronização com Figma
+
+Se editando componentes no Figma:
+
+1. **Instale plugin:** https://www.figma.com/community/plugin/843461159747178978
+2. **Import tokens:** Tokens → Import → Cole `tokens.json`
+3. **Apply colors:** Selecione elemento → Fill → escolha token
+4. **Sync bidirecional:** Mudanças em tokens.json ↔ Figma automaticamente
+
+---
+
+## 📚 Recursos
+
+- **`tokens.json`** — Fonte de verdade (DTCG format)
+- **`tokens.yaml`** — Versão legível
+- **`tokens.css`** — CSS variables (auto-gerado)
+- **`TOKENS.md`** — Documentação completa
+- **`minhas-empresas.html`** — Exemplo de implementação real
+- **Showcase de tokens** — Clique "Design tokens" em `minhas-empresas.html`
+
+---
+
+## ⚠️ Erros Comuns
+
+| Erro | Solução |
+|------|---------|
+| `background: #0ba5ec;` | Use `var(--fill-accent)` |
+| `color: white;` | Use `var(--text-on-{role})` |
+| `border-radius: 8px;` | Use `var(--radius)` |
+| `box-shadow: 0 4px 12px;` | Use `var(--shadow-lg)` |
+| `transition: 300ms;` | Use `var(--dur-base)` |
+| Foco invisível em buttons | Já incluído (`:focus-visible`) |
+
+---
+
+## 🚀 Dark Mode (Futuro)
+
+Quando dark mode for implementado, tokens vão flipar automaticamente:
+
+```css
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: var(--neutral-0);   /* de #181d27 para #fff */
+    --surface-1: var(--neutral-900);    /* de #fff para #1a1a1a */
+    /* ... etc */
+  }
+}
+```
+
+Nenhuma mudança no HTML/CSS — tokens fazem o trabalho.
+
+---
+
+## ✅ Checklist Final
+
+Antes de fazer commit:
+
+- [ ] Sem cores hardcoded (`#xxx`)
+- [ ] Sem border-radius sem token (`px`)
+- [ ] Sem shadow sem token
+- [ ] Sem duration sem token (`ms`)
+- [ ] Todos os textos sobre fundo colorido usam `--text-on-{role}`
+- [ ] Focus rings visíveis (testar com Tab)
+- [ ] Contraste WCAG AA ✓ (validar com showcase)
+- [ ] Pronto para dark mode (apenas tokens mudam)
+
+---
+
+## 📞 Dúvidas?
+
+Consulte o showcase de tokens em `minhas-empresas.html` ou abra `TOKENS.md` para referência completa.
+
+---
+
+**Versão:** 1.0
+**Última atualização:** 2026-08-03
+**Mantido por:** Design System Team

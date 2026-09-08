@@ -1,0 +1,3203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Atividade · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/esqueleto.css">
+<style>
+
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   Espelha o :root de meus-projetos.html, acrescido da camada de
+   Motion (--dur-*, --ease-*) e de --bg-primary-strong, usado nos
+   cabeçalhos das colunas do board.
+   Tokens do sistema: css/tokens.css
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+  min-width:1024px;
+}
+body.modal-open{overflow:hidden}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+img{display:block;max-width:100%}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;
+  padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ---------- Acessibilidade: focus rings ---------- */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:var(--focus-offset);
+}
+.nav-item:focus-visible{
+  outline:2px solid var(--neutral-900);
+  outline-offset:var(--focus-offset);
+  border-radius:var(--radius);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:flex;min-height:100vh}
+
+/* ---------- Rail ---------- */
+.rail{
+  width:var(--rail-w);
+  flex:0 0 var(--rail-w);
+  background:var(--fill-primary);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 24px;
+  position:sticky;top:0;height:100vh;
+  z-index:10;
+}
+/* Símbolo da marca: mesma caixa de 44px dos itens do menu, para o
+   logo e a "bolacha" do Início ficarem alinhados e do mesmo tamanho.
+   Monograma PD geométrico — contra-formas circulares, em amarelo
+   sobre bolacha preta. */
+.logomark{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+  margin-bottom:24px;
+}
+.logomark svg{width:28px;height:auto;display:block;fill:var(--fill-primary)}
+.rail-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.rail-spacer{flex:1}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.rail-divider{width:40px;height:1px;background:var(--border-strong)}
+
+.nav-item{
+  position:relative;
+  width:44px;height:44px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-on-primary);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover{background:var(--fill-primary-hover)}
+.nav-item[aria-current="page"]{background:var(--fill-primary-hover)}
+.nav-item::after{
+  content:attr(data-label);
+  position:absolute;left:calc(100% + 10px);top:50%;
+  transform:translateY(-50%) translateX(-4px);
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:12px;font-weight:500;line-height:18px;
+  padding:6px 10px;border-radius:var(--radius);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;
+  transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+  z-index:60;
+}
+.nav-item:hover::after,.nav-item:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  overflow:hidden;background:var(--fill-primary-hover);
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Painel ---------- */
+.panel{
+  flex:1;min-width:0;
+  background:var(--surface-1);
+  border-radius:var(--radius-panel);
+  margin-top:12px;
+  min-height:calc(100vh - 12px);
+  padding:0 32px 32px;
+  display:flex;flex-direction:column;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header{
+  width:100%;
+  padding:36px 0 0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.page-title{
+  display:flex;align-items:center;gap:12px;
+  font-size:30px;line-height:38px;font-weight:600;
+  letter-spacing:-.02em;color:var(--text-primary);
+}
+.page-title-logo{width:64px;height:auto;flex-shrink:0}
+/* ---------- Medidas do esqueleto nesta tela ----------
+   As peças (.esq-barra, .esq-pill) e a animação vêm de
+   css/esqueleto.css; aqui ficam só os tamanhos, que são desta
+   página — a barra do título tem a altura do <h1> daqui, e a linha
+   de tarefa copia a silhueta do card que atividade.js monta. */
+.esq-barra--pagina{width:300px;height:26px}
+.esq-tarefa .esq-arrasta{width:10px;height:28px;flex-shrink:0}
+.esq-tarefa .esq-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.esq-tarefa .esq-acessar{width:132px;height:36px;flex-shrink:0}
+.esq-tarefa .esq-kebab{width:24px;height:24px;flex-shrink:0;border-radius:999px}
+
+.page-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+
+/* Ações da atividade — linha própria abaixo do breadcrumb, à direita */
+.activity-actions{display:flex;align-items:center;gap:16px;justify-content:flex-start}
+
+.section-head{width:100%}
+.rule{height:1px;background:var(--border);margin:24px 0}
+
+/* ---------- Breadcrumb (separador "/" como no Figma) ---------- */
+.breadcrumb{display:flex;align-items:center}
+.breadcrumb-list{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  list-style:none;margin:0;padding:0;
+}
+.breadcrumb-item{display:flex;align-items:center;gap:4px}
+.breadcrumb-link,
+.breadcrumb-current{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 8px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;
+}
+.breadcrumb-link{
+  color:var(--text-secondary);
+  text-decoration:none;
+  transition:background .15s ease,color .15s ease;
+}
+.breadcrumb-link:hover{background:var(--surface-0);color:var(--text-primary)}
+.breadcrumb-link:focus-visible,
+.breadcrumb-current:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-current{
+  background:var(--surface-0);
+  color:var(--text-primary);
+  font-weight:600;
+}
+.breadcrumb-sep{
+  width:16px;height:16px;flex-shrink:0;
+  color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  display:flex;align-items:center;justify-content:center;
+}
+.breadcrumb-back{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:var(--radius);
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  font-size:14px;line-height:20px;font-weight:500;
+  text-decoration:none;white-space:nowrap;
+  margin-right:12px;
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.breadcrumb-back:hover{background:var(--surface-0);color:var(--text-primary);border-color:var(--text-secondary)}
+.breadcrumb-back:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  white-space:nowrap;
+  text-decoration:none;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Escala de tamanho do style guide: sm · md · lg · xl.
+   O padrão do .btn equivale ao lg; --sm é o menor da escala
+   (Figma: 36px de altura, padding 14/8, Text sm/Semibold 14/20). */
+.btn--sm{
+  height:36px;padding:0 14px;
+  font-size:14px;line-height:20px;
+}
+.btn--sm svg{width:20px;height:20px}
+
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--success{background:var(--fill-success);color:var(--text-on-success);box-shadow:var(--shadow-xs)}
+.btn--success:hover{background:var(--fill-success-hover)}
+.btn--secondary{background:var(--surface-1);color:var(--text-secondary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--secondary:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* Um botão que não responde precisa PARECER que não responde — a
+   mesma lição de BOARD-IA-001, que board.html já tinha registrado e
+   esta tela não. Sem isto, `disabled` é invisível: o botão fica com
+   cara de ativo e o clique sem efeito vira bug aos olhos de quem
+   tentou. Vale para qualquer .btn desativado desta página, não só
+   para os do cabeçalho quando a atividade não carrega. */
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn--primary:disabled:hover{background:var(--fill-accent)}
+.btn--success:disabled:hover{background:var(--fill-success)}
+.btn--secondary:disabled:hover{background:var(--surface-1);color:var(--text-primary)}
+.btn--danger{background:var(--fill-danger);color:var(--text-on-danger);box-shadow:var(--shadow-xs)}
+.btn--danger:hover{filter:brightness(.92)}
+
+/* Botão só de ícone (kebab) */
+.btn-icon{
+  width:44px;height:44px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  color:var(--text-secondary);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.btn-icon:hover{background:var(--surface-0);color:var(--text-primary)}
+.btn-icon--sm{width:36px;height:36px}
+.btn-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   SEÇÕES DE CONTEÚDO
+   ============================================================ */
+.section{width:100%}
+.section-title{font-size:20px;line-height:30px;font-weight:600;color:var(--text-primary)}
+.section-body{margin-top:8px;font-size:14px;line-height:22px;color:var(--text-secondary);max-width:80ch}
+.section-body--full{max-width:100%}
+.section-body + .section-body{margin-top:0}
+.section-body--sm{font-size:12px;line-height:18px}
+
+/* ============================================================
+   LISTA DE TAREFAS
+   ============================================================ */
+/* Faixa cinza que agrupa os cards.
+   Figma: Neutral/50, padding 24, gap 16, sem raio. */
+.task-board{
+  width:100%;
+}
+.task-list{
+  list-style:none;
+  display:flex;flex-direction:column;gap:16px;
+  padding:24px;
+  background:var(--surface-0);
+  border-radius:var(--radius-lg);
+}
+.task-list .section-title{margin:0}
+.task-box{
+  display:flex;flex-direction:column;gap:16px;
+  padding:24px;
+  background:var(--surface-0);
+  border-radius:var(--radius-lg);
+}
+.task-box .section-title{margin:0}
+.task-context{
+  border-left:3px solid var(--fill-accent);
+  padding:4px 0 4px 16px;
+  margin:0;
+}
+.task-context-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary);margin:0}
+.task-context-desc{font-size:14px;line-height:22px;color:var(--text-secondary);margin:4px 0 0;max-width:640px}
+.task{
+  display:flex;align-items:center;gap:20px;
+  position:relative;
+  padding:32px 24px;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  transition:box-shadow var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.task[hidden]{display:none}
+/* Falha de carga da lista. Card como os outros, mas sem nada
+   acionável dentro: não é uma tarefa, é o motivo de não haver
+   nenhuma na tela. */
+.task-falha{
+  justify-content:center;text-align:center;
+  color:var(--text-secondary);
+  font-size:14px;line-height:22px;
+}
+.task:hover{box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+
+/* Arraste em curso: o card original fica esmaecido e a linha
+   pontilhada mostra onde ele vai cair. */
+.task.is-dragging{
+  opacity:.4;
+  border-style:dashed;
+  border-color:var(--fill-accent);
+  box-shadow:none;
+}
+.task.just-moved{animation:task-settle var(--dur-base) var(--ease-out)}
+@keyframes task-settle{from{background:var(--sky-100)}to{background:var(--surface-1)}}
+.task-list.is-reordering .task{transition:none}
+
+@media (prefers-reduced-motion:reduce){
+  .task.just-moved{animation:none}
+}
+
+.task-drag{
+  flex-shrink:0;
+  width:24px;height:32px;
+  display:grid;place-items:center;
+  color:var(--text-muted);
+  cursor:grab;
+  border-radius:var(--radius);
+  transition:color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.task-drag:hover{color:var(--text-secondary);background:var(--surface-0)}
+.task-drag:active{cursor:grabbing}
+.task-drag:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.task-drag svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* Selo de status */
+.task-status{
+  width:44px;height:44px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  color:var(--text-primary);
+}
+.task-status svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.task-status--done{background:var(--bg-success)}
+.task-status--pending{background:var(--bg-warning)}
+
+/* Selo com rótulo: vira uma pílula verde que acomoda o texto */
+.task-status--labeled{
+  width:auto;min-width:112px;height:32px;
+  border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:0 16px;
+  font-size:12px;line-height:18px;font-weight:600;
+  color:var(--green-600);
+}
+.task-status--labeled svg{width:14px;height:14px}
+.task-status--labeled--pending{color:var(--amber-600)}
+.task-status--labeled--pro{background:var(--bg-pro);color:var(--text-pro)}
+
+.task-info{flex:1;min-width:0}
+.task-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+.task-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;line-height:18px;font-weight:500;
+  color:var(--text-pro);
+  background:var(--bg-pro);
+  border:1px solid transparent;
+  border-radius:999px;
+  padding:2px 10px;
+  white-space:nowrap;
+}
+.task-tag svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.task-desc{font-size:14px;line-height:20px;color:var(--text-secondary);margin-top:2px}
+
+.task-open{
+  flex-shrink:0;
+  height:40px;padding:0 16px;
+  display:inline-flex;align-items:center;
+  border-radius:var(--radius);
+  background:var(--sky-100);
+  color:var(--text-primary);
+  font-size:14px;line-height:20px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.task-open:hover{background:var(--fill-accent);color:var(--text-on-accent)}
+.task-open:disabled{
+  background:var(--surface-0);
+  color:var(--text-disabled);
+  cursor:not-allowed;
+}
+
+.task-menu{
+  position:relative;
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.task-menu:hover{background:var(--surface-0);color:var(--text-primary)}
+.task-menu[aria-expanded="true"]{background:var(--surface-0);color:var(--text-primary)}
+.task-menu svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.task-menu-wrap{
+  position:relative;
+}
+
+/* Kebab dropdown das tarefas */
+.task-menu-wrap .menu{
+  position:absolute;top:calc(100% + 4px);right:0;
+  min-width:184px;padding:4px;
+  background:var(--surface-1);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-menu);
+  z-index:30;
+  display:none;
+}
+.task-menu-wrap .menu.is-open{display:block}
+.menu button{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+  white-space:nowrap;
+}
+.menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.menu button:hover{background:var(--surface-0);color:var(--text-primary)}
+.menu .sep{height:1px;background:var(--border);margin:4px}
+.menu .danger{color:var(--text-danger)}
+.menu .danger:hover{background:var(--bg-danger)}
+
+/* Kebab dropdown do cabeçalho da atividade */
+.activity-actions{position:relative}
+.activity-menu-wrap{position:relative;display:inline-flex}
+.activity-menu-wrap .menu{
+  position:absolute;top:calc(100% + 4px);right:0;
+  min-width:184px;padding:4px;
+  background:var(--surface-1);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-menu);
+  z-index:30;
+  display:none;
+}
+.activity-menu-wrap .menu.is-open{display:block}
+
+/* ============================================================
+   MODAL — dialog nativo (focus trap + Esc de graça)
+   ============================================================ */
+.modal{
+  position:fixed;inset:0;margin:auto;
+  width:520px;max-width:calc(100vw - 48px);
+  padding:24px;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+}
+.modal::backdrop{background:var(--overlay)}
+.modal[open]{animation:modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:fade-in var(--dur-base) var(--ease-out)}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-header{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.modal-form{display:flex;flex-direction:column;gap:16px;margin-top:24px}
+.modal-confirm-text{font-size:15px;line-height:24px;color:var(--text-primary);margin:0}
+.field{display:flex;flex-direction:column;gap:6px}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+
+.modal-form .input,
+.modal-form .textarea,
+.modal-form .select{
+  width:100%;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.modal-form .input{height:44px;padding:0 14px}
+.modal-form .textarea{min-height:104px;resize:vertical;padding:10px 14px}
+.modal-form .select{
+  height:44px;padding:0 14px;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:18px;
+  padding-right:40px;
+}
+.modal-form .input::placeholder,
+.modal-form .textarea::placeholder{color:var(--text-muted)}
+.modal-form .input:focus,
+.modal-form .textarea:focus,
+.modal-form .select:focus{
+  outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100);
+}
+
+.modal-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+.modal-footer--start{justify-content:flex-start}
+
+/* BOARD-ACESSO-001: tarefa `sem_tela` não tem para onde ir, então nem
+   o botão do card nem o item do menu aparecem. Mesmo critério da
+   decisão A13: botão que não faz nada é pior que botão nenhum. */
+.task:not([data-destino]) .menu [data-task-action="acessar"]{display:none}
+.task:not([data-destino]) .menu [data-task-action="acessar"] + .sep{display:none}
+.modal-footer .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px}
+
+/* ---------- Modal "Nova tarefa": lateral de categorias ---------- */
+.modal--np{width:825px;height:674px;max-width:calc(100vw - 48px);max-height:calc(100vh - 48px);padding:0;overflow:hidden}
+.modal--np .np-shell{display:flex;height:100%}
+.modal--np .np-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.modal--np .np-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.modal--np .np-side-item:hover{background:var(--surface-0)}
+.modal--np .np-side-item[aria-current="true"]{background:var(--sky-200)}
+.modal--np .np-divider{flex:0 0 1px;background:var(--border)}
+.modal--np .np-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;
+  padding:24px 32px;
+}
+.modal--np .np-main .modal-form{
+  margin-top:0;padding-top:24px;
+  flex:1;
+  display:flex;flex-direction:column;
+}
+.modal--np .np-main .modal-form .modal-footer{margin-top:0}
+.modal--np .np-main .modal-form .modal-divider{margin:auto 0 4px}
+.modal-divider{height:1px;background:var(--border);flex-shrink:0;margin:24px 0}
+
+/* ---------- Toast ---------- */
+.toast{
+  position:fixed;left:50%;bottom:32px;z-index:200;
+  transform:translateX(-50%) translateY(8px);
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-menu);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  opacity:0;pointer-events:none;
+  transition:opacity var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out);
+}
+.toast.is-visible{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.toast-icon{width:20px;height:20px;flex-shrink:0;fill:var(--fill-success);stroke:none}
+.toast-text{flex:1;min-width:0}
+.toast-close{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;flex-shrink:0;
+  border-radius:var(--radius);
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.toast-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.toast-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   ASSISTANT — coluna à direita, sobre o fundo amarelo da página
+   Não é overlay: entra como terceiro filho flex de .app, então o
+   painel branco encolhe em vez de ficar coberto.
+   ============================================================ */
+.assistant{
+  flex:0 0 320px;
+  align-self:flex-start;
+  position:sticky;top:0;
+  height:100vh;
+  overflow:hidden;
+  transition:flex-basis var(--dur-base) var(--ease-in-out);
+}
+/* Fechado o painel nao some: encolhe ate a faixa de 80px que sobra
+   a direita, exatamente como no Figma. */
+body.is-assistant-closed .assistant{flex-basis:80px}
+
+/* O gatilho fica FORA de .assistant-inner para nao desaparecer junto
+   com o conteudo. right:16px o deixa centrado na faixa de 80px
+   (80 - 48 - 16 = 16) e a 16px da borda quando aberto. */
+.assistant-toggle{
+  position:absolute;top:32px;right:32px;z-index:2;
+  width:48px;height:48px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  background:var(--fill-primary-hover);
+  color:var(--text-on-primary);
+  transition:box-shadow var(--dur-fast) var(--ease-out),right var(--dur-base) var(--ease-in-out);
+}
+/* Fechado: 80 - 48 - 16 = 16, ou seja, centrado na faixa. */
+body.is-assistant-closed .assistant-toggle{right:16px}
+.assistant-toggle:hover{box-shadow:inset 0 0 0 999px var(--bg-on-primary)}
+.assistant-toggle:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+.assistant-toggle svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+/* Ícone de IA (sparkles) é preenchido, não contornado — sobrescreve
+   a regra genérica de stroke acima. */
+.assistant-toggle .icon-ai{fill:currentColor;stroke:none}
+.assistant-toggle .icon-ai{display:none}
+body.is-assistant-closed .assistant-toggle .icon-collapse{display:none}
+body.is-assistant-closed .assistant-toggle .icon-ai{display:block}
+
+/* Largura fixa no miolo: enquanto a coluna encolhe, o conteudo desliza
+   para fora em vez de refluir e embaralhar o texto. */
+.assistant-inner{
+  width:320px;height:100%;
+  display:flex;flex-direction:column;
+  padding:32px 32px 24px;
+  transition:opacity var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out);
+}
+body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
+
+@media (prefers-reduced-motion:reduce){
+  .assistant,.assistant-inner{transition-duration:1ms}
+}
+
+/* ---------- Cabeçalho ---------- */
+.assistant-head{
+  display:flex;align-items:center;
+  height:48px;flex-shrink:0;
+  padding-right:64px;            /* 48 do gatilho + 16 de folga */
+}
+.assistant-heading{
+  font-size:18px;line-height:28px;font-weight:600;
+  color:var(--text-on-primary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.assistant-rule{
+  height:1px;flex-shrink:0;
+  margin:24px 0;
+  background:var(--bg-on-primary);
+}
+
+/* ---------- Thread ---------- */
+.assistant-thread{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  display:flex;flex-direction:column;gap:24px;
+  padding:0 16px;
+}
+.assistant-thread::-webkit-scrollbar{width:8px}
+.assistant-thread::-webkit-scrollbar-thumb{background:var(--bg-on-primary-hover);border-radius:999px}
+.assistant-thread::-webkit-scrollbar-track{background:transparent}
+
+/* Cada mensagem: avatar em cima, balão embaixo. */
+.msg{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.msg--user{align-items:flex-end}
+
+.msg-avatar{
+  width:24px;height:24px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;
+  background:var(--surface-1);
+}
+.msg-avatar img{width:100%;height:100%;object-fit:cover}
+.msg-avatar--bot{
+  display:grid;place-items:center;
+  background:var(--bg-primary-strong);
+  color:var(--text-primary);
+}
+.msg-avatar--bot svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Mensagem sem balão: o texto assenta direto sobre o amarelo do
+   painel, ocupando a largura inteira da thread. Sem fundo, sem
+   padding e sem raio — o alinhamento é o que distingue quem falou. */
+.msg-bubble{
+  width:100%;
+  font-size:14px;line-height:20px;
+  color:var(--text-secondary);
+}
+.msg--user .msg-bubble{text-align:right}
+
+/* ---------- Composer ---------- */
+.composer{
+  flex-shrink:0;
+  display:flex;flex-direction:column;gap:20px;
+  padding:16px;
+  background:var(--surface-1);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  transition:box-shadow var(--dur-fast) var(--ease-out);
+}
+.composer:focus-within{box-shadow:0 0 0 4px var(--sky-100)}
+
+.composer-input{
+  width:100%;min-height:44px;
+  border:none;background:none;resize:none;
+  font-size:14px;line-height:22px;
+  color:var(--text-primary);
+}
+.composer-input::placeholder{color:var(--text-muted)}
+.composer-input:focus{outline:none}
+
+.composer-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+.composer-attach{
+  width:36px;height:36px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  color:var(--text-muted);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.composer-attach:hover{background:var(--surface-0);color:var(--text-secondary)}
+.composer-attach svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+.composer-send{
+  display:inline-flex;align-items:center;gap:8px;
+  height:36px;padding:0 16px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);
+  color:var(--text-on-accent);
+  font-size:14px;line-height:20px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.composer-send:hover{background:var(--fill-accent-hover)}
+.composer-send svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.composer-send:disabled{opacity:.5;cursor:not-allowed}
+.composer-send:disabled:hover{background:var(--fill-accent)}
+.composer-input:disabled{opacity:.6;cursor:not-allowed}
+
+/* Aviso curto ao lado do Enviar: sem crédito, provedor fora, IA não
+   configurada. Fica no compositor, e não como mensagem na conversa,
+   porque não é algo que o assistente disse. */
+.composer-aviso{
+  flex:1;min-width:0;
+  font-size:12px;line-height:16px;
+  color:var(--text-on-primary);
+  opacity:.85;
+}
+.composer-aviso:empty{display:none}
+
+/* ---------- Estado vazio da conversa ---------- */
+.ia-convite{
+  display:flex;flex-direction:column;gap:6px;
+  padding:16px 0;
+  color:var(--text-on-primary);
+}
+.ia-convite b{font-size:14px;line-height:20px;font-weight:600}
+.ia-convite span{font-size:13px;line-height:20px;opacity:.85}
+
+/* ---------- "Pensando" ----------
+   IA-CONV-008: resposta de IA leva segundos, e silêncio sem sinal é
+   indistinguível de tela travada. Nenhuma outra parte da plataforma
+   precisa disso porque nenhuma outra demora tanto. */
+.ia-pensando{display:flex;align-items:center;gap:8px;padding:4px 0}
+.ia-pensando span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--text-on-primary);opacity:.5;
+  animation:ia-pulso 1.2s var(--ease-in-out) infinite;
+}
+.ia-pensando span:nth-child(2){animation-delay:.15s}
+.ia-pensando span:nth-child(3){animation-delay:.3s}
+@keyframes ia-pulso{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){
+  .ia-pensando span{animation:none;opacity:.6}
+}
+
+/* ---------- Procedência (IA-GARANT) ----------
+   A marcação é visual e explícita, não só de tom (decisão A1):
+   distinção que existe apenas na frase se perde na leitura rápida,
+   que é como se lê um chat. */
+.ia-fontes{
+  display:flex;flex-wrap:wrap;gap:6px;
+  margin-top:8px;
+}
+.ia-fonte{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 8px;border-radius:999px;
+  font-size:11px;line-height:16px;font-weight:600;
+}
+.ia-fonte svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.ia-fonte--validada{background:var(--bg-success);color:var(--text-success)}
+.ia-fonte--hipotese{background:var(--bg-warning);color:var(--text-warning)}
+
+/* Aviso de que a resposta não se apoia em nada validado
+   (IA-VAZIO-001). Precisa ser lido antes da resposta, não depois. */
+.ia-sem-verdade{
+  display:flex;align-items:flex-start;gap:8px;
+  margin-bottom:8px;padding:8px 10px;
+  border-radius:var(--radius);
+  background:var(--bg-warning);color:var(--text-warning);
+  font-size:12px;line-height:18px;font-weight:500;
+}
+.ia-sem-verdade svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Orientação num projeto em branco (IA-VAZIO-005) não é alerta: a
+   sugestão nunca alegou ser fato, e o âmbar acusaria algo que não
+   aconteceu. Azul de informação, mesma estrutura.
+
+   NÃO usa --bg-accent/--text-accent: os dois apontam para
+   --blue-500, o que daria texto azul sobre fundo azul. Aqui vale o
+   mesmo padrão do warning (tinta clara + texto escuro):
+   blue-700 sobre sky-100 dá 5,10:1, acima do mínimo AA de 4,5 e na
+   mesma faixa do par âmbar já aprovado (5,20:1). */
+.ia-sem-verdade--guia{background:var(--sky-100);color:var(--blue-700)}
+
+.ia-erro{
+  padding:8px 10px;border-radius:var(--radius);
+  background:var(--bg-danger);color:var(--text-danger);
+  font-size:12px;line-height:18px;font-weight:500;
+}
+
+/* ---------- Ação proposta (IA-ACAO) ----------
+   O balão do assistente assenta direto sobre o amarelo do painel
+   (comentário acima), mas uma proposta pendente é a única parte da
+   conversa que pede uma DECISÃO — por isso ela ganha superfície
+   própria (surface-1, a mesma do compositor), destacada do texto
+   solto ao redor em vez de se misturar a ele. */
+.ia-acao{
+  display:flex;flex-direction:column;gap:10px;
+  margin-top:8px;padding:10px 12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+}
+.ia-acao-corpo{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:12px;line-height:18px;font-weight:500;
+  color:var(--text-primary);
+}
+.ia-acao-corpo svg{
+  width:14px;height:14px;flex-shrink:0;margin-top:2px;
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.ia-acao-botoes{display:flex;gap:8px}
+.ia-acao-btn{
+  flex:1;height:30px;padding:0 12px;
+  border-radius:var(--radius);
+  font-size:12px;line-height:16px;font-weight:600;
+  transition:background var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+}
+.ia-acao-btn:disabled{opacity:.5;cursor:not-allowed}
+.ia-acao-btn--confirmar{background:var(--fill-accent);color:var(--text-on-accent)}
+.ia-acao-btn--confirmar:hover:not(:disabled){background:var(--fill-accent-hover)}
+.ia-acao-btn--descartar{background:var(--surface-2);color:var(--text-secondary)}
+.ia-acao-btn--descartar:hover:not(:disabled){background:var(--border)}
+
+/* Estado final — sem botão nenhum, só o registro do que aconteceu.
+   Um segundo clique não existe mais para existir (IA-ACAO-006). */
+.ia-acao--feita,.ia-acao--descartada{
+  display:flex;align-items:center;gap:8px;
+  margin-top:8px;padding:8px 10px;
+  border-radius:var(--radius);
+  font-size:12px;line-height:18px;font-weight:500;
+}
+.ia-acao--feita{background:var(--bg-success);color:var(--text-success)}
+.ia-acao--feita svg{width:14px;height:14px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ia-acao--descartada{background:var(--surface-2);color:var(--text-muted)}
+
+/* ---------- Conteúdo expandível dentro de um card (.pf-row) ----------
+   Usado pelo "Histórico de uso" e por "Comprar créditos": vive dentro
+   do próprio card, por isso não tem borda/fundo próprios — só um
+   respiro e uma linha fina separando do cabeçalho do card. */
+.pf-row-expand{
+  width:100%;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+
+@keyframes expandDown{
+  from{opacity:0;transform:translateY(-8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.pf-row-expand[hidden]{
+  display:none;
+}
+
+.timeline-container{
+  display:flex;flex-direction:column;gap:0;
+}
+
+.timeline-item{
+  display:flex;gap:16px;padding:12px 0;
+  position:relative;
+  padding-left:20px;
+}
+
+.timeline-item:not(:last-child)::before{
+  content:"";
+  position:absolute;
+  left:7px;top:0;
+  width:2px;height:100%;
+  background:var(--border-strong);
+}
+
+.timeline-dot{
+  position:absolute;left:0;top:12px;
+  width:16px;height:16px;flex-shrink:0;
+  border-radius:50%;
+  background:var(--fill-accent);
+  border:3px solid var(--surface-0);
+  box-shadow:0 0 0 1px var(--border-strong);
+}
+
+.timeline-content{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:0}
+
+.timeline-date{
+  font-size:11px;line-height:16px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+.timeline-task{
+  font-size:13px;line-height:20px;font-weight:500;color:var(--text-primary);
+}
+
+.timeline-cost{
+  font-size:12px;line-height:18px;font-weight:500;color:var(--text-secondary);
+}
+
+.timeline-cost strong{color:var(--text-primary);font-weight:700}
+
+.timeline-item:first-child .timeline-dot{
+  background:var(--fill-success);
+  box-shadow:0 0 0 3px var(--green-100),0 0 0 4px var(--border-strong);
+}
+
+/* ---------- Compra de créditos via Pix ---------- */
+.pf-compra-form{display:flex;flex-direction:column;gap:16px}
+
+.pf-valor-wrap{
+  display:flex;align-items:center;gap:8px;
+  height:44px;padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-valor-wrap:focus-within{border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-valor-prefixo{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);flex-shrink:0}
+.pf-input--valor{
+  border:none;padding:0;height:auto;box-shadow:none;
+  font-size:16px;font-weight:600;
+}
+.pf-input--valor:focus{box-shadow:none}
+
+.pf-btn--success{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+.pf-btn--success:hover{filter:brightness(.96)}
+.pf-btn--accent{background:var(--fill-accent);color:var(--text-on-accent);border-color:transparent}
+.pf-btn--accent:hover{background:var(--fill-accent-hover)}
+.pf-btn--accent:disabled{opacity:.5;cursor:not-allowed}
+.pf-btn--accent:disabled:hover{background:var(--fill-accent)}
+
+.pf-pix{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  margin-top:4px;padding:20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+.pf-pix[hidden]{display:none}
+
+.pf-pix-qr{
+  padding:12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+  line-height:0;
+}
+.pf-pix-qr canvas{display:block;width:176px;height:176px}
+
+.pf-pix-legenda{font-size:13px;line-height:20px;font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
+
+.pf-pix-copia{display:flex;align-items:center;gap:8px;width:100%}
+.pf-pix-codigo{
+  flex:1;min-width:0;height:40px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--surface-1);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;color:var(--text-secondary);
+  text-overflow:ellipsis;
+}
+.pf-pix-copia .pf-btn{flex-shrink:0;height:40px}
+.pf-pix-copia .pf-btn.is-copiado{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+
+
+/* ============================================================
+   MODAL — perfil do usuário
+   Mesma casca da modal "Novo projeto": 825x674, lateral de 192 e
+   conteúdo de 632. <dialog> nativo, então foco preso e Esc já vêm
+   de graça. Componente autocontido (.pf-*) para poder viver em
+   qualquer página que tenha o menu lateral.
+   ============================================================ */
+body.modal-open{overflow:hidden}
+
+.pf-modal{
+  position:fixed;inset:0;margin:auto;
+  width:825px;max-width:calc(100vw - 48px);
+  height:674px;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.pf-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.pf-modal[open]{animation:pf-in var(--dur-base) var(--ease-out)}
+.pf-modal[open]::backdrop{animation:pf-fade var(--dur-base) var(--ease-out)}
+@keyframes pf-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes pf-fade{from{opacity:0}to{opacity:1}}
+
+/* 192 + 1 do divisor + 632 = 825 */
+.pf-shell{display:flex;height:100%}
+
+/* ---------- Lateral: seções ---------- */
+.pf-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.pf-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-side-item:hover{background:var(--surface-0)}
+.pf-side-item[aria-current="true"]{background:var(--sky-200)}
+.pf-side-spacer{flex:1;min-height:12px}
+.pf-side-item--danger{color:var(--text-danger)}
+.pf-side-item--danger:hover{background:var(--bg-danger)}
+
+.pf-divider{flex:0 0 1px;background:var(--border)}
+
+/* ---------- Conteúdo ---------- */
+.pf-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:32px;
+  padding:24px 32px;
+}
+.pf-head{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  height:48px;
+}
+.pf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.pf-title-icon{
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+  box-shadow:0 0 0 6px var(--bg-primary);
+}
+.pf-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pf-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.pf-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Área rolável, com a barra afastada do conteúdo */
+.pf-body{flex:1;min-height:0;overflow-y:auto;padding-right:16px}
+.pf-body::-webkit-scrollbar{width:10px}
+.pf-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.pf-body::-webkit-scrollbar-track{background:transparent}
+
+.pf-panel{display:flex;flex-direction:column;gap:24px}
+/* A regra acima venceria o display:none do atributo [hidden] na
+   ordem do cascata — daí esta guarda explícita. */
+.pf-panel[hidden]{display:none}
+
+/* ---------- Foto ---------- */
+.pf-avatar-row{display:flex;align-items:center;gap:20px}
+.pf-avatar{
+  width:80px;height:80px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;background:var(--surface-0);
+}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-avatar-actions{display:flex;align-items:center;gap:8px}
+
+.pf-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 14px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.pf-btn:hover{background:var(--surface-0)}
+.pf-btn--danger{color:var(--text-danger);border-color:var(--border-strong)}
+.pf-btn--danger:hover{background:var(--bg-danger);border-color:var(--fill-danger)}
+
+/* ---------- Campos ---------- */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pf-label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.pf-input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font:inherit;font-size:14px;line-height:20px;
+  color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-input::placeholder{color:var(--text-muted)}
+.pf-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-hint{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+/* Saldo e extrato reais — mesma folha de empresas.html (Fase 1/4).
+   Chegaram aqui junto com js/creditos.js, que substituiu o saldo
+   fixo de "500 créditos" e a timeline inventada. */
+.pf-saldo{margin:4px 0 0;display:flex;align-items:baseline;gap:8px}
+.pf-saldo-valor{
+  font-size:28px;line-height:34px;font-weight:600;
+  color:var(--text-primary);font-variant-numeric:tabular-nums;
+}
+/* Falha de carregamento tem cor própria: ela não pode ser lida como
+   um saldo baixo (DIN-006). */
+.pf-saldo-falha{color:var(--text-warning)}
+.pf-extrato{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.pf-extrato-item{
+  display:flex;align-items:baseline;gap:12px;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px;line-height:18px;
+}
+.pf-extrato-item:last-child{border-bottom:0}
+.pf-extrato-desc{flex:1;color:var(--text-primary)}
+/* Linha de detalhe da recarga: explica por que o crédito é menor que
+   o valor pago (taxa do PSP). Só aparece quando houve taxa. */
+.pf-extrato-detalhe{
+  display:block;margin-top:2px;
+  color:var(--text-muted);font-size:12px;line-height:16px;
+  font-variant-numeric:tabular-nums;
+}
+.pf-extrato-data{color:var(--text-muted);font-size:12px}
+.pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.pf-extrato-valor.is-entrada{color:var(--text-success)}
+.pf-extrato-valor.is-saida{color:var(--text-secondary)}
+.pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
+
+/* Barra de evolução do crédito: o trecho disponível encolhe conforme
+   o uso aumenta (a faixa restante da barra representa o usado). */
+.pf-credito-barra{
+  width:100%;height:12px;
+  border-radius:999px;
+  background:var(--border-strong);
+  overflow:hidden;
+}
+.pf-credito-uso{
+  height:100%;
+  border-radius:999px;
+  background:var(--fill-accent);
+  transition:width var(--dur-base) var(--ease-out);
+}
+.pf-credito-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:12px;line-height:18px;font-weight:600;color:var(--text-secondary);
+}
+
+/* ---------- Linha com interruptor ---------- */
+.pf-row{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+/* Efeito de âncora: pisca uma vez para guiar o olhar até a sessão
+   que acabou de aparecer/expandir, sem deixar destaque permanente.
+   Em box-shadow para funcionar sobre qualquer card (.pf-row, .pf-pix
+   etc.) sem brigar com o background/borda próprios do elemento. */
+@keyframes pf-anchor-flash{
+  0%{box-shadow:0 0 0 4px var(--sky-100), 0 0 0 1px var(--fill-accent) inset}
+  100%{box-shadow:0 0 0 0 transparent, 0 0 0 0 transparent}
+}
+.pf-anchor-flash{
+  animation:pf-anchor-flash 1.1s var(--ease-out);
+}
+.pf-row--stack{flex-direction:column}
+.pf-row--stack .pf-row-actions{width:100%}
+.pf-row-actions{display:flex;align-items:flex-start}
+.pf-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pf-row-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.pf-row-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+
+.pf-switch{
+  appearance:none;-webkit-appearance:none;
+  position:relative;flex-shrink:0;
+  width:44px;height:24px;margin-top:2px;
+  border-radius:999px;
+  background:var(--neutral-300);
+  cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.pf-switch:checked{background:var(--fill-accent)}
+.pf-switch:checked::after{transform:translateX(20px)}
+.pf-switch:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Cartões de escolha (tema) ---------- */
+.pf-option{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.pf-option:hover{border-color:var(--border-strong)}
+.pf-option[aria-checked="true"]{background:var(--neutral-100);border-color:var(--neutral-300)}
+.pf-option-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pf-option-mark{
+  width:16px;height:16px;flex-shrink:0;margin-top:2px;
+  display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);color:transparent;
+}
+.pf-option-mark svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;display:block}
+.pf-option[aria-checked="true"] .pf-option-mark{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--text-on-accent)}
+
+/* ---------- Rodapé ---------- */
+.pf-rule{flex-shrink:0;height:1px;background:var(--border)}
+.pf-foot{flex-shrink:0;display:flex;align-items:center;gap:12px;height:48px}
+.pf-save{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:48px;padding:0 24px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-save:hover{background:var(--fill-accent-hover)}
+.pf-cancel{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:48px;padding:0 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-cancel:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* Avatar do menu vira o gatilho da modal */
+.avatar{padding:0;cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-out)}
+.avatar:hover{box-shadow:0 0 0 2px var(--text-primary)}
+.avatar:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+</style>
+</head>
+<body class="is-assistant-closed">
+
+<div class="app">
+
+  <aside class="rail">
+    <div class="logomark" role="img" aria-label="Plataforma de Design">
+      <svg viewBox="5.6 9 28.8 22" aria-hidden="true"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegação principal">
+      <button type="button" class="nav-item" data-label="Início">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Empresas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Projetos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Idéias">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="m8 12 2.8 2.8L16 9.5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Sobre a empresa">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5Z"/><path d="M13 3v5.5H18.5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+      </button>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-foot">
+      <button type="button" class="nav-item" data-label="Configurações">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="rail-divider"></div>
+      <button type="button" class="avatar" id="avatarBtn"
+              aria-haspopup="dialog" aria-label="Abrir perfil de Ricardo Mateus">
+        <img src="https://i.pravatar.cc/80?img=47" alt="">
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="panel">
+
+    <header class="page-header">
+      <!-- O título é "Empresa / Projeto" e vem da API. Antes dizia
+           "Carregando…", que ocupava a linha inteira com uma palavra
+           que não é o nome de nada — e continuava lá, escrito, se a
+           carga falhasse. -->
+      <h1 class="page-title is-carregando" id="tituloAtividade" aria-busy="true">
+        <span class="esqueleto" aria-hidden="true">
+          <span class="esq-barra esq-barra--pagina"></span>
+        </span>
+        <span id="atividadeTitulo"></span>
+      </h1>
+      <div class="page-actions">
+        <button type="button" class="btn btn--primary" id="openTaskModal">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Nova tarefa
+        </button>
+        <button type="button" class="btn btn--success" id="finishActivityBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3H3z"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M10 14h4"/></svg>
+          Concluir atividade
+        </button>
+      </div>
+    </header>
+
+    <div class="section-head">
+      <div class="rule"></div>
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <ol class="breadcrumb-list">
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-back" href="visao_do_projeto.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              Voltar
+            </a>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="empresas.html">Empresas</a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="projetos.html">Projetos</a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="visao_do_projeto.html">Visão do projeto</a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <span class="breadcrumb-current" aria-current="page">Atividade</span>
+          </li>
+        </ol>
+      </nav>
+      <div class="rule"></div>
+    </div>
+
+<div class="task-board">
+      <ul class="task-list" aria-labelledby="tarefasTitulo">
+      <h2 class="section-title" id="tarefasTitulo">Minhas tarefas</h2>
+      <!-- Três linhas: o suficiente para a lista ter altura e não
+           pular quando as tarefas de verdade chegarem. São removidas
+           por `renderizar()`, que limpa a lista antes de desenhar. -->
+      <li class="task esq-tarefa" aria-hidden="true">
+        <span class="esq-barra esq-arrasta"></span>
+        <span class="esq-pill"></span>
+        <span class="esq-info">
+          <span class="esq-barra esq-barra--titulo"></span>
+          <span class="esq-barra esq-barra--curta"></span>
+        </span>
+        <span class="esq-barra esq-acessar"></span>
+        <span class="esq-barra esq-kebab"></span>
+      </li>
+      <li class="task esq-tarefa" aria-hidden="true">
+        <span class="esq-barra esq-arrasta"></span>
+        <span class="esq-pill"></span>
+        <span class="esq-info">
+          <span class="esq-barra esq-barra--titulo"></span>
+          <span class="esq-barra esq-barra--curta"></span>
+        </span>
+        <span class="esq-barra esq-acessar"></span>
+        <span class="esq-barra esq-kebab"></span>
+      </li>
+      <li class="task esq-tarefa" aria-hidden="true">
+        <span class="esq-barra esq-arrasta"></span>
+        <span class="esq-pill"></span>
+        <span class="esq-info">
+          <span class="esq-barra esq-barra--titulo"></span>
+          <span class="esq-barra esq-barra--curta"></span>
+        </span>
+        <span class="esq-barra esq-acessar"></span>
+        <span class="esq-barra esq-kebab"></span>
+      </li>
+      </ul>
+      <p class="sr-only" id="dragHelp">Arraste para reordenar, ou usa as setas para cima e para baixo.</p>
+      <p class="sr-only" role="status" aria-live="polite" id="taskLive"></p>
+    </div>
+
+  </main>
+
+  <!-- ===================== ASSISTANT (visual) ===================== -->
+  <aside class="assistant" id="assistant" aria-labelledby="assistantHeading">
+    <button type="button" class="assistant-toggle" id="assistantToggle"
+            aria-controls="assistantInner" aria-expanded="true" aria-label="Fechar assistente">
+      <svg class="icon-collapse" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <svg class="icon-ai" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+    </button>
+
+    <div class="assistant-inner" id="assistantInner">
+
+      <div class="assistant-head">
+        <h2 class="assistant-heading" id="assistantHeading">Assistente de IA</h2>
+      </div>
+      <div class="assistant-rule" role="presentation"></div>
+
+      <!-- A conversa falsa que vivia aqui saiu (IA-CONV-006): era texto
+           fixo sobre renda interna e inadimplência, assunto de outro
+           projeto. O conteúdo agora vem de js/ia.js, replicando o
+           mesmo assistente de visao_do_projeto.html. -->
+      <div class="assistant-thread" id="iaThread" aria-live="polite" aria-busy="false">
+      </div>
+
+      <div class="assistant-rule" role="presentation"></div>
+
+    <div class="composer">
+      <label class="sr-only" for="assistantInput">Mensagem para o assistente</label>
+      <textarea class="composer-input" id="assistantInput" rows="2" placeholder="Digite sua mensagem"></textarea>
+      <div class="composer-actions">
+        <!-- O botão de anexo saiu (decisão A13): não há funcionalidade de
+             anexo, e botão que não faz nada é pior que botão nenhum. -->
+        <span class="composer-aviso" id="iaAviso" role="status"></span>
+        <button type="button" class="composer-send" id="iaEnviar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Enviar
+        </button>
+      </div>
+    </div>
+
+   </div>
+  </aside>
+</div>
+
+<!-- ===================== MODAL NOVA TAREFA ===================== -->
+<dialog class="modal modal--np" id="taskModal" aria-labelledby="taskModalTitle">
+  <div class="np-shell">
+
+    <!-- Lateral: categorias de tarefa -->
+    <nav class="np-side" aria-label="Categorias de tarefa">
+      <button type="button" class="np-side-item" aria-current="true">Mais utilizados</button>
+      <button type="button" class="np-side-item">Pesquisa</button>
+      <button type="button" class="np-side-item">Entregáveis</button>
+      <button type="button" class="np-side-item">Dinâmicas</button>
+    </nav>
+
+    <div class="np-divider" aria-hidden="true"></div>
+
+    <!-- Conteúdo -->
+    <div class="np-main">
+
+      <header class="modal-header">
+        <h2 class="modal-title" id="taskModalTitle">
+          <span class="modal-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="m8 12 2.8 2.8L16 9.5"/></svg>
+          </span>
+          Nova tarefa
+        </h2>
+        <button type="button" class="modal-close" id="closeTaskModal">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </header>
+
+      <form class="modal-form" id="taskForm" method="dialog">
+        <div class="field">
+          <label class="label" for="taskTitle">Título</label>
+          <input class="input" type="text" id="taskTitle" name="title" placeholder="Ex. Entrevistar moradores do prédio" required maxlength="60">
+        </div>
+
+        <div class="field">
+          <label class="label" for="taskDesc">Descrição</label>
+          <textarea class="textarea" id="taskDesc" name="desc" placeholder="Explique a tarefa em poucas linhas." required maxlength="280"></textarea>
+        </div>
+
+        <!-- BOARD-ACESSO-001/002: é este campo que decide o que
+             acontece ao acessar a tarefa. Antes o destino era escolhido
+             comparando o TEXTO do título com "Matriz CSD" — o mesmo
+             defeito que IDEIA-MOV-015 já corrigiu em outro lugar.
+
+             "Sem tela própria" saiu (decisão A31): toda tarefa tem um
+             espaço de trabalho, e o tipo diz QUE trabalho é, não se
+             existe trabalho. `pesquisa` é o padrão porque descobrir é
+             o primeiro movimento de qualquer atividade. -->
+        <div class="field">
+          <label class="label" for="taskTipo">Que tipo de tarefa é esta</label>
+          <select class="select" id="taskTipo" name="tipo">
+            <option value="pesquisa" selected>Pesquisa — levantar informação e organizar em quadro</option>
+            <option value="matriz_csd">Matriz CSD — certezas, suposições e dúvidas</option>
+          </select>
+        </div>
+
+        <div class="modal-divider"></div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn--primary">Salvar</button>
+          <button type="button" class="btn btn--secondary" id="generateWithAIBtn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+            Gerar com ajuda da IA
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR FINALIZAÇÃO ===================== -->
+<dialog class="modal" id="finishModal" aria-labelledby="finishModalTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="finishModalTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 7h18v3H3z"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M10 14h4"/></svg>
+      </span>
+      Concluir atividade
+    </h2>
+    <button type="button" class="modal-close" id="closeFinishModal" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Tem certeza que deseja concluir essa atividade? Todos os dados serão salvos na documentação da empresa.</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--primary" id="confirmFinishBtn">Concluir</button>
+      <button type="button" class="btn btn--secondary" id="cancelFinishModal">Não</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR FINALIZAR TAREFA ===================== -->
+<dialog class="modal" id="taskFinishModal" aria-labelledby="taskFinishTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="taskFinishTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg>
+      </span>
+      Concluir tarefa
+    </h2>
+    <button type="button" class="modal-close" id="closeTaskFinishBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Tem certeza que deseja concluir essa tarefa?</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--primary" id="confirmTaskFinishBtn">Finalizar</button>
+      <button type="button" class="btn btn--secondary" id="cancelTaskFinishBtn">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR REABRIR TAREFA ===================== -->
+<dialog class="modal" id="taskReopenModal" aria-labelledby="taskReopenTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="taskReopenTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </span>
+      Reabrir tarefa
+    </h2>
+    <button type="button" class="modal-close" id="closeTaskReopenBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Tem certeza que deseja reabrir essa tarefa?</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--primary" id="confirmTaskReopenBtn">Reabrir</button>
+      <button type="button" class="btn btn--secondary" id="cancelTaskReopenBtn">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR DUPLICAR TAREFA ===================== -->
+<dialog class="modal" id="taskDupModal" aria-labelledby="taskDupTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="taskDupTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      </span>
+      Duplicar tarefa
+    </h2>
+    <button type="button" class="modal-close" id="closeTaskDupBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Tem certeza que deseja duplicar essa tarefa?</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--primary" id="confirmTaskDupBtn">Duplicar</button>
+      <button type="button" class="btn btn--secondary" id="cancelTaskDupBtn">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR EXCLUIR TAREFA ===================== -->
+<dialog class="modal" id="taskDeleteModal" aria-labelledby="taskDeleteTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="taskDeleteTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+      </span>
+      Excluir tarefa
+    </h2>
+    <button type="button" class="modal-close" id="closeTaskDeleteBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Tem certeza que deseja excluir essa tarefa? Essa ação não pode ser desfeita.</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--danger" id="confirmTaskDeleteBtn">Excluir</button>
+      <button type="button" class="btn btn--secondary" id="cancelTaskDeleteBtn">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL EDITAR ATIVIDADE ===================== -->
+<dialog class="modal" id="atvEditModal" aria-labelledby="atvEditTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="atvEditTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+      </span>
+      Editar atividade
+    </h2>
+    <button type="button" class="modal-close" id="closeAtvEditBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <form class="modal-form" id="atvEditForm" method="dialog">
+    <div class="field">
+      <label class="label" for="atvEditTitleInput">Título</label>
+      <input class="input" type="text" id="atvEditTitleInput" name="title" required maxlength="60">
+    </div>
+
+    <div class="field">
+      <label class="label" for="atvEditDesc">Descrição</label>
+      <textarea class="textarea" id="atvEditDesc" name="desc" required maxlength="280"></textarea>
+    </div>
+
+    <div class="modal-footer">
+      <button type="submit" class="btn btn--primary">Salvar</button>
+      <button type="button" class="btn btn--secondary" id="cancelAtvEditBtn">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR EXCLUIR ATIVIDADE ===================== -->
+<dialog class="modal" id="atvDeleteModal" aria-labelledby="atvDeleteTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="atvDeleteTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+      </span>
+      Excluir atividade
+    </h2>
+    <button type="button" class="modal-close" id="closeAtvDeleteBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Tem certeza que deseja excluir essa atividade? Esta ação vai remover todas as tarefas dessa atividade e não pode ser desfeita.</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--danger" id="confirmAtvDeleteBtn">Excluir</button>
+      <button type="button" class="btn btn--secondary" id="cancelAtvDeleteBtn">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL CONFIRMAR GERAR TAREFAS COM IA ===================== -->
+<dialog class="modal" id="generateTasksModal" aria-labelledby="generateTasksTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="generateTasksTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+      </span>
+      Gerar tarefas com IA
+    </h2>
+    <button type="button" class="modal-close" id="closeGenerateTasksBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <div class="modal-form">
+    <p class="modal-confirm-text">Deseja gerar tarefas automaticamente com base no contexto da atividade?</p>
+    <div class="modal-footer modal-footer--start">
+      <button type="button" class="btn btn--primary" id="confirmGenerateTasksBtn">Gerar</button>
+      <button type="button" class="btn btn--secondary" id="cancelGenerateTasksBtn">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- Assistente: abrir / fechar ---------- */
+  var assistantInner  = document.getElementById('assistantInner');
+  var assistantToggle = document.getElementById('assistantToggle');
+
+  function setAssistant(open){
+    document.body.classList.toggle('is-assistant-closed', !open);
+    assistantToggle.setAttribute('aria-expanded', String(open));
+    assistantToggle.setAttribute('aria-label', open ? 'Fechar assistente' : 'Abrir assistente');
+
+    // inert so no miolo: o gatilho continua na faixa e segue focavel,
+    // entao o foco nunca fica preso num elemento que sumiu.
+    assistantInner.inert = !open;
+  }
+
+  var CHAVE_ASSISTENTE = 'pd:assistente:aberto';
+
+  assistantToggle.addEventListener('click', function(){
+    var aberto = document.body.classList.contains('is-assistant-closed');
+    setAssistant(aberto);
+    try{ localStorage.setItem(CHAVE_ASSISTENTE, aberto ? '1' : '0'); }catch(e){}
+  });
+
+  /* Estado inicial: o que a pessoa deixou aberto ou fechado na
+     última tela com assistente — a preferência é da pessoa, não
+     da tela. Sem nada salvo ainda (primeira visita), vale o padrão
+     desta tela (recolhido, como no Figma). */
+  var assistenteSalvo = null;
+  try{ assistenteSalvo = localStorage.getItem(CHAVE_ASSISTENTE); }catch(e){}
+  setAssistant(assistenteSalvo === null ? false : assistenteSalvo === '1');
+
+  /* =========================================================
+     Reordenar tarefas — arraste (mouse) + setas (teclado)
+     ========================================================= */
+  var list = document.querySelector('.task-list');
+  var live = document.getElementById('taskLive');
+  var dragged = null;
+  var ordemAntesArrastar = null;
+
+  function tarefas(){
+    return Array.prototype.slice.call(list.querySelectorAll('.task'));
+  }
+
+  /* ATV-TAR-ORDEM-004: a lista de ids na ordem atual, para poder
+     voltar exatamente a ela se a gravação no servidor falhar. */
+  function ordemAtual(){
+    return tarefas().map(function(li){ return li.dataset.id; });
+  }
+  function aplicarOrdem(ids){
+    ids.forEach(function(id){
+      var li = list.querySelector('.task[data-id="' + id + '"]');
+      if(li) list.appendChild(li);
+    });
+  }
+  function nome(li){
+    var t = li.querySelector('.task-title');
+    return t ? t.textContent.trim() : 'Tarefa';
+  }
+  function anunciar(li){
+    var todas = tarefas();
+    live.textContent = nome(li) + ' movida para a posição ' +
+                       (todas.indexOf(li) + 1) + ' de ' + todas.length + '.';
+  }
+  function destacar(li){
+    li.classList.remove('just-moved');
+    void li.offsetWidth;            // reinicia a animação
+    li.classList.add('just-moved');
+  }
+
+  /* ---------- Mouse: só o handle inicia o arraste ---------- */
+  // O <li> nasce sem draggable para não sequestrar a seleção de
+  // texto; o atributo só é ligado enquanto o handle está pressionado.
+  list.addEventListener('pointerdown', function(e){
+    var handle = e.target.closest('.task-drag');
+    if(!handle) return;
+    handle.closest('.task').setAttribute('draggable', 'true');
+  });
+  document.addEventListener('pointerup', function(){
+    tarefas().forEach(function(li){ li.removeAttribute('draggable'); });
+  });
+
+  list.addEventListener('dragstart', function(e){
+    var li = e.target.closest('.task');
+    if(!li) return;
+    dragged = li;
+    ordemAntesArrastar = ordemAtual();
+    li.classList.add('is-dragging');
+    list.classList.add('is-reordering');
+    e.dataTransfer.effectAllowed = 'move';
+    // Firefox só inicia o arraste se houver dados no dataTransfer.
+    e.dataTransfer.setData('text/plain', nome(li));
+  });
+
+  // Devolve o card que deve ficar ABAIXO do ponteiro: o primeiro
+  // cuja metade superior já foi ultrapassada.
+  function alvo(y){
+    return tarefas()
+      .filter(function(li){ return li !== dragged; })
+      .reduce(function(perto, li){
+        var box = li.getBoundingClientRect();
+        var delta = y - box.top - box.height / 2;
+        return (delta < 0 && delta > perto.delta) ? {delta:delta, li:li} : perto;
+      }, {delta: -Infinity, li: null}).li;
+  }
+
+  list.addEventListener('dragover', function(e){
+    if(!dragged) return;
+    e.preventDefault();                    // sem isso o drop nunca dispara
+    e.dataTransfer.dropEffect = 'move';
+    var ref = alvo(e.clientY);
+    if(ref) list.insertBefore(dragged, ref);
+    else    list.appendChild(dragged);
+  });
+
+  list.addEventListener('drop', function(e){ e.preventDefault(); });
+
+  list.addEventListener('dragend', function(){
+    if(!dragged) return;
+    dragged.classList.remove('is-dragging');
+    list.classList.remove('is-reordering');
+    dragged.removeAttribute('draggable');
+    destacar(dragged);
+    anunciar(dragged);
+
+    var id = dragged.dataset.id;
+    var indiceNovo = tarefas().indexOf(dragged);
+    var ordemAntes = ordemAntesArrastar;
+    if(id && window.AtividadeAcoes){
+      window.AtividadeAcoes.moverOrdem(id, indiceNovo).catch(function(){
+        if(ordemAntes) aplicarOrdem(ordemAntes);   // ATV-TAR-ORDEM-004: volta pro lugar
+      });
+    }
+    dragged = null;
+  });
+
+  /* ---------- Teclado: setas no handle ---------- */
+  list.addEventListener('keydown', function(e){
+    var handle = e.target.closest('.task-drag');
+    if(!handle) return;
+    if(e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+    var li = handle.closest('.task');
+    var vizinho = e.key === 'ArrowUp' ? li.previousElementSibling
+                                      : li.nextElementSibling;
+    if(!vizinho) return;
+
+    e.preventDefault();
+    var ordemAntes = ordemAtual();
+    if(e.key === 'ArrowUp') list.insertBefore(li, vizinho);
+    else                    list.insertBefore(vizinho, li);
+
+    handle.focus();   // mover o nó no DOM tira o foco
+    destacar(li);
+    anunciar(li);
+
+    var id = li.dataset.id;
+    var indiceNovo = tarefas().indexOf(li);
+    if(id && window.AtividadeAcoes){
+      window.AtividadeAcoes.moverOrdem(id, indiceNovo).catch(function(){
+        aplicarOrdem(ordemAntes);
+        handle.focus();
+      });
+    }
+  });
+
+})();
+
+/* ------------------------------------------------------------
+   Navegação do rail
+   ------------------------------------------------------------ */
+document.querySelector('.rail-nav .nav-item[data-label="Início"]')
+  .addEventListener('click', function(){ window.location.href = 'empresas.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Empresas"]')
+  .addEventListener('click', function(){ window.location.href = 'empresas.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Projetos"]')
+  .addEventListener('click', function(){ window.location.href = 'projetos.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Idéias"]')
+  .addEventListener('click', function(){ window.location.href = 'visao_do_projeto.html'; });
+/* "Sobre a empresa" precisa saber de qual empresa e projeto — sem
+   isso aquela tela devolve a pessoa para trás. `ContextoUrl` é
+   publicado por js/atividade.js e js/board.js. */
+document.querySelector('.rail-nav .nav-item[data-label="Sobre a empresa"]')
+  .addEventListener('click', function(){
+    window.location.href = 'Sobre_a_empresa.html' + (window.ContextoUrl || '');
+  });
+</script>
+
+<script>
+/* ------------------------------------------------------------
+   Dropdown (kebab) das tarefas
+   ------------------------------------------------------------ */
+function closeTaskMenus(){
+  document.querySelectorAll('.menu.is-open').forEach(function(m){
+    m.classList.remove('is-open');
+    var task = m.closest('.task');
+    var btn = task ? task.querySelector('.task-menu')
+                   : m.closest('.activity-menu-wrap').querySelector('.btn-icon');
+    if(btn) btn.setAttribute('aria-expanded','false');
+  });
+}
+
+document.addEventListener('click', function(ev){
+  var trigger = ev.target.closest('.task-menu, .activity-menu-wrap .btn-icon');
+  if(trigger){
+    var wrap = trigger.closest('.activity-menu-wrap');
+    var host = wrap ? wrap : trigger.closest('.task');
+    var menu = host.querySelector('.menu');
+    var wasOpen = menu.classList.contains('is-open');
+    closeTaskMenus();
+    if(!wasOpen){
+      menu.classList.add('is-open');
+      trigger.setAttribute('aria-expanded','true');
+    }
+    ev.stopPropagation();
+    return;
+  }
+  if(!ev.target.closest('.menu')) closeTaskMenus();
+});
+
+document.addEventListener('keydown', function(ev){
+  if(ev.key === 'Escape') closeTaskMenus();
+});
+
+/* ------------------------------------------------------------
+   Modal Nova tarefa
+   ------------------------------------------------------------ */
+var taskModal = document.getElementById('taskModal');
+var taskForm  = document.getElementById('taskForm');
+var taskModalTitle = document.getElementById('taskModalTitle');
+var openTaskBtns = [
+  document.getElementById('openTaskModal'),
+  document.getElementById('openTaskModalFake')
+];
+
+// Card que está sendo editado (null = criação de nova tarefa)
+var tarefaEditando = null;
+
+function openTaskModal(){
+  tarefaEditando = null;
+  taskModalTitle.textContent = 'Nova tarefa';
+  taskModal.showModal();
+  document.body.classList.add('modal-open');
+  document.getElementById('taskTitle').focus();
+}
+function closeTaskModal(){
+  taskModal.close();
+}
+
+// Abre o mesmo modal em modo edição, preenchido com os dados do card
+function openEditTaskModal(task){
+  tarefaEditando = task;
+  taskModalTitle.textContent = 'Editar tarefa';
+  document.getElementById('taskTitle').value =
+    (task.querySelector('.task-title') || {}).textContent || '';
+  document.getElementById('taskDesc').value =
+    (task.querySelector('.task-desc') || {}).textContent || '';
+  taskModal.showModal();
+  document.body.classList.add('modal-open');
+  document.getElementById('taskTitle').focus();
+}
+
+openTaskBtns.forEach(function(btn){
+  if(btn) btn.addEventListener('click', openTaskModal);
+});
+document.getElementById('closeTaskModal').addEventListener('click', closeTaskModal);
+document.getElementById('generateWithAIBtn').addEventListener('click', function(){
+  closeTaskModal();
+  openGenerateTasksModal();
+});
+
+/* BOARD-ACESSO-001: o "Acessar" do menu de três pontinhos vai para o
+   MESMO lugar que o botão "Acessar tarefa" do card — os dois leem o
+   `data-destino` que js/atividade.js gravou a partir do `tipo` da
+   tarefa (`pesquisa` -> board.html, `matriz_csd` -> matriz_csd.html).
+
+   Antes daqui só saía navegação quando o título era literalmente
+   "Matriz CSD": clicar em "Acessar" em qualquer outra tarefa fechava
+   o menu e não fazia mais nada. */
+document.addEventListener('click', function(ev){
+  var acessar = ev.target.closest('.task .menu [data-task-action="acessar"]');
+  if(!acessar) return;
+  closeTaskMenus();
+
+  var card = acessar.closest('.task');
+  var destino = card && card.dataset.destino;
+  /* Sem destino é tarefa `sem_tela` — o item nem aparece no menu
+     (regra de CSS abaixo), então isto é só a rede de segurança. */
+  if(!destino) return;
+
+  window.location.href = destino;
+});
+
+taskModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+  taskForm.reset();
+});
+
+taskModal.addEventListener('click', function(e){
+  if(e.target === taskModal) closeTaskModal();
+});
+
+taskForm.addEventListener('submit', function(e){
+  var title = document.getElementById('taskTitle').value.trim();
+  var desc  = document.getElementById('taskDesc').value.trim();
+  if(!title) return;
+
+  if(tarefaEditando){
+    /* Editar tarefa não persiste no servidor: não faz parte das
+       regras definidas em atividade-lista.md (P9/P10, §5 — editar
+       segue em aberto). Mantém o comportamento do protótipo, só na
+       tela, para não fingir uma gravação que ninguém decidiu. */
+    var t = tarefaEditando.querySelector('.task-title');
+    var d = tarefaEditando.querySelector('.task-desc');
+    if(t) t.textContent = title;
+    if(d) d.textContent = desc;
+    mostrarMensagemAtividade('Tarefa editada com sucesso.');
+    tarefaEditando = null;
+    return;
+  }
+
+  /* ATV-TAR-CRIA: criação de verdade — espera a gravação no
+     servidor antes de fechar o modal, por isso o preventDefault
+     (o form é method="dialog" e fecharia sozinho). */
+  e.preventDefault();
+  if(!window.AtividadeAcoes) return;
+  var botaoSalvar = taskForm.querySelector('button[type="submit"]');
+  if(botaoSalvar) botaoSalvar.disabled = true;
+  var tipoEl = document.getElementById('taskTipo');
+  window.AtividadeAcoes.criar(title, desc, tipoEl ? tipoEl.value : 'pesquisa').then(function(){
+    closeTaskModal();
+  }).catch(function(){
+    /* Mensagem de erro já mostrada por AtividadeAcoes.criar; o
+       modal continua aberto para tentar de novo. */
+  }).then(function(){
+    if(botaoSalvar) botaoSalvar.disabled = false;
+  });
+});
+
+document.addEventListener('click', function(ev){
+  var editar = ev.target.closest('.task .menu [data-task-action="editar"]');
+  if(!editar) return;
+  closeTaskMenus();
+  openEditTaskModal(editar.closest('.task'));
+  ev.stopPropagation();
+});
+
+/* ------------------------------------------------------------
+   Modal Finalizar atividade
+   ------------------------------------------------------------ */
+var finishModal = document.getElementById('finishModal');
+
+function openFinishModal(){
+  finishModal.showModal();
+  document.body.classList.add('modal-open');
+}
+function closeFinishModal(){
+  finishModal.close();
+}
+
+document.getElementById('finishActivityBtn').addEventListener('click', openFinishModal);
+document.getElementById('closeFinishModal').addEventListener('click', closeFinishModal);
+document.getElementById('cancelFinishModal').addEventListener('click', closeFinishModal);
+
+finishModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+});
+
+finishModal.addEventListener('click', function(e){
+  if(e.target === finishModal) closeFinishModal();
+});
+
+document.getElementById('confirmFinishBtn').addEventListener('click', function(){
+  closeFinishModal();
+  if(!window.AtividadeAcoes) return;
+  /* IDEIA-MOV-014/015 (ideias-movimentacao.md §1.4): concluir a
+     atividade move a IDÉIA para "Finalizado", pelo id, pela API
+     real — nunca por localStorage nem por título. */
+  window.AtividadeAcoes.concluirAtividade().then(function(destino){
+    window.location.href = destino;
+  });
+  /* Erro já avisado por AtividadeAcoes.concluirAtividade; a pessoa
+     continua na tela para tentar de novo. */
+});
+
+/* ------------------------------------------------------------
+   Modal editar atividade
+   ------------------------------------------------------------ */
+var atvEditModal = document.getElementById('atvEditModal');
+
+function openAtvEditModal(){
+  // Pré-preenche com o contexto atual da atividade.
+  document.getElementById('atvEditTitleInput').value =
+    (document.querySelector('.task-context-title strong') || {}).textContent || '';
+  document.getElementById('atvEditDesc').value =
+    (document.querySelector('.task-context-desc') || {}).textContent || '';
+  atvEditModal.showModal();
+  document.body.classList.add('modal-open');
+  document.getElementById('atvEditTitleInput').focus();
+}
+function closeAtvEditModal(){
+  atvEditModal.close();
+}
+
+document.getElementById('closeAtvEditBtn').addEventListener('click', closeAtvEditModal);
+document.getElementById('cancelAtvEditBtn').addEventListener('click', closeAtvEditModal);
+
+atvEditModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+});
+
+atvEditModal.addEventListener('click', function(e){
+  if(e.target === atvEditModal) closeAtvEditModal();
+});
+
+document.getElementById('atvEditForm').addEventListener('submit', function(e){
+  var title = document.getElementById('atvEditTitleInput').value.trim();
+  var desc  = document.getElementById('atvEditDesc').value.trim();
+  if(!title || !desc) return;
+
+  // Atualiza os textos que descrevem a atividade.
+  var ctxTitle = document.querySelector('.task-context-title strong');
+  var ctxDesc  = document.querySelector('.task-context-desc');
+  if(ctxTitle) ctxTitle.textContent = title;
+  if(ctxDesc)  ctxDesc.textContent  = desc;
+
+  atvEditModal.close();
+  mostrarMensagemAtividade('Atividade editada com sucesso.');
+});
+
+/* ------------------------------------------------------------
+   Modal excluir atividade
+   ------------------------------------------------------------ */
+var atvDeleteModal = document.getElementById('atvDeleteModal');
+
+function openAtvDeleteModal(){
+  atvDeleteModal.showModal();
+  document.body.classList.add('modal-open');
+}
+function closeAtvDeleteModal(){
+  atvDeleteModal.close();
+}
+
+document.getElementById('closeAtvDeleteBtn').addEventListener('click', closeAtvDeleteModal);
+document.getElementById('cancelAtvDeleteBtn').addEventListener('click', closeAtvDeleteModal);
+
+atvDeleteModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+});
+
+atvDeleteModal.addEventListener('click', function(e){
+  if(e.target === atvDeleteModal) closeAtvDeleteModal();
+});
+
+document.getElementById('confirmAtvDeleteBtn').addEventListener('click', function(){
+  atvDeleteModal.close();
+  window.location.href = 'visao_do_projeto.html?atividade_excluida=1';
+});
+
+/* ------------------------------------------------------------
+   Ações do menu (três pontinhos) da atividade
+   ------------------------------------------------------------ */
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.activity-menu-wrap .menu [data-activity-action]');
+  if(!item) return;
+  closeTaskMenus();
+  var acao = item.dataset.activityAction;
+  if(acao === 'editar') openAtvEditModal();
+  else if(acao === 'excluir') openAtvDeleteModal();
+  ev.stopPropagation();
+});
+
+/* ------------------------------------------------------------
+   Menu do card conforme o status: tarefa concluída troca
+    "Editar / Concluir atividade" por "Reabrir tarefa"
+   ------------------------------------------------------------ */
+var ICON_ACESSAR   = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 10 14"/></svg>';
+var ICON_EDITAR    = '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>';
+var ICON_DUPLICAR  = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+var ICON_FINALIZAR = '<svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg>';
+var ICON_REABRIR   = '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
+var ICON_EXCLUIR   = '<svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>';
+
+function menuTarefaConcluida(){
+  return '<button role="menuitem" data-task-action="acessar">' + ICON_ACESSAR + 'Acessar</button>' +
+    '<button role="menuitem" data-task-action="reabrir">' + ICON_REABRIR + 'Reabrir tarefa</button>' +
+    '<div class="sep"></div>' +
+    '<button role="menuitem" class="danger" data-task-action="excluir">' + ICON_EXCLUIR + 'Excluir</button>';
+}
+function menuTarefaPendente(){
+  return '<button role="menuitem" data-task-action="acessar">' + ICON_ACESSAR + 'Acessar</button>' +
+    '<button role="menuitem" data-task-action="editar">' + ICON_EDITAR + 'Editar</button>' +
+    '<button role="menuitem" data-task-action="finalizar">' + ICON_FINALIZAR + 'Concluir tarefa</button>' +
+    '<div class="sep"></div>' +
+    '<button role="menuitem" class="danger" data-task-action="excluir">' + ICON_EXCLUIR + 'Excluir</button>';
+}
+function atualizarMenuTarefa(task){
+  var menu = task.querySelector('.menu');
+  if(!menu) return;
+  var concluida = task.querySelector('.task-status').classList.contains('task-status--done');
+  menu.innerHTML = concluida ? menuTarefaConcluida() : menuTarefaPendente();
+}
+
+/* ------------------------------------------------------------
+   Finalizar tarefa: abre confirmação; ao confirmar, a tag do
+   card vira verde (como "Anotação")
+   ------------------------------------------------------------ */
+var taskFinishModal = document.getElementById('taskFinishModal');
+var tarefaFinalizando = null;
+
+function openTaskFinishModal(){
+  taskFinishModal.showModal();
+  document.body.classList.add('modal-open');
+}
+function closeTaskFinishModal(){
+  taskFinishModal.close();
+}
+document.getElementById('closeTaskFinishBtn').addEventListener('click', closeTaskFinishModal);
+document.getElementById('cancelTaskFinishBtn').addEventListener('click', closeTaskFinishModal);
+taskFinishModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+  tarefaFinalizando = null;
+});
+taskFinishModal.addEventListener('click', function(e){
+  if(e.target === taskFinishModal) closeTaskFinishModal();
+});
+
+document.getElementById('confirmTaskFinishBtn').addEventListener('click', function(){
+  var task = tarefaFinalizando;
+  closeTaskFinishModal();
+  if(!task || !window.AtividadeAcoes) return;
+  var id = task.dataset.id;
+  if(!id) return;
+
+  /* ATV-TAR-CONCLUIR-001: só o status muda — sem navegar para fora
+     da atividade (era o bug do protótipo: redirecionava para
+     visao_do_projeto.html ao concluir UMA tarefa). */
+  window.AtividadeAcoes.mudarStatus(id, 'concluida').then(function(){
+    var tag = task.querySelector('.task-status');
+    if(tag){
+      tag.className = 'task-status task-status--done task-status--labeled';
+      tag.setAttribute('aria-label', 'Concluída');
+      tag.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>Concluída';
+      atualizarMenuTarefa(task);
+    }
+    mostrarMensagemAtividade('Tarefa concluída com sucesso.');
+  });
+  /* Erro já avisado por AtividadeAcoes.mudarStatus. */
+});
+
+/* Reabrir tarefa: abre confirmação; ao confirmar, volta o card para pendente */
+var taskReopenModal = document.getElementById('taskReopenModal');
+var tarefaReabrindo = null;
+
+function openTaskReopenModal(){
+  taskReopenModal.showModal();
+  document.body.classList.add('modal-open');
+}
+function closeTaskReopenModal(){
+  taskReopenModal.close();
+}
+document.getElementById('closeTaskReopenBtn').addEventListener('click', closeTaskReopenModal);
+document.getElementById('cancelTaskReopenBtn').addEventListener('click', closeTaskReopenModal);
+taskReopenModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+  tarefaReabrindo = null;
+});
+taskReopenModal.addEventListener('click', function(e){
+  if(e.target === taskReopenModal) closeTaskReopenModal();
+});
+
+document.getElementById('confirmTaskReopenBtn').addEventListener('click', function(){
+  var task = tarefaReabrindo;
+  closeTaskReopenModal();
+  if(!task || !window.AtividadeAcoes) return;
+  var id = task.dataset.id;
+  if(!id) return;
+
+  window.AtividadeAcoes.mudarStatus(id, 'pendente').then(function(){
+    var tag = task.querySelector('.task-status');
+    if(tag){
+      tag.className = 'task-status task-status--pending task-status--labeled task-status--labeled--pending';
+      tag.setAttribute('aria-label', 'Pendente');
+      tag.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.2"/><path d="M12 17.2h.01"/></svg>Pendente';
+      atualizarMenuTarefa(task);
+    }
+    mostrarMensagemAtividade('Tarefa reaberta com sucesso.');
+  });
+  /* Erro já avisado por AtividadeAcoes.mudarStatus. */
+});
+
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.task .menu [data-task-action="reabrir"]');
+  if(!item) return;
+  closeTaskMenus();
+  tarefaReabrindo = item.closest('.task');
+  openTaskReopenModal();
+  ev.stopPropagation();
+});
+
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.task .menu [data-task-action="finalizar"]');
+  if(!item) return;
+  closeTaskMenus();
+  tarefaFinalizando = item.closest('.task');
+  openTaskFinishModal();
+  ev.stopPropagation();
+});
+
+/* ------------------------------------------------------------
+   Duplicar tarefa: abre confirmação; ao confirmar, clona o card
+   e insere logo abaixo do original
+   ------------------------------------------------------------ */
+var taskDupModal = document.getElementById('taskDupModal');
+var tarefaDuplicando = null;
+
+function openTaskDupModal(){
+  taskDupModal.showModal();
+  document.body.classList.add('modal-open');
+}
+function closeTaskDupModal(){
+  taskDupModal.close();
+}
+document.getElementById('closeTaskDupBtn').addEventListener('click', closeTaskDupModal);
+document.getElementById('cancelTaskDupBtn').addEventListener('click', closeTaskDupModal);
+taskDupModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+  tarefaDuplicando = null;
+});
+taskDupModal.addEventListener('click', function(e){
+  if(e.target === taskDupModal) closeTaskDupModal();
+});
+
+document.getElementById('confirmTaskDupBtn').addEventListener('click', function(){
+  var task = tarefaDuplicando;
+  if(task){
+    var copia = task.cloneNode(true);
+    copia.querySelector('.task-drag').setAttribute('aria-label', 'Reordenar cópia');
+    task.parentNode.insertBefore(copia, task.nextSibling);
+    mostrarMensagemAtividade('Tarefa duplicada com sucesso.');
+  }
+  closeTaskDupModal();
+});
+
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.task .menu [data-task-action="duplicar"]');
+  if(!item) return;
+  closeTaskMenus();
+  tarefaDuplicando = item.closest('.task');
+  openTaskDupModal();
+  ev.stopPropagation();
+});
+
+/* ------------------------------------------------------------
+   Excluir tarefa: abre confirmação; ao confirmar, remove o card
+   ------------------------------------------------------------ */
+var taskDeleteModal = document.getElementById('taskDeleteModal');
+var tarefaExcluindo = null;
+
+function openTaskDeleteModal(){
+  taskDeleteModal.showModal();
+  document.body.classList.add('modal-open');
+}
+function closeTaskDeleteModal(){
+  taskDeleteModal.close();
+}
+document.getElementById('closeTaskDeleteBtn').addEventListener('click', closeTaskDeleteModal);
+document.getElementById('cancelTaskDeleteBtn').addEventListener('click', closeTaskDeleteModal);
+taskDeleteModal.addEventListener('close', function(){
+  document.body.classList.remove('modal-open');
+  tarefaExcluindo = null;
+});
+taskDeleteModal.addEventListener('click', function(e){
+  if(e.target === taskDeleteModal) closeTaskDeleteModal();
+});
+
+document.getElementById('confirmTaskDeleteBtn').addEventListener('click', function(){
+  var task = tarefaExcluindo;
+  closeTaskDeleteModal();
+  if(!task || !window.AtividadeAcoes) return;
+  var id = task.dataset.id;
+  if(!id) return;
+
+  /* ATV-TAR-EXCLUI: só remove o card da tela depois de confirmado
+     que a API apagou a linha de verdade. */
+  window.AtividadeAcoes.excluir(id).then(function(){
+    task.remove();
+    mostrarMensagemAtividade('Tarefa excluída com sucesso.');
+  });
+  /* Erro já avisado por AtividadeAcoes.excluir. */
+});
+
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.task .menu [data-task-action="excluir"]');
+  if(!item) return;
+  closeTaskMenus();
+  tarefaExcluindo = item.closest('.task');
+  openTaskDeleteModal();
+  ev.stopPropagation();
+});
+
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.task .menu [data-task-action="gerar-ia"]');
+  if(!item) return;
+  closeTaskMenus();
+  openGenerateTasksModal();
+  ev.stopPropagation();
+});
+
+document.addEventListener('click', function(ev){
+  var item = ev.target.closest('.task .menu [data-task-action="nova-tarefa"]');
+  if(!item) return;
+  closeTaskMenus();
+  openTaskModal();
+  ev.stopPropagation();
+});
+
+/* ------------------------------------------------------------
+   Toast de feedback
+   ------------------------------------------------------------ */
+function mostrarMensagemAtividade(msg){
+  var toast = document.getElementById('atvToast');
+  var txt   = document.getElementById('atvToastText');
+  if(!toast || !txt) return;
+  txt.textContent = msg;
+  toast.hidden = false;
+  requestAnimationFrame(function(){ toast.classList.add('is-visible'); });
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(function(){
+    toast.classList.remove('is-visible');
+    setTimeout(function(){ toast.hidden = true; }, 200);
+  }, 3000);
+}
+
+  /* ------------------------------------------------------------
+     Modal Gerar tarefas com IA
+     ------------------------------------------------------------ */
+  var generateTasksModal = document.getElementById('generateTasksModal');
+
+  function openGenerateTasksModal(){
+    generateTasksModal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function closeGenerateTasksModal(){
+    generateTasksModal.close();
+    document.body.classList.remove('modal-open');
+  }
+
+  document.getElementById('closeGenerateTasksBtn').addEventListener('click', closeGenerateTasksModal);
+  document.getElementById('cancelGenerateTasksBtn').addEventListener('click', closeGenerateTasksModal);
+  generateTasksModal.addEventListener('click', function(e){
+    if(e.target === generateTasksModal) closeGenerateTasksModal();
+  });
+  generateTasksModal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+  });
+
+  document.getElementById('confirmGenerateTasksBtn').addEventListener('click', function(){
+    closeGenerateTasksModal();
+    // Mostrar todos os cards ocultos
+    document.querySelectorAll('.task-list .task[hidden]').forEach(function(task){
+      task.hidden = false;
+    });
+    mostrarMensagemAtividade('Tarefas geradas com sucesso!');
+  });
+
+(function(){
+  var toast = document.getElementById('atvToast');
+  if(!toast) return;
+  document.getElementById('atvToastClose').addEventListener('click', function(){
+    clearTimeout(toast._timer);
+    toast.classList.remove('is-visible');
+    setTimeout(function(){ toast.hidden = true; }, 200);
+  });
+})();
+
+</script>
+
+<!-- ===================== TOAST ===================== -->
+<div class="toast" id="atvToast" role="status" aria-live="polite" hidden>
+  <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm4.7 7.7-5.4 5.4a1 1 0 0 1-1.4 0l-2.6-2.6 1.4-1.4 1.9 1.9 4.7-4.7Z"/></svg>
+  <span class="toast-text" id="atvToastText"></span>
+  <button type="button" class="toast-close" id="atvToastClose" aria-label="Fechar">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+</div>
+
+
+<!-- ===================== MODAL — PERFIL DO USUÁRIO ===================== -->
+<dialog class="pf-modal" id="perfilModal" aria-labelledby="pfTitulo">
+  <div class="pf-shell">
+
+    <nav class="pf-side" aria-label="Seções do perfil">
+      <button type="button" class="pf-side-item" data-painel="perfil" aria-current="true">Perfil</button>
+      <button type="button" class="pf-side-item" data-painel="conta">Conta</button>
+      <button type="button" class="pf-side-item" data-painel="notificacoes">Notificações</button>
+      <button type="button" class="pf-side-item" data-painel="preferencias">Preferências</button>
+      <button type="button" class="pf-side-item" data-painel="creditos">Créditos de uso</button>
+      <span class="pf-side-spacer"></span>
+      <button type="button" class="pf-side-item pf-side-item--danger" id="pfSair">Sair da conta</button>
+    </nav>
+
+    <div class="pf-divider" role="presentation"></div>
+
+    <div class="pf-main">
+      <div class="pf-head">
+        <h2 class="pf-title">
+          <span class="pf-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+          </span>
+          <span id="pfTitulo">Perfil</span>
+        </h2>
+        <button type="button" class="pf-close" id="pfFechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <div class="pf-body">
+
+        <!-- ---------- Perfil ---------- -->
+        <section class="pf-panel" id="pf-perfil" aria-label="Perfil">
+          <div class="pf-avatar-row">
+            <span class="pf-avatar"><img src="https://i.pravatar.cc/160?img=47" alt="Foto de Ricardo Mateus"></span>
+            <div class="pf-avatar-actions">
+              <button type="button" class="pf-btn">Trocar foto</button>
+              <button type="button" class="pf-btn pf-btn--danger">Remover</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfNome">Nome completo</label>
+            <input class="pf-input" type="text" id="pfNome" value="Ricardo Mateus" autocomplete="name">
+          </div>
+
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfEmail">E-mail</label>
+              <input class="pf-input" type="email" id="pfEmail" value="ricardosmateus@gmail.com" autocomplete="email">
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfCargo">Cargo</label>
+              <input class="pf-input" type="text" id="pfCargo" value="Designer de produto">
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfBio">Sobre você</label>
+            <input class="pf-input" type="text" id="pfBio" placeholder="Uma linha sobre o seu trabalho">
+            <p class="pf-hint">Aparece ao lado das suas idéias e comentários.</p>
+          </div>
+        </section>
+
+        <!-- ---------- Conta ---------- -->
+        <section class="pf-panel" id="pf-conta" aria-label="Conta" hidden>
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfIdioma">Idioma</label>
+              <select class="pf-input" id="pfIdioma">
+                <option selected>Português (Brasil)</option>
+                <option>English (US)</option>
+                <option>Español</option>
+              </select>
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfFuso">Fuso horário</label>
+              <select class="pf-input" id="pfFuso">
+                <option selected>(GMT-03:00) São Paulo</option>
+                <option>(GMT-05:00) Nova York</option>
+                <option>(GMT+01:00) Lisboa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfSenha">Senha</label>
+            <input class="pf-input" type="password" id="pfSenha" value="douglas123" autocomplete="current-password">
+            <p class="pf-hint">Última alteração há 3 meses.</p>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Excluir conta</span>
+              <span class="pf-row-desc">Remove seus dados e projetos em definitivo. Não dá para desfazer.</span>
+            </div>
+            <button type="button" class="pf-btn pf-btn--danger">Excluir</button>
+          </div>
+        </section>
+
+        <!-- ---------- Notificações ---------- -->
+        <section class="pf-panel" id="pf-notificacoes" aria-label="Notificações" hidden>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Novidades por e-mail</span>
+              <span class="pf-row-desc">Avisos quando alguém comentar ou mover uma idéia sua.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Novidades por e-mail">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Resumo semanal</span>
+              <span class="pf-row-desc">Um apanhado do que andou pelos seus projetos na semana.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Resumo semanal">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Menções</span>
+              <span class="pf-row-desc">Quando citarem seu nome numa atividade ou tarefa.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Menções">
+          </div>
+        </section>
+
+        <!-- ---------- Preferências ---------- -->
+        <section class="pf-panel" id="pf-preferencias" aria-label="Preferências" hidden>
+          <div role="radiogroup" aria-label="Tema" style="display:flex;flex-direction:column;gap:12px">
+            <button type="button" class="pf-option" role="radio" aria-checked="true">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Claro</span>
+                <span class="pf-row-desc">O tema que a plataforma usa hoje.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Escuro</span>
+                <span class="pf-row-desc">Para trabalhar com pouca luz.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Seguir o sistema</span>
+                <span class="pf-row-desc">Acompanha a preferência do seu computador.</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Reduzir animações</span>
+              <span class="pf-row-desc">Desliga as transições de abertura e movimento.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Reduzir animações">
+          </div>
+        </section>
+
+        <!-- ---------- Créditos de uso ---------- -->
+        <section class="pf-panel" id="pf-creditos" aria-label="Créditos de uso" hidden>
+          <div class="pf-field">
+            <span class="pf-label">Saldo disponível</span>
+            <!-- O valor vem de GET /creditos/saldo (js/creditos.js).
+                 Antes era "500 créditos" fixo no HTML, com uma barra
+                 de progresso em 40% que também não vinha de lugar
+                 nenhum: três números inventados numa tela sobre
+                 dinheiro. -->
+            <p class="pf-saldo" id="pfSaldo" aria-live="polite">
+              <span class="pf-saldo-valor" id="pfSaldoValor">—</span>
+            </p>
+            <!-- DIN-006: falha ao carregar NUNCA pode parecer saldo
+                 zero. São mensagens diferentes, de propósito. -->
+            <p class="pf-hint pf-saldo-falha" id="pfSaldoFalha" role="status" hidden>
+              Não foi possível carregar o seu saldo agora. Isto não significa
+              que ele esteja zerado — tente novamente em instantes.
+            </p>
+            <p class="pf-hint" id="pfSaldoHint">O saldo diminui conforme a plataforma usa IA por você.</p>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="comprarRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Comprar créditos</span>
+              <span class="pf-row-desc">Adicione créditos para continuar usando as funcionalidades de IA.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn pf-btn--success" id="comprarBtn">Comprar</button>
+            </div>
+
+            <!-- Formulário de compra + Pix (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="comprarConteudo" hidden>
+              <div class="pf-compra-form">
+                <div class="pf-field">
+                  <label class="pf-label" for="pfValorCredito">Valor a adicionar</label>
+                  <div class="pf-valor-wrap">
+                    <span class="pf-valor-prefixo" aria-hidden="true">R$</span>
+                    <input class="pf-input pf-input--valor" type="text" inputmode="decimal"
+                           id="pfValorCredito" placeholder="0,00" aria-describedby="pfValorHint">
+                  </div>
+                  <p class="pf-hint" id="pfValorHint">1 crédito equivale a R$ 1,00. Valor mínimo de R$ 10,00.</p>
+                </div>
+
+                <button type="button" class="pf-btn pf-btn--accent" id="gerarQrBtn" disabled>Gerar QR Code Pix</button>
+                <p class="pf-recarga-erro" id="pfRecargaErro" hidden></p>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr" id="pfPixQrBox">
+                    <img id="pfPixImg" width="176" height="176" alt="QR Code para pagamento via Pix">
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <p class="pf-pix-status is-aguardando" id="pfPixStatus"><span class="pf-pix-ponto" aria-hidden="true"></span><span id="pfPixStatusTexto">Aguardando pagamento…</span></p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint pf-pix-hint-auto">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr">
+                    <canvas id="pfPixCanvas" width="176" height="176" role="img" aria-label="QR Code para pagamento via Pix"></canvas>
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="historicoRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Histórico de uso</span>
+              <span class="pf-row-desc">Acompanhe quando e onde os seus créditos foram usados.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn" id="verHistoricoBtn">Ver histórico</button>
+            </div>
+
+            <!-- Timeline de histórico de créditos (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="historicoTimeline" hidden>
+              <div class="timeline-container" id="timelineContainer">
+                <!-- Timeline será preenchida por JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="pf-rule" role="presentation"></div>
+
+      <div class="pf-foot">
+        <button type="button" class="pf-save" id="pfSalvar">Salvar alterações</button>
+        <button type="button" class="pf-cancel" id="pfCancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var modal = document.getElementById('perfilModal');
+  var gatilho = document.getElementById('avatarBtn');
+  if(!modal || !gatilho) return;
+
+  var itens   = Array.prototype.slice.call(modal.querySelectorAll('.pf-side-item[data-painel]'));
+  var paineis = Array.prototype.slice.call(modal.querySelectorAll('.pf-panel'));
+  var titulo  = document.getElementById('pfTitulo');
+
+  function mostrar(id){
+    itens.forEach(function(i){ i.setAttribute('aria-current', String(i.getAttribute('data-painel') === id)); });
+    paineis.forEach(function(p){ p.hidden = p.id !== 'pf-' + id; });
+    var atual = itens.filter(function(i){ return i.getAttribute('data-painel') === id; })[0];
+    if(atual) titulo.textContent = atual.textContent.trim();
+    modal.querySelector('.pf-body').scrollTop = 0;
+  }
+  itens.forEach(function(i){
+    i.addEventListener('click', function(){ mostrar(i.getAttribute('data-painel')); });
+  });
+
+  // Cartões de tema: um só marcado por vez
+  var temas = Array.prototype.slice.call(modal.querySelectorAll('.pf-option[role="radio"]'));
+  temas.forEach(function(t){
+    t.addEventListener('click', function(){
+      temas.forEach(function(o){ o.setAttribute('aria-checked', String(o === t)); });
+    });
+  });
+
+  function abrir(){
+    mostrar('perfil');
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fechar(){ if(modal.open) modal.close(); }
+
+  gatilho.addEventListener('click', abrir);
+  document.getElementById('pfFechar').addEventListener('click', fechar);
+  document.getElementById('pfCancelar').addEventListener('click', fechar);
+  document.getElementById('pfSalvar').addEventListener('click', fechar);
+  document.getElementById('pfSair').addEventListener('click', function(){ window.location.href = 'login.html'; });
+
+  // Clique no backdrop (fora da casca) fecha
+  modal.addEventListener('click', function(e){
+    var r = modal.getBoundingClientRect();
+    var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!dentro) fechar();
+  });
+
+  // Esc já fecha sozinho no <dialog>; aqui só devolvemos o estado
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    gatilho.focus();
+  });
+})();
+</script>
+
+<script>
+/* ---------- Efeito de âncora, compartilhado entre os cards ----------
+   Rola até o card e faz o destaque piscar uma vez, sem deixar
+   estado permanente — usado por "Histórico de uso" e "Comprar
+   créditos" ao expandir seu conteúdo. */
+window.pfAncorarCard = function(row){
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'nearest'});
+  row.classList.remove('pf-anchor-flash');
+  void row.offsetWidth;                        // reflow: reinicia a animação a cada clique
+  row.classList.add('pf-anchor-flash');
+  setTimeout(function(){
+    row.classList.remove('pf-anchor-flash');
+  }, 1100);
+};
+</script>
+
+<script>
+/* ---------- Histórico de Créditos ----------
+   Expande a timeline dentro da sessão "Histórico de uso"
+   do modal de Perfil, aba "Crédito de uso".
+*/
+(function(){
+  'use strict';
+  var verHistoricoBtn = document.getElementById('verHistoricoBtn');
+  var historicoTimeline = document.getElementById('historicoTimeline');
+  var timelineContainer = document.getElementById('timelineContainer');
+  var historicoRow = document.getElementById('historicoRow');
+
+  if(!verHistoricoBtn || !historicoTimeline || !timelineContainer) return;
+
+  /* Esta seção NÃO tem mais dados próprios. O conteúdo do
+     #timelineContainer é preenchido por js/creditos.js, que busca o
+     extrato real em GET /creditos/extrato. Aqui sobrou só o
+     abre-e-fecha.
+
+     Antes existia aqui uma lista fixa com sete tarefas inventadas.
+     Um histórico falso ao lado de um saldo real é pior do que não
+     ter histórico: convida a conferir uma conta que não existe. */
+
+  function toggle(){
+    var isHidden = historicoTimeline.hidden;
+    if(isHidden){
+      historicoTimeline.hidden = false;
+      verHistoricoBtn.textContent = 'Ocultar histórico';
+      window.pfAncorarCard(historicoRow);
+    } else {
+      historicoTimeline.hidden = true;
+      verHistoricoBtn.textContent = 'Ver histórico';
+    }
+  }
+
+  verHistoricoBtn.addEventListener('click', toggle);
+})();
+</script>
+
+<script>
+/* ---------- Comprar créditos via Pix ----------
+   Expande o formulário de valor + QR Code Pix dentro do card
+   "Comprar créditos". A cobrança é real (Fase 3): o servidor cria
+   a cobrança no PSP, grava o registro e devolve o BR Code — o QR
+   também vem pronto do servidor (data URL), gerado a partir do
+   MESMO texto do "copia e cola", para os dois nunca poderem
+   divergir. A tela só chama a API, mostra o que ela devolve, e
+   consulta o status em intervalos até a confirmação — o crédito em
+   si só acontece quando o webhook confirma o pagamento no servidor
+   (SEG-PAG-002): esta tela nunca decide sozinha que "pagou".
+*/
+(function(){
+  'use strict';
+  var comprarBtn = document.getElementById('comprarBtn');
+  var comprarRow = document.getElementById('comprarRow');
+  var comprarConteudo = document.getElementById('comprarConteudo');
+  var valorInput = document.getElementById('pfValorCredito');
+  var gerarQrBtn = document.getElementById('gerarQrBtn');
+  var erroEl = document.getElementById('pfRecargaErro');
+  var pfPix = document.getElementById('pfPix');
+  var pfPixQrBox = document.getElementById('pfPixQrBox');
+  var pfPixImg = document.getElementById('pfPixImg');
+  var pfPixValor = document.getElementById('pfPixValor');
+  var pfPixCodigo = document.getElementById('pfPixCodigo');
+  var pfPixStatus = document.getElementById('pfPixStatus');
+  var pfPixStatusTexto = document.getElementById('pfPixStatusTexto');
+  var copiarPixBtn = document.getElementById('pfCopiarPix');
+
+  if(!comprarBtn || !comprarConteudo || !valorInput || !gerarQrBtn || !pfPix) return;
+
+  var VALOR_MINIMO = 10;
+  var INTERVALO_POLL_MS = 4000;
+  var TETO_POLL_MS = 20 * 60 * 1000; // 20 min — mesmo que algo dê errado no cálculo de expiração
+  var pollTimer = null;
+
+  /* ---- Máscara de moeda: usuário digita só números, formata como R$ ---- */
+  function valorNumerico(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    return digitos ? parseInt(digitos, 10) / 100 : 0;
+  }
+
+  function formatarValorInput(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    if(!digitos){ valorInput.value = ''; atualizarEstadoBotao(); return; }
+    var valor = parseInt(digitos, 10) / 100;
+    valorInput.value = valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    atualizarEstadoBotao();
+  }
+
+  function atualizarEstadoBotao(){
+    var valor = valorNumerico();
+    gerarQrBtn.disabled = valor < VALOR_MINIMO;
+    // Muda o valor: o QR anterior (se houver) não vale mais para o novo valor
+    esconderErro();
+    if(!pfPix.hidden) esconderPix();
+  }
+
+  function mostrarErro(msg){
+    erroEl.textContent = msg;
+    erroEl.hidden = false;
+  }
+
+  function esconderErro(){
+    erroEl.hidden = true;
+    erroEl.textContent = '';
+  }
+
+  function esconderPix(){
+    pfPix.hidden = true;
+    comprarConteudo.classList.remove('is-confirmado');
+    pararPolling();
+  }
+
+  function pararPolling(){
+    if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function definirStatus(classe, texto){
+    pfPixStatus.className = 'pf-pix-status ' + classe;
+    pfPixStatusTexto.textContent = texto;
+  }
+
+  function marcarPago(){
+    /* O valor sai da legenda, que vai ser escondida junto com o QR —
+       sem ele, a confirmação perderia a informação mais concreta que
+       tinha ("confirmado" sem dizer de quanto). */
+    var valor = pfPixValor ? pfPixValor.textContent : '';
+    definirStatus('is-pago', valor
+      ? 'Pagamento de ' + valor + ' confirmado — créditos adicionados!'
+      : 'Pagamento confirmado — créditos adicionados!');
+    /* Esconde QR, "copia e cola" e instruções: depois de pago, são
+       convite para pagar duas vezes. */
+    comprarConteudo.classList.add('is-confirmado');
+    pfPixQrBox.classList.remove('is-expirado');
+    copiarPixBtn.disabled = true;
+    /* O crédito já aconteceu no servidor, via webhook (SEG-PAG-002)
+       — isto aqui só atualiza o que a pessoa está vendo na tela. */
+    if(window.Creditos){
+      window.Creditos.recarregar();
+      window.Creditos.extrato();
+    }
+  }
+
+  function marcarExpirado(){
+    definirStatus('is-expirado', 'Este código expirou — gere um novo para continuar.');
+    pfPixQrBox.classList.add('is-expirado');
+    copiarPixBtn.disabled = true;
+  }
+
+  /* ---- Consulta o status de verdade no servidor. Nunca decide
+     "pagou" sozinha — só reflete o que a rota devolve, e a rota,
+     por sua vez, nunca inventa: quem manda é o webhook. ---- */
+  function consultarStatus(txid, expiraEm, iniciadoEm){
+    fetch('/creditos/recarga/' + encodeURIComponent(txid), { credentials: 'same-origin' })
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d){
+        if(d.status === 'pago'){
+          pararPolling();
+          marcarPago();
+        } else if(d.status === 'expirado' || d.status === 'cancelado'){
+          pararPolling();
+          marcarExpirado();
+        }
+        // 'aguardando': segue tentando no próximo tick.
+      })
+      .catch(function(e){
+        // Falha de rede é transitória — não desiste, só tenta de novo
+        // no próximo tick. Quem para o polling é o teto de tempo.
+        console.error('[creditos] falha ao consultar status do Pix:', e);
+      });
+  }
+
+  function iniciarPolling(txid, expiraEmIso){
+    pararPolling();
+    var expiraEm = new Date(expiraEmIso).getTime();
+    var teto = Date.now() + TETO_POLL_MS;
+    var iniciadoEm = Date.now();
+
+    pollTimer = setInterval(function(){
+      var agora = Date.now();
+      if((Number.isFinite(expiraEm) && agora > expiraEm) || agora > teto){
+        pararPolling();
+        marcarExpirado();
+        return;
+      }
+      consultarStatus(txid, expiraEm, iniciadoEm);
+    }, INTERVALO_POLL_MS);
+  }
+
+  /* ---- Gera a cobrança de verdade: cria no servidor, mostra o QR
+     e o copia-e-cola que ele devolveu, e passa a consultar o
+     status. ---- */
+  function gerarQr(){
+    var valor = valorNumerico();
+    if(valor < VALOR_MINIMO) return;
+
+    esconderErro();
+    gerarQrBtn.disabled = true;
+    var textoOriginal = gerarQrBtn.textContent;
+    gerarQrBtn.textContent = 'Gerando…';
+
+    fetch('/creditos/recarga', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: valorInput.value }),
+    })
+      .then(function(r){
+        return r.json().catch(function(){ return {}; }).then(function(dados){
+          return { ok: r.ok, dados: dados };
+        });
+      })
+      .then(function(resultado){
+        if(!resultado.ok){
+          mostrarErro(resultado.dados.erro || 'Não foi possível gerar o código Pix agora. Tente de novo.');
+          return;
+        }
+        var dados = resultado.dados;
+
+        pfPixImg.src = dados.qr_data_url;
+        pfPixCodigo.value = dados.brcode;
+        pfPixValor.textContent = dados.valor_formatado;
+        pfPixQrBox.classList.remove('is-expirado');
+        definirStatus('is-aguardando', 'Aguardando pagamento…');
+        copiarPixBtn.disabled = false;
+        /* Cobrança nova: desfaz o estado de "confirmado" de uma
+           anterior, senão o QR novo nasceria escondido. */
+        comprarConteudo.classList.remove('is-confirmado');
+        pfPix.hidden = false;
+        // Mesmo motion de âncora do "Comprar", agora guiando o olhar
+        // até o QR Code recém-gerado.
+        window.pfAncorarCard(pfPix);
+
+        iniciarPolling(dados.txid, dados.expira_em);
+      })
+      .catch(function(e){
+        console.error('[creditos] falha ao gerar cobrança Pix:', e);
+        mostrarErro('Não foi possível falar com o servidor agora. Verifique sua conexão e tente de novo.');
+      })
+      .then(function(){
+        gerarQrBtn.textContent = textoOriginal;
+        gerarQrBtn.disabled = valorNumerico() < VALOR_MINIMO;
+      });
+  }
+
+  function copiarCodigo(){
+    var restaurarTexto = copiarPixBtn.textContent;
+    function marcarCopiado(){
+      copiarPixBtn.textContent = 'Copiado!';
+      copiarPixBtn.classList.add('is-copiado');
+      setTimeout(function(){
+        copiarPixBtn.textContent = restaurarTexto;
+        copiarPixBtn.classList.remove('is-copiado');
+      }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(pfPixCodigo.value).then(marcarCopiado);
+    } else {
+      pfPixCodigo.select();
+      document.execCommand('copy');
+      marcarCopiado();
+    }
+  }
+
+  function toggle(){
+    var isHidden = comprarConteudo.hidden;
+    if(isHidden){
+      comprarConteudo.hidden = false;
+      comprarBtn.textContent = 'Fechar';
+      window.pfAncorarCard(comprarRow);
+    } else {
+      comprarConteudo.hidden = true;
+      comprarBtn.textContent = 'Comprar';
+      esconderErro();
+      esconderPix();
+    }
+  }
+
+  comprarBtn.addEventListener('click', toggle);
+  valorInput.addEventListener('input', formatarValorInput);
+  gerarQrBtn.addEventListener('click', gerarQr);
+  copiarPixBtn.addEventListener('click', copiarCodigo);
+})();
+</script>
+
+<!-- ATV-ACESSO/ATV-TAR-*: a lista de tarefas agora vem da API de
+     verdade (js/atividade.js) — as pontes por localStorage que
+     existiam aqui (tarefa-1-status / nova-tarefa) foram removidas.
+     A ponte com pesquisa.html continua pendente (P3, atividade-lista.md
+     §5): aquela tela ainda não fala com a API de tarefas. -->
+<script src="js/api.js"></script>
+<script src="js/ia.js"></script>
+<script src="js/atividade.js"></script>
+
+<script src="js/creditos.js"></script>
+
+</body>
+</html>

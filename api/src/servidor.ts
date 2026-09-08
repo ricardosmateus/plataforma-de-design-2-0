@@ -1,0 +1,203 @@
+/* ============================================================
+   Servidor
+   ============================================================
+   Plano de backend §2 e §6: API stateless atrás de HTTPS, CORS
+   restrito ao domínio do frontend, rate limit na borda da API.
+   ============================================================ */
+
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
+import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import estaticos from '@fastify/static';
+import multipart from '@fastify/multipart';
+
+import { TAMANHO_MAXIMO } from './armazenamento/logotipo.js';
+import { env, origensPermitidas, producao } from './env.js';
+import { rotasAuth } from './rotas/auth.js';
+import { rotasEmpresas } from './rotas/empresas.js';
+import { rotasGrafo } from './rotas/grafo.js';
+import { rotasProjetos } from './rotas/projetos.js';
+import { rotasIdeias } from './rotas/ideias.js';
+import { rotasTarefas } from './rotas/tarefas.js';
+import { rotasBoard } from './rotas/board.js';
+import { rotasIa } from './rotas/ia.js';
+import { rotasCreditos } from './rotas/creditos.js';
+import { rotasPesquisa } from './rotas/pesquisa.js';
+import { rotasWebhooks } from './rotas/webhooks.js';
+import { db, avisarSeClientDesatualizado } from './db.js';
+
+/* A raiz do site é a pasta acima de api/ — o repositório inteiro.
+   Isso torna a allowlist abaixo obrigatória, não opcional. */
+const AQUI = path.dirname(fileURLToPath(import.meta.url));
+const RAIZ_SITE = path.resolve(AQUI, '..', '..');
+
+/* ALLOWLIST, jamais denylist.
+   Debaixo desta raiz vivem api/.env com os segredos, a documentação
+   e as regras de negócio. Servir por exclusão significa que no dia
+   em que alguém criar uma pasta nova, ela vaza — e ninguém percebe.
+   Por inclusão, o pior caso é um arquivo novo não ser servido, o
+   que aparece na hora. */
+const PERMITIDO =
+  /^\/(?:[\w-]+\.html|css\/[\w.-]+\.css|js\/[\w.-]+\.js|img\/[\w.-]+\.(?:svg|png|jpe?g|webp|avif))$/;
+
+export async function construirApp() {
+  const app = Fastify({
+    logger: producao
+      ? { level: 'info' }
+      : { level: 'warn', transport: undefined },
+    /* Necessário para que req.ip reflita o cliente e não o
+       balanceador — o rate limit por IP depende disso. */
+    trustProxy: true,
+  });
+
+  await app.register(cookie);
+
+  /* Limite um pouco acima de TAMANHO_MAXIMO: a regra de negócio
+     (2MB, EMP-CRIA-003) é aplicada com a mensagem certa dentro da
+     rota; este limite aqui é só uma rede de segurança para não
+     deixar o processo ler um corpo absurdamente grande antes de
+     chegar a validar nada. */
+  await app.register(multipart, {
+    limits: { fileSize: TAMANHO_MAXIMO + 1024, files: 1 },
+  });
+
+  await app.register(cors, {
+    /* Allowlist estrita (plano §6). credentials:true é obrigatório
+       porque a sessão viaja em cookie, não em cabeçalho. */
+    origin(origem, cb) {
+      if (!origem) return cb(null, true);          // curl, healthcheck
+      cb(null, origensPermitidas.includes(origem));
+    },
+    credentials: true,
+    // PUT entrou com a edição de projeto (PROJ-CRIA-005) e PATCH com
+    // a movimentação de idéia entre colunas (IDEIA-MOV) — sem eles
+    // no allowlist, o preflight do navegador bloqueia a chamada
+    // mesmo com a rota certa do lado do servidor (mesmo problema que
+    // já tinha acontecido com o DELETE de empresa).
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  });
+
+  /* Filtro grosso por IP. O filtro fino, por e-mail, está em
+     rotas/auth.ts — só ele pega ataque distribuído mirando uma
+     conta específica, que é o caso que interessa. */
+  await app.register(rateLimit, {
+    max: 60,
+    timeWindow: '1 minute',
+    allowList: (req) => {
+      if (env.NODE_ENV === 'test') return true;
+
+      /* Arquivo do frontend NÃO é chamada de API.
+         Com SERVIR_FRONTEND=sim esta mesma instância serve o site, e
+         `estaticos` é registrado depois deste plugin — então herda o
+         hook e cada .css/.js/.png consome a cota. board.html sozinho
+         pede 7 arquivos: recarregar a tela algumas vezes enquanto se
+         trabalha esgotava os 60/min e a pessoa se bloqueava sozinha,
+         com "Muitas requisições" no primeiro clique seguinte.
+
+         O limite existe para proteger a API de abuso; folha de estilo
+         não precisa de cota. Mesma allowlist de PERMITIDO, para os
+         dois lugares não divergirem no dia em que um tipo novo entrar. */
+      return PERMITIDO.test((req.url ?? '').split('?')[0] ?? '');
+    },
+    errorResponseBuilder: () => ({
+      campo: null,
+      mensagem: 'Muitas requisições. Aguarde um instante.',
+    }),
+  });
+
+  app.get('/saude', async () => {
+    await db.$queryRaw`SELECT 1`;
+    return { ok: true };
+  });
+
+  await app.register(rotasAuth);
+  await app.register(rotasEmpresas);
+  await app.register(rotasGrafo);
+  await app.register(rotasProjetos);
+  await app.register(rotasIdeias);
+  await app.register(rotasTarefas);
+  await app.register(rotasBoard);
+  await app.register(rotasIa);
+  await app.register(rotasCreditos);
+  await app.register(rotasPesquisa);
+  await app.register(rotasWebhooks);
+
+  /* ------------------------------------------------------------
+     Frontend servido pela própria API
+     ------------------------------------------------------------
+     Em desenvolvimento isso vira um processo só, numa porta só:
+     acaba o segundo terminal, acaba o CORS entre origens e acaba a
+     classe de erro em que o site "cai" porque o outro servidor
+     morreu sem avisar.
+
+     Em produção fica desligado por padrão: o frontend vai para CDN
+     (plano §2), que serve arquivo estático melhor do que qualquer
+     API. Ligue com SERVIR_FRONTEND=sim se optar por publicar tudo
+     junto num único serviço.
+     ------------------------------------------------------------ */
+  if (env.SERVIR_FRONTEND === 'sim') {
+    await app.register(estaticos, {
+      root: RAIZ_SITE,
+      index: false,
+      /* O caminho chega sem query string, mas normalizamos por
+         garantia — ?v=3 não pode virar brecha na allowlist. */
+      allowedPath: (caminho) => PERMITIDO.test(caminho.split('?')[0] ?? ''),
+
+      /* Fora de produção, nada de cache.
+         O padrão (`max-age=0` + ETag) manda o navegador revalidar, e
+         em teoria basta — na prática, um .js editado continuava
+         rodando a versão antiga na aba aberta, e o tempo ia embora
+         atrás de um defeito que já estava corrigido no disco.
+         `no-store` remove a dúvida: em desenvolvimento, o que a tela
+         executa é sempre o que está no arquivo. Em produção o
+         comportamento não muda — lá o cache é desejável. */
+      setHeaders: (resposta) => {
+        if (env.NODE_ENV !== 'production') {
+          resposta.header('Cache-Control', 'no-store, must-revalidate');
+        }
+      },
+    });
+
+    app.get('/', async (_req, resposta) => resposta.redirect('/login.html'));
+  }
+
+  /* Nunca devolver stack para o cliente: mensagem genérica para
+     fora, detalhe no log. */
+  app.setErrorHandler((e, _req, resposta) => {
+    app.log.error(e);
+    if (resposta.sent) return;
+    resposta.code(500).send({ campo: null, mensagem: 'Erro inesperado. Tente novamente.' });
+  });
+
+  return app;
+}
+
+/* Sobe sempre, exceto em teste — os testes importam construirApp()
+   e não querem porta aberta.
+
+   A versão anterior comparava import.meta.url com process.argv[1]
+   para detectar "executado direto". Sob `tsx watch` esses dois
+   valores nem sempre batem, e o processo subia sem nunca escutar —
+   silenciosamente, que é o pior jeito de falhar. */
+if (env.NODE_ENV !== 'test') {
+  /* Antes de abrir a porta: se o client estiver defasado em relação
+     ao schema, dizer isso com o comando que resolve — em vez de
+     deixar a falha aparecer depois como um 500 críptico dentro de
+     uma tela. */
+  avisarSeClientDesatualizado();
+
+  const app = await construirApp();
+  try {
+    await app.listen({ port: env.PORTA, host: '0.0.0.0' });
+    console.log(`API em http://localhost:${env.PORTA}`);
+    console.log(`Origens permitidas: ${origensPermitidas.join(', ')}`);
+    console.log(`Driver de e-mail: ${env.EMAIL_DRIVER}`);
+  } catch (e) {
+    app.log.error(e);
+    process.exit(1);
+  }
+}

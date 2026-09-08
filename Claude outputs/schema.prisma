@@ -1,0 +1,483 @@
+// ============================================================
+// SCHEMA — Autenticação
+// ============================================================
+// Autenticação + o começo do módulo de empresas (22/08/2026):
+// `empresas` e `empresa_membros`, autorizadas para que a listagem
+// possa dizer a verdade sobre quem tem o quê (EMP-LIST-009).
+// Perfil de especialista e créditos continuam fora — a decisão D2
+// (créditos por usuário ou por empresa) segue destravada.
+//
+// Módulo de projetos (24/08/2026): `projetos`, sempre vinculado a
+// uma empresa (PROJ-ISO-001). Catálogo de tipo nasce só com
+// `startup` (PROJ-CRIA-006).
+//
+// Assistente de IA (25/08/2026): `ia_conversas` e `ia_mensagens`.
+// A conversa é por pessoa dentro de cada projeto (decisão A10), e
+// `fontes` guarda a procedência verificada de cada resposta
+// (IA-GARANT-003).
+//
+// Módulo de idéias (25/08/2026): `ideias`, sempre dentro de um
+// projeto (IDEIA-ISO-001). A corrente passa a ter três elos —
+// empresa → projeto → idéia — e toda rota percorre os três antes
+// de tocar em qualquer linha (IDEIA-ISO-004).
+//
+// Ações propostas pelo assistente (26/08/2026): o assistente passa a
+// poder PROPOR criar, editar ou mover uma idéia quando a pessoa pede
+// — mas nunca executa por conta própria (decisão A18,
+// IA-ACAO-001/002). A proposta viaja na própria mensagem
+// (`acao_tipo`/`acao_dados`/`acao_status`), e só vira escrita real no
+// quadro depois de um clique explícito de confirmação, que passa
+// pela MESMA validação de `ideias.ts` — o servidor não confia no que
+// o modelo propôs, confia no que o servidor confere de novo.
+//
+// Regras: Regras_de_negocio/modulos/acesso/login.md
+//         Regras_de_negocio/modulos/empresas/empresas-listagem.md §3
+//         Regras_de_negocio/modulos/projetos/projetos-listagem.md §3
+//         Regras_de_negocio/modulos/ideias/ideias-quadro.md §3
+//         Regras_de_negocio/modulos/ia/ia-assistente-conversa.md §3
+//         Regras_de_negocio/modulos/ia/ia-assistente-conhecimento.md §1.5
+// Plano:  Documentacao/Backend/PLANO_BACKEND_LOGIN.md §4
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MotivoSuspensao {
+  violacao
+  inadimplencia
+}
+
+enum PropositoOtp {
+  login
+  cadastro
+}
+
+enum PapelMembro {
+  proprietario
+  membro
+  especialista
+}
+
+// Catálogo fechado de tipos de projeto — PROJ-CRIA-006/007. Nasce só
+// com `startup`; os demais entram um de cada vez, cada um como uma
+// migração aditiva própria, junto da tela que aquele tipo abre.
+enum TipoProjeto {
+  startup
+}
+
+// Quem escreveu a mensagem. Enum e não booleano: se um dia entrar
+// uma terceira origem (uma nota do sistema, por exemplo), ela nasce
+// nomeada em vez de virar um "não é pessoa".
+enum AutorMensagem {
+  pessoa
+  assistente
+}
+
+// O tipo de ação que o assistente propôs numa resposta (IA-ACAO-002).
+// Fechado de propósito: só os três verbos que a pessoa autorizou —
+// criar, editar, mover. Arquivar/excluir continuam fora do alcance
+// do assistente, propostos ou não (IA-ACAO-001).
+enum TipoAcaoIa {
+  criar_ideia
+  editar_ideia
+  mover_ideia
+}
+
+// O ciclo de vida de uma ação proposta. `pendente` é o único estado
+// em que a confirmação ainda pode agir — depois disso a decisão já
+// foi tomada e não volta atrás por engano de um segundo clique
+// (IA-ACAO-006).
+enum StatusAcaoIa {
+  nenhuma
+  pendente
+  confirmada
+  descartada
+}
+
+// As três colunas do quadro de idéias (IDEIA-QUADRO-001). É enum, e
+// não texto livre, porque as colunas são fixas: o banco precisa
+// recusar um quarto valor em vez de aceitá-lo e quebrar a tela.
+enum StatusIdeia {
+  ideias
+  andamento
+  finalizado
+}
+
+// O ciclo de vida de uma tarefa dentro de uma atividade
+// (ATV-TAR-CONCLUIR-001). Toda tarefa nasce em `pendente` e pode
+// ser reaberta, nunca é uma mão única (ATV-TAR-CONCLUIR-002).
+enum StatusTarefa {
+  pendente
+  concluida
+}
+
+// ------------------------------------------------------------
+// Uma pessoa = uma conta = um e-mail (ACS-CONTA-001).
+// A conta NÃO carrega tipo: as capacidades virão de vínculos com
+// empresas, que ainda não existem neste escopo (ACS-CONTA-002).
+// CPF não vive aqui — sai só no primeiro recebimento do
+// especialista (ACS-CONTA-008, decisão D5).
+// ------------------------------------------------------------
+model Usuario {
+  id              String    @id @default(uuid()) @db.Uuid
+  nome            String
+  email           String    @unique              // sempre minúsculo
+  senhaHash       String    @map("senha_hash")   // argon2id
+  emailVerificado Boolean   @default(false) @map("email_verificado")
+
+  suspensoEm      DateTime?        @map("suspenso_em")
+  suspensaoMotivo MotivoSuspensao? @map("suspensao_motivo")
+
+  // Aceite dos termos: guardar QUANDO e QUAL versão, senão não há
+  // como demonstrar depois o que a pessoa aceitou (CAD-ACEITE-002).
+  termosVersao    String?   @map("termos_versao")
+  termosAceitosEm DateTime? @map("termos_aceitos_em")
+
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+  atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
+
+  sessoes      Sessao[]
+  codigos      CodigoOtp[]
+  dispositivos DispositivoConfiavel[]
+  tentativas   TentativaLogin[]
+  vinculos     EmpresaMembro[]
+  empresasCriadas Empresa[]    @relation("criador")
+  projetosCriados Projeto[]    @relation("criadorProjeto")
+  ideiasCriadas   Ideia[]      @relation("criadorIdeia")
+  conversasIa     IaConversa[]
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// EMPRESA — o contêiner de projetos. Regras em
+// empresas-listagem.md §3.
+//
+// `arquivadoEm` existe por causa da decisão E1: arquivar tira a
+// empresa da listagem de verdade, e não apenas coloca um rótulo
+// nela (EMP-LIST-011).
+// ------------------------------------------------------------
+model Empresa {
+  id          String    @id @default(uuid()) @db.Uuid
+  nome        String
+  // Nome normalizado (minúsculo, sem acento), gravado pelo servidor —
+  // nunca recebido do cliente. É sobre esta coluna que a unicidade de
+  // nome por conta (EMP-CRIA-002) é verificada.
+  //
+  // A restrição em si é um ÍNDICE ÚNICO PARCIAL — único por
+  // (criado_por, nome_busca) somente WHERE arquivado_em IS NULL — e o
+  // Prisma Schema Language não tem sintaxe para isso. Fica só na
+  // migração hand-written, junto de empresa_membros_ativo_unico, que
+  // segue o mesmo padrão.
+  nomeBusca   String    @map("nome_busca")
+  descricao   String?
+  logotipoUrl String?   @map("logotipo_url")
+  fonte       String?   // identidade visual — EMP-LIST-004
+  cor         String?
+
+  criadoPor   String    @map("criado_por") @db.Uuid
+  criador     Usuario   @relation("criador", fields: [criadoPor], references: [id])
+
+  arquivadoEm  DateTime? @map("arquivado_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  membros  EmpresaMembro[]
+  projetos Projeto[]
+
+  @@map("empresas")
+}
+
+// ------------------------------------------------------------
+// PROJETO — vive sempre dentro de uma empresa. `empresaId` é
+// obrigatório e nunca muda depois de criado (PROJ-ISO-001): não
+// existe projeto solto nem projeto que troca de empresa.
+//
+// Sem `nome`/`descricao` próprios (decisão P1, projetos-listagem.md
+// §4) — o rótulo exibido vem do catálogo de `tipo`, resolvido pelo
+// servidor. Ver projetos-criacao.md §3.
+// ------------------------------------------------------------
+model Projeto {
+  id        String      @id @default(uuid()) @db.Uuid
+  empresaId String      @map("empresa_id") @db.Uuid
+  tipo      TipoProjeto
+
+  criadoPor String    @map("criado_por") @db.Uuid
+  criador   Usuario   @relation("criadorProjeto", fields: [criadoPor], references: [id])
+
+  arquivadoEm  DateTime? @map("arquivado_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ideias  Ideia[]
+  conversasIa IaConversa[]
+
+  // Toda listagem filtra por empresa + não-arquivado (PROJ-LIST-001).
+  @@index([empresaId, arquivadoEm])
+  @@map("projetos")
+}
+
+// ------------------------------------------------------------
+// IDÉIA — vive sempre dentro de um projeto. `projetoId` é
+// obrigatório e imutável (IDEIA-ISO-001).
+//
+// Diferente de `empresas`, NÃO há unicidade de título: duas idéias
+// do mesmo projeto podem se chamar igual (IDEIA-CRIA-007, decisão
+// I10), porque repetir é legítimo em brainstorm. A consequência
+// está registrada em IDEIA-MOV-015 e vale para todo o código:
+// nada identifica uma idéia por título — só por id.
+//
+// `importancia` aceita 0 = "sem prioridade definida" (IDEIA-CRIA-002).
+// ------------------------------------------------------------
+model Ideia {
+  id        String      @id @default(uuid()) @db.Uuid
+  projetoId String      @map("projeto_id") @db.Uuid
+
+  titulo      String
+  descricao   String
+  importancia Int         @default(0)
+  status      StatusIdeia @default(ideias)
+
+  criadoPor String    @map("criado_por") @db.Uuid
+  criador   Usuario   @relation("criadorIdeia", fields: [criadoPor], references: [id])
+
+  arquivadoEm  DateTime? @map("arquivado_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  projeto Projeto @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  tarefas Tarefa[]
+
+  // Toda listagem filtra por projeto + não-arquivado (IDEIA-QUADRO-004).
+  @@index([projetoId, arquivadoEm])
+  @@map("ideias")
+}
+
+// ------------------------------------------------------------
+// TAREFA — item de trabalho dentro de uma atividade. Vive sempre
+// dentro de uma idéia (ATV-TAR-CRIA-001 em atividade-lista.md).
+// `ideiaId` é obrigatório e imutável — toda tarefa é vinculada a
+// exatamente uma idéia.
+//
+// `ordem` é um inteiro simples, renumerado a cada reordenação.
+// A lista é pequena o bastante para isso ser barato — nenhuma
+// biblioteca nova (ATV-TAR-ORDEM-001).
+//
+// `status` define o ciclo de vida: `pendente` ao nascer
+// (ATV-TAR-CRIA-003), pode voltar a `pendente` da conclusão
+// (ATV-TAR-CONCLUIR-002), mas concluir NÃO mexe na idéia
+// (ATV-TAR-CONCLUIR-004).
+// ------------------------------------------------------------
+model Tarefa {
+  id        String      @id @default(uuid()) @db.Uuid
+  ideiaId   String      @map("ideia_id") @db.Uuid
+
+  titulo    String
+  descricao String
+  status    StatusTarefa @default(pendente)
+  ordem     Int         @default(0)
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  ideia Ideia @relation(fields: [ideiaId], references: [id], onDelete: Cascade)
+
+  // Listagem de tarefas filtra por ideia e ordena por ordem
+  @@index([ideiaId, ordem])
+  @@map("tarefas")
+}
+
+// ------------------------------------------------------------
+// VÍNCULO — é ele, e não um campo em `users`, que define o que a
+// pessoa pode fazer (ACS-CONTA-002, decisão D1). A mesma conta é
+// proprietária de uma empresa e especialista contratada em outra.
+//
+// `revogadoEm` em vez de DELETE: o histórico de quem teve acesso a
+// quê é a única forma de responder "quem viu esse projeto?" depois.
+// `expiraEm` cobre contrato com prazo.
+// ------------------------------------------------------------
+model EmpresaMembro {
+  id        String      @id @default(uuid()) @db.Uuid
+  empresaId String      @map("empresa_id") @db.Uuid
+  usuarioId String      @map("user_id") @db.Uuid
+  papel     PapelMembro
+
+  convidadoPor String? @map("convidado_por") @db.Uuid
+  expiraEm     DateTime? @map("expira_em")
+
+  criadoEm   DateTime  @default(now()) @map("criado_em")
+  revogadoEm DateTime? @map("revogado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revogadoEm])
+  @@index([empresaId, revogadoEm])
+  @@map("empresa_membros")
+}
+
+// ------------------------------------------------------------
+// Refresh tokens ativos. Guardamos só o hash: se o banco vazar,
+// os tokens não são utilizáveis.
+// "Lembrar de mim" controla o tempo de vida (ACS-LOGIN-008).
+// ------------------------------------------------------------
+model Sessao {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuarioId        String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  lembrarDeMim     Boolean   @default(false) @map("lembrar_de_mim")
+  expiraEm         DateTime  @map("expira_em")
+  criadoEm         DateTime  @default(now()) @map("criado_em")
+  revogadoEm       DateTime? @map("revogado_em")
+
+  ip               String?
+  agente           String?   @map("user_agent")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([expiraEm])
+  @@map("sessions")
+}
+
+// ------------------------------------------------------------
+// Códigos de verificação. O código NUNCA é gravado em texto puro
+// (plano §4). Usamos HMAC com um segredo do servidor, não hash
+// simples: seis dígitos são só um milhão de combinações, e um
+// hash rápido cairia em segundos se o banco vazasse. Sem o
+// segredo, que não vive no banco, o ataque offline não anda.
+// ------------------------------------------------------------
+model CodigoOtp {
+  id         String       @id @default(uuid()) @db.Uuid
+  usuarioId  String       @map("user_id") @db.Uuid
+  proposito  PropositoOtp
+  codigoHash String       @map("codigo_hash")
+  expiraEm   DateTime     @map("expira_em")
+  tentativas Int          @default(0)
+  usadoEm    DateTime?    @map("usado_em")
+  criadoEm   DateTime     @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, proposito])
+  @@index([expiraEm])
+  @@map("otp_codes")
+}
+
+// ------------------------------------------------------------
+// Dispositivos reconhecidos: é o que dispensa o código a cada
+// login (ACS-LOGIN-002 e 011). O token é aleatório e guardado
+// hasheado; o cookie carrega o valor cru.
+// ------------------------------------------------------------
+model DispositivoConfiavel {
+  id          String    @id @default(uuid()) @db.Uuid
+  usuarioId   String    @map("user_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  apelido     String?
+  expiraEm    DateTime  @map("expira_em")
+  ultimoUsoEm DateTime  @default(now()) @map("ultimo_uso_em")
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("dispositivos_confiaveis")
+}
+
+// ------------------------------------------------------------
+// Auditoria de tentativas. Alimenta o limite por e-mail que
+// produz o 429 e o alerta "Muitas tentativas" (ACS-LOGIN-005).
+// usuarioId é nulo quando a tentativa usou e-mail inexistente —
+// é justamente aí que mora o ataque de enumeração.
+// ------------------------------------------------------------
+model TentativaLogin {
+  id           String   @id @default(uuid()) @db.Uuid
+  usuarioId    String?  @map("user_id") @db.Uuid
+  emailTentado String   @map("email_tentado")
+  sucesso      Boolean
+  ip           String?
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([emailTentado, criadoEm])
+  @@index([ip, criadoEm])
+  @@map("login_attempts")
+}
+
+
+// ------------------------------------------------------------
+// CONVERSA COM O ASSISTENTE — uma por pessoa, por projeto
+// (decisão A10, IA-CONV-001).
+//
+// Privada: ninguém lê a conversa de outra pessoa, nem o proprietário
+// da empresa (IA-CONV-003). A conversa carrega o raciocínio em
+// construção de quem pergunta, e o especialista é alguém de fora.
+// ------------------------------------------------------------
+model IaConversa {
+  id        String @id @default(uuid()) @db.Uuid
+  projetoId String @map("projeto_id") @db.Uuid
+  usuarioId String @map("usuario_id") @db.Uuid
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  projeto  Projeto      @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  usuario  Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagens IaMensagem[]
+
+  @@unique([projetoId, usuarioId])
+  @@map("ia_conversas")
+}
+
+// ------------------------------------------------------------
+// MENSAGEM — pergunta da pessoa ou resposta do assistente.
+//
+// `fontes` guarda a procedência COMO FOI VERIFICADA no momento da
+// resposta (IA-GARANT-003). Se a idéia sair de `Finalizado` depois,
+// a mensagem antiga continua registrando o que valia quando foi
+// dita: reescrever o passado apagaria a única evidência de que a
+// regra chegou a ser aplicada.
+// ------------------------------------------------------------
+model IaMensagem {
+  id         String        @id @default(uuid()) @db.Uuid
+  conversaId String        @map("conversa_id") @db.Uuid
+  autor      AutorMensagem
+  texto      String
+
+  // [{ ideiaId, categoria: 'validada' | 'hipotese' }] — só em
+  // mensagens do assistente.
+  fontes Json?
+
+  // true quando a resposta saiu sem nenhuma idéia de `Finalizado`
+  // por trás (IA-VAZIO-001). Guardado, e não recalculado depois,
+  // pelo mesmo motivo de `fontes`.
+  semVerdadeValidada Boolean @default(false) @map("sem_verdade_validada")
+
+  // ---------- Ação proposta (IA-ACAO) — só em mensagens do
+  // assistente, e só quando a pessoa pediu explicitamente para
+  // criar, editar ou mover uma idéia (IA-ACAO-003). `acaoDados` é o
+  // que o MODELO propôs — dado não confiável até a confirmação
+  // repetir a mesma validação de `ideias.ts` (IA-ACAO-005).
+  acaoTipo    TipoAcaoIa?  @map("acao_tipo")
+  acaoDados   Json?        @map("acao_dados")
+  acaoStatus  StatusAcaoIa @default(nenhuma) @map("acao_status")
+  // Preenchido só depois de confirmada: a idéia criada, ou a idéia
+  // editada/movida. É o que a tela usa para atualizar o quadro sem
+  // recarregar tudo.
+  acaoIdeiaId String?      @map("acao_ideia_id") @db.Uuid
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  conversa IaConversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+
+  @@index([conversaId, criadoEm])
+  @@map("ia_mensagens")
+}

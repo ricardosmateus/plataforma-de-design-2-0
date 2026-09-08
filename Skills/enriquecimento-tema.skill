@@ -1,0 +1,260 @@
+# Skill — Enriquecimento de Tema
+
+Camada aditiva por cima dos recortes que
+`Skills/categorizacao-taxonomia.skill` mantém. Plano completo, com as
+decisões e o que ainda falta: `Documentacao/enriquecimento-tema.md`.
+
+Escrita depois do código, documentando o que existe de fato. Fase 3
+(lacunas) está planejada e **não** construída — não há arquivo,
+prompt nem coluna em uso para ela.
+
+## Objetivo
+
+A página de tema responde "o que foi escrito sobre isto". Faltavam
+duas perguntas, e cada uma virou uma fase:
+
+1. **Em que ordem faz sentido ler isto?** → **leitura guiada**: os
+   mesmos recortes reagrupados por assunto, com título de seção
+   escrito pelo modelo.
+2. **Que números este tema cita?** → **gráficos**: barra, linha ou
+   pizza montados a partir de valores que estão literalmente no
+   texto dos recortes.
+
+## O que não muda, nunca
+
+- **A leitura crua continua existindo e continua grátis.**
+  `GET /empresas/:id/temas/:categoria` não chama o modelo, não custa
+  crédito e não espera nada. As duas fases são aditivas: se nunca
+  rodaram ou falharam, a tela mostra o que sempre mostrou.
+- **O modelo rotula, não escreve.** Ele devolve título de seção,
+  título de gráfico e rótulo de ponto — mais números que apontam
+  para recortes que já existem. O texto de cada trecho é montado no
+  servidor a partir do banco, a cada requisição, nunca copiado da
+  resposta.
+- **Nenhum recorte some.** Ver `OUTROS_TRECHOS` abaixo.
+
+## Momento de execução
+
+Dentro de `segmentarIdeiaEmSegundoPlano` (`api/src/ia/recortes.ts`),
+depois da transação que grava os recortes com sucesso, para cada
+categoria que a idéia toca:
+
+```ts
+void enriquecerGraficosEmSegundoPlano(empresaId, categoria, ideia.criadoPor);
+void enriquecerLeituraEmSegundoPlano(empresaId, categoria, ideia.criadoPor);
+```
+
+Sem `await`: o disparo não pode atrasar a resposta que gravou os
+recortes. As duas rodam soltas e não sabem uma da outra.
+
+O alvo é `(empresa, categoria)` — todos os recortes daquela empresa
+naquela categoria, de qualquer idéia. "A leitura de Mercado" é o tema
+inteiro, não o que uma idéia isolada disse.
+
+### Fingerprint, não flag
+
+```ts
+sha256(recortes.map(r => r.id).join(','))
+```
+
+`recortes.ts` recria os recortes por inteiro (`deleteMany` +
+`createMany`) a cada segmentação, então o conjunto de ids muda sempre
+que há algo novo para reler — e não muda quando uma idéia sem relação
+nenhuma finaliza. Igual ao gravado, não reprocessa.
+
+Cada fase tem o **seu** fingerprint (`fingerprintLeitura`,
+`fingerprintGraficos`): gráficos pode estar pendente enquanto leitura
+está `ok`, e o contrário.
+
+## Modelo de dados — `SinteseTema`
+
+Uma linha por `(empresaId, categoria)`, `@@unique` composta, gravada
+por `upsert`. Colunas por fase: `fingerprint*`, conteúdo (`Json?`) e
+`status*`.
+
+`status` tem três valores e os três decidem coisas diferentes:
+
+| valor | quer dizer |
+|---|---|
+| `pendente` | ainda não rodou |
+| `ok` | rodou (inclusive quando o resultado é lista vazia) |
+| `falhou` | rodou, não deu certo, e não havia nada gravado antes |
+
+`falhou` nunca passa por cima de conteúdo bom: se já existia leitura
+ou gráfico, o erro preserva o que estava lá e o status continua `ok`.
+`sem-ia` não vira `falhou` — a fase estar desligada não é uma
+tentativa que falhou. E o fingerprint não é gravado em erro nenhum,
+então a próxima mudança nos recortes tenta de novo.
+
+## Fase 1 — Leitura guiada
+
+**Construída.** Modelo: `IA_MODELO` (Haiku), `max_tokens: 2048`,
+`system` em cache `ephemeral`.
+
+### Contrato
+
+Os recortes entram numerados (`[1]`, `[2]`, …). A resposta só tem
+número e título:
+
+```json
+{"secoes":[
+  {"titulo":"Tamanho e crescimento do mercado","recortes":[3,1,7]},
+  {"titulo":"Concorrência direta","recortes":[2,5]}
+]}
+```
+
+### Regras que `interpretar()` faz valer
+
+`api/src/ia/enriquecimento-leitura.ts` — puro, sem `import`, testável
+sem rede nem banco.
+
+- número que não existe entre os recortes do tema: **descarta o
+  número**, não a seção;
+- número repetido em duas seções: fica na **primeira** que citou;
+- seção que sobra sem nenhum recorte válido: some (título solto sem
+  nada abaixo não é seção);
+- título passa de `TETO_TITULO` (80): cortado;
+- **recorte que o modelo esqueceu**: cai numa seção final
+  `OUTROS_TRECHOS` (`"Outros trechos"`), gerada aqui e não pelo
+  modelo — se fosse um título que o modelo tem liberdade de propor, a
+  garantia de que nada some ficaria refém da educação da resposta;
+- resposta ilegível: `null` (preserva a leitura anterior). Lista
+  vazia e `null` decidem coisas opostas.
+
+## Fase 2 — Gráficos
+
+**Construída.** Modelo: `IA_MODELO_SONNET`, `max_tokens: 8192`.
+
+Sonnet e não Haiku porque achar o número certo no contexto certo
+("cresceu 20%" pode ser do mercado inteiro ou do concorrente citado
+no parágrafo ao lado) é outra tarefa que rotular blocos.
+
+**Sem `IA_MODELO_SONNET` no ambiente a fase inteira devolve `sem-ia`
+e nenhum gráfico é gerado** — silenciosamente, só um aviso no log.
+
+### Contrato
+
+```json
+{"graficos":[
+  {"tipo":"barra","titulo":"Tamanho do mercado por segmento",
+   "eixo_x":"Segmento","eixo_y":"R$ milhões",
+   "dados":[
+     {"rotulo":"B2C","valor":120,"origem":4},
+     {"rotulo":"B2B","valor":45,"origem":4}
+   ]}
+]}
+```
+
+`origem` é obrigatória em **cada ponto**, não no gráfico — pontos de
+um mesmo gráfico vêm de recortes diferentes (dois concorrentes
+citados em tarefas separadas). `interpretar()` troca o número pelo
+`recorteId` na hora de gravar.
+
+### Regras que `interpretar()` faz valer
+
+`api/src/ia/enriquecimento-graficos-leitura.ts`, mesmo desenho puro:
+
+- `tipo` fora de `barra|linha|pizza`, ou título vazio: **descarta o
+  gráfico**;
+- `rotulo` vazio, `valor` que não é número finito, `origem` que não é
+  número ou não existe entre os recortes: **descarta o ponto**;
+- gráfico com menos de **2** pontos depois da filtragem: descarta o
+  gráfico (um ponto não é gráfico);
+- nenhum gráfico válido: `[]`. **Estado normal, não erro** — a maior
+  parte dos temas não tem número comparável, e Personas ou UX
+  raramente terão.
+
+## API — `GET /empresas/:id/temas/:categoria/sintese`
+
+`api/src/rotas/grafo.ts`, ao lado de `/temas/:categoria` e separada
+dela de propósito.
+
+Devolve `categoria`, `status_leitura`, `status_graficos`, `secoes`,
+`graficos` e `recortes` — o mapa `recorteId → {texto, tarefa, idéia,
+projeto}` que dá texto às seções e destino aos pontos dos gráficos.
+
+Duas coisas acontecem **na leitura**, não na gravação, e são a mesma:
+
+- **o mapa resolve os ids das seções E as origens dos gráficos.**
+  Resolver só os das seções deixaria sem destino todo ponto cuja
+  origem não foi citada em nenhuma seção — e, num tema com gráfico e
+  sem leitura guiada, deixaria todos sem destino;
+- **id órfão é filtrado dos dois lados.** Entre a síntese ter sido
+  gerada e esta chamada, os recortes podem ter sido recriados com ids
+  novos. Seção perde o trecho; gráfico perde o ponto, e um gráfico
+  que fica com menos de 2 pontos deixa de ser devolvido — a mesma
+  regra do interpretador, aplicada de novo porque lá ela vale para o
+  que o modelo acabou de responder e aqui para o que envelheceu.
+
+## Frontend
+
+`tema.html` + `js/tema.js` + `js/graficos.js` (carregado antes de
+`tema.js`).
+
+`js/tema.js` chama `/sintese` uma vez, em paralelo com
+`/temas/:categoria`, e distribui o resultado. Três containers irmãos,
+cada um com sua condição em `aplicarModo()`:
+
+| container | aparece quando |
+|---|---|
+| `#temaLeitura` | `status_leitura === 'ok'` e há seções |
+| `#temaBlocos` | não há leitura guiada (a lista por atividade de origem) |
+| `#temaGraficos` | `status_graficos === 'ok'` e há gráficos |
+
+Os gráficos ficam **fora** de `#temaLeitura` porque as fases são
+independentes: dentro dele, um tema com gráfico e sem leitura
+desenharia o gráfico num container escondido.
+
+### `js/graficos.js`
+
+SVG gerado no cliente, sem biblioteca — mesma razão de `grafo.js`
+(canvas próprio, sem d3). Só desenha; quem sabe para onde cada ponto
+leva é `tema.js`, que tem o mapa de recortes.
+
+- **barra**: base no **zero**, não no menor valor. Escalar de min a
+  max faria a diferença entre 98 e 100 parecer a diferença entre nada
+  e tudo;
+- **linha**: escala min–max com folga, porque linha é sobre a forma da
+  variação e ancorar no zero achataria a curva;
+- **pizza**: legenda à direita com rótulo, valor e porcentagem — a
+  fatia sozinha não deixa ninguém comparar 22% com 26%. Ignora
+  `eixo_x`/`eixo_y`.
+
+### Rastreabilidade e acessibilidade
+
+Cada gráfico sai com a lista das origens dos seus dados logo abaixo —
+**links de verdade**, um por recorte citado, nomeados pela tarefa de
+origem. Clicar na barra é atalho de mouse; o link é a porta, e é o
+único caminho que funciona sem mouse.
+
+O SVG é `role="img"` com `aria-label` que enumera os pares
+rótulo/valor: quem não vê o desenho recebe os dados, não a legenda
+inútil "gráfico de barras".
+
+## Custo
+
+Tipo `sintese_tema` no enum `TipoConsumoIa`, separado de
+`classificacao` e `assistente` para "quanto custou enriquecer os
+temas" ter resposta própria.
+
+Padrão de sempre: `reservar` pelo teto antes da chamada, `liberar` a
+reserva depois, `consumir` o custo real só quando o motivo é `ok`.
+`SaldoInsuficiente` não é erro — o tema simplesmente não é
+enriquecido, e a leitura crua continua de pé.
+
+## Testes
+
+- `api/testes/enriquecimento-leitura.test.ts`
+- `api/testes/enriquecimento-graficos-leitura.test.ts`
+
+Só as funções puras. É onde estão as decisões, e elas rodam sem rede
+nem banco.
+
+## Pontos-chave
+
+- O modelo escreve **títulos e rótulos**. Texto e número vêm do banco.
+- Cada fase tem status e fingerprint próprios e falha sozinha.
+- Erro **nunca** apaga o que já existia.
+- `[]` é resultado normal em gráficos, não falha.
+- Filtragem de id órfão acontece na gravação **e** na leitura.
+- Sem `IA_MODELO_SONNET`, a Fase 2 não roda.

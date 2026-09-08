@@ -1,0 +1,3387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Style guide · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- A fonte da verdade. Esta página não define nenhum token próprio:
+     tudo que aparece aqui é lido de css/tokens.css em tempo real, então
+     o guia não tem como mentir sobre o sistema. -->
+<link rel="stylesheet" href="css/tokens.css?v=4">
+<link rel="stylesheet" href="css/components.css?v=4">
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--surface-0);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospace}
+
+:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ============================================================
+   SHELL — barra de navegação fixa + conteúdo
+   ============================================================ */
+.sg{display:flex;align-items:flex-start;min-height:100vh}
+
+.sg-nav{
+  flex:0 0 248px;
+  position:sticky;top:0;height:100vh;
+  display:flex;flex-direction:column;
+  padding:32px 20px;
+  background:var(--surface-1);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+}
+.sg-brand{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.sg-logomark{
+  width:40px;height:40px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+}
+.sg-logomark svg{width:26px;height:auto;display:block;fill:var(--fill-primary)}
+.sg-brand-text{display:flex;flex-direction:column;min-width:0}
+.sg-brand-title{font-size:14px;line-height:20px;font-weight:700}
+.sg-brand-sub{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+.sg-nav-group{margin-top:28px}
+.sg-nav-label{
+  display:block;
+  font-size:11px;line-height:16px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text-muted);
+  padding:0 12px 8px;
+}
+.sg-nav-link{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 12px;border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.sg-nav-link:hover{background:var(--surface-0);color:var(--text-primary)}
+.sg-nav-link.is-active{background:var(--sky-100);color:var(--text-primary);font-weight:600}
+.sg-nav-link[aria-disabled="true"]{color:var(--text-muted);cursor:default}
+.sg-nav-link[aria-disabled="true"]:hover{background:none;color:var(--text-muted)}
+
+.sg-chip{
+  flex-shrink:0;
+  padding:1px 6px;border-radius:999px;
+  font-size:10px;line-height:16px;font-weight:600;
+  background:var(--surface-0);color:var(--text-muted);
+  border:1px solid var(--border);
+}
+.sg-chip--now{background:var(--bg-success);color:var(--text-success);border-color:transparent}
+
+.sg-main{flex:1;min-width:0;padding:48px 40px 96px;max-width:1180px}
+
+/* ============================================================
+   CABEÇALHO E SEÇÕES
+   ============================================================ */
+.sg-head{margin-bottom:12px}
+.sg-eyebrow{
+  font-size:11px;line-height:16px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text-accent);
+}
+.sg-title{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-.02em;margin-top:8px}
+.sg-lede{font-size:16px;line-height:24px;color:var(--text-secondary);max-width:68ch;margin-top:12px}
+
+.sg-section{padding-top:64px;scroll-margin-top:24px}
+.sg-section-title{font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.01em}
+.sg-section-desc{font-size:15px;line-height:24px;color:var(--text-secondary);max-width:68ch;margin-top:8px}
+.sg-rule{height:1px;background:var(--border);margin:20px 0 28px}
+
+.sg-sub{font-size:18px;line-height:28px;font-weight:600;margin:36px 0 4px}
+.sg-sub-desc{font-size:14px;line-height:22px;color:var(--text-secondary);max-width:68ch;margin-bottom:16px}
+
+.sg-card{
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:24px;
+}
+
+/* Aviso — usado para registrar divergências encontradas */
+.sg-note{
+  display:flex;gap:12px;
+  padding:16px;margin-top:16px;
+  border-radius:var(--radius);
+  background:var(--bg-warning);
+  border:1px solid var(--border);
+}
+.sg-note--info{background:var(--sky-100)}
+.sg-note-icon{flex-shrink:0;width:20px;height:20px;color:var(--text-warning)}
+.sg-note--info .sg-note-icon{color:var(--text-accent)}
+.sg-note-icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sg-note-body{font-size:13px;line-height:20px;color:var(--text-primary);min-width:0}
+.sg-note-body strong{font-weight:600}
+.sg-note-body code{
+  font-size:12px;padding:1px 5px;border-radius:4px;
+  background:var(--bg-on-primary);
+}
+
+/* ============================================================
+   AMOSTRAS DE COR
+   ============================================================ */
+.sg-ramp{margin-bottom:28px}
+.sg-ramp-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.sg-ramp-name{font-size:14px;line-height:20px;font-weight:600}
+.sg-ramp-desc{font-size:13px;line-height:20px;color:var(--text-secondary)}
+
+.sg-swatches{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(148px,1fr));
+  gap:12px;
+}
+.sg-swatch{
+  display:flex;flex-direction:column;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--surface-1);
+  overflow:hidden;
+  text-align:left;
+  transition:box-shadow var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+}
+.sg-swatch:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.sg-swatch-chip{
+  height:64px;
+  /* xadrez: revela a transparência dos tokens em rgba */
+  background-image:linear-gradient(45deg,var(--neutral-200) 25%,transparent 25%),
+                   linear-gradient(-45deg,var(--neutral-200) 25%,transparent 25%),
+                   linear-gradient(45deg,transparent 75%,var(--neutral-200) 75%),
+                   linear-gradient(-45deg,transparent 75%,var(--neutral-200) 75%);
+  background-size:12px 12px;
+  background-position:0 0,0 6px,6px -6px,-6px 0;
+  position:relative;
+}
+.sg-swatch-chip::after{content:"";position:absolute;inset:0;background:var(--amostra)}
+.sg-swatch-meta{padding:10px 12px;border-top:1px solid var(--border)}
+.sg-swatch-token{font-size:12px;line-height:18px;font-weight:600;word-break:break-all}
+.sg-swatch-value{font-size:11px;line-height:16px;color:var(--text-secondary);margin-top:2px}
+
+/* ---- Cartão de role semântica ---- */
+.sg-roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:16px}
+.sg-role{
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  overflow:hidden;
+}
+.sg-role-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;
+}
+.sg-role-name{font-size:15px;line-height:22px;font-weight:600}
+.sg-role-use{font-size:12px;line-height:18px;color:var(--text-secondary);margin-top:1px}
+.sg-role-demo{
+  flex-shrink:0;
+  padding:7px 14px;border-radius:var(--radius);
+  font-size:13px;line-height:20px;font-weight:600;
+}
+.sg-role-rows{border-top:1px solid var(--border)}
+.sg-role-row{
+  display:flex;align-items:center;gap:10px;
+  width:100%;padding:8px 16px;
+  border-top:1px solid var(--border);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.sg-role-row:first-child{border-top:none}
+.sg-role-row:hover{background:var(--surface-0)}
+.sg-role-dot{
+  width:22px;height:22px;flex-shrink:0;
+  border-radius:6px;
+  border:1px solid var(--border-strong);
+  background:var(--amostra);
+}
+.sg-role-token{flex:1;min-width:0;font-size:12px;line-height:18px;font-weight:500}
+.sg-role-val{font-size:11px;line-height:16px;color:var(--text-muted);white-space:nowrap}
+
+/* ---- Selo de contraste ---- */
+.sg-wcag{
+  flex-shrink:0;
+  display:inline-flex;align-items:center;gap:4px;
+  padding:1px 7px;border-radius:999px;
+  font-size:11px;line-height:16px;font-weight:600;
+}
+.sg-wcag--aaa{background:var(--bg-success);color:var(--text-success)}
+.sg-wcag--aa{background:var(--sky-100);color:var(--blue-700)}
+.sg-wcag--aa18{background:var(--bg-warning);color:var(--text-warning)}
+.sg-wcag--fail{background:var(--bg-danger);color:var(--text-danger)}
+
+.sg-contrastes{display:flex;flex-direction:column;gap:2px}
+.sg-contraste{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+}
+.sg-contraste-amostra{
+  flex-shrink:0;min-width:132px;
+  padding:6px 12px;border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:600;
+  text-align:center;
+}
+.sg-contraste-desc{flex:1;min-width:0;font-size:13px;line-height:20px;color:var(--text-secondary)}
+.sg-contraste-desc b{color:var(--text-primary);font-weight:600}
+.sg-ratio{font-size:13px;line-height:20px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   TIPOGRAFIA
+   ============================================================ */
+.sg-type-row{
+  display:flex;align-items:baseline;gap:24px;
+  padding:18px 0;
+  border-top:1px solid var(--border);
+}
+.sg-type-row:first-child{border-top:none}
+.sg-type-specimen{flex:1;min-width:0;color:var(--text-primary)}
+.sg-type-meta{
+  flex:0 0 236px;
+  display:flex;flex-direction:column;gap:2px;
+  font-size:12px;line-height:18px;color:var(--text-secondary);
+}
+.sg-type-role{font-size:13px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.sg-type-specs{font-variant-numeric:tabular-nums}
+.sg-type-uso{color:var(--text-muted)}
+.sg-type-token{
+  align-self:flex-start;
+  padding:1px 6px;border-radius:4px;
+  font-size:11px;line-height:16px;font-weight:600;
+  background:var(--sky-100);color:var(--blue-700);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.sg-type-token:hover{background:var(--sky-200)}
+
+/* ---- Pesos ---- */
+.sg-pesos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.sg-peso{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:14px 16px;
+  border:1px solid var(--border);border-radius:var(--radius-lg);
+  background:var(--surface-1);text-align:left;
+  transition:box-shadow var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+}
+.sg-peso:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.sg-peso-amostra{font-size:28px;line-height:36px;letter-spacing:-.02em}
+.sg-peso-token{font-size:12px;line-height:18px;font-weight:600;margin-top:4px}
+.sg-peso-val{font-size:11px;line-height:16px;color:var(--text-secondary)}
+.sg-peso-uso{font-size:12px;line-height:18px;color:var(--text-muted);margin-top:4px}
+
+/* ============================================================
+   ELEVAÇÃO
+   ============================================================ */
+.sg-shadows{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:24px}
+.sg-shadow{
+  padding:28px 20px;
+  border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  text-align:center;
+}
+.sg-shadow-token{font-size:13px;line-height:20px;font-weight:600}
+.sg-shadow-uso{font-size:12px;line-height:18px;color:var(--text-secondary);margin-top:4px}
+
+/* ============================================================
+   EFEITOS
+   ============================================================ */
+.sg-efeitos{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+.sg-curva{display:flex;align-items:center;gap:16px}
+.sg-curva svg{
+  width:96px;height:96px;flex-shrink:0;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-0);
+}
+.sg-curva-path{fill:none;stroke:var(--fill-accent);stroke-width:2.5;stroke-linecap:round}
+.sg-curva-guia{stroke:var(--border-strong);stroke-width:1;stroke-dasharray:3 3}
+.sg-curva-info{min-width:0}
+.sg-curva-nome{font-size:13px;line-height:20px;font-weight:600}
+.sg-curva-val{font-size:11px;line-height:16px;color:var(--text-secondary);margin-top:2px;word-break:break-all}
+.sg-curva-uso{font-size:12px;line-height:18px;color:var(--text-muted);margin-top:6px}
+
+/* Pista da demonstração de duração */
+.sg-pista{
+  position:relative;height:36px;margin-top:12px;
+  border-radius:999px;background:var(--surface-0);
+  border:1px solid var(--border);
+}
+.sg-bolinha{
+  position:absolute;top:5px;left:5px;
+  width:24px;height:24px;border-radius:50%;
+  background:var(--fill-accent);
+  box-shadow:var(--shadow-xs);
+}
+.sg-pista.is-fim .sg-bolinha{left:calc(100% - 29px)}
+.sg-dur-fast .sg-bolinha{transition:left var(--dur-fast) var(--ease-out)}
+.sg-dur-base .sg-bolinha{transition:left var(--dur-base) var(--ease-out)}
+.sg-dur-slow .sg-bolinha{transition:left var(--dur-slow) var(--ease-out)}
+
+.sg-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 14px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.sg-btn:hover{background:var(--surface-0)}
+.sg-btn--accent{background:var(--fill-accent);color:var(--text-on-accent);border-color:transparent}
+.sg-btn--accent:hover{background:var(--fill-accent-hover)}
+
+/* Demonstração de sobreposição */
+.sg-overlay-demo{
+  position:relative;height:132px;overflow:hidden;
+  border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--fill-primary);
+  display:grid;place-items:center;
+}
+.sg-overlay-fundo{
+  font-size:14px;line-height:20px;font-weight:600;
+  color:var(--text-on-primary);padding:0 16px;text-align:center;
+}
+.sg-overlay-veu{
+  position:absolute;inset:0;
+  background:var(--overlay);backdrop-filter:blur(8px);
+  display:grid;place-items:center;
+  opacity:0;transition:opacity var(--dur-base) var(--ease-out);
+}
+.sg-overlay-demo:hover .sg-overlay-veu,
+.sg-overlay-demo:focus-within .sg-overlay-veu{opacity:1}
+.sg-overlay-cartao{
+  padding:14px 18px;border-radius:var(--radius);
+  background:var(--surface-1);box-shadow:var(--shadow-modal);
+  font-size:13px;line-height:20px;font-weight:600;
+}
+
+/* ============================================================
+   LAYOUT E GRID
+   ============================================================ */
+.sg-shell{
+  display:flex;gap:8px;height:210px;
+  padding:8px;border-radius:var(--radius);
+  background:var(--surface-0);border:1px solid var(--border);
+}
+.sg-shell-parte{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border-radius:6px;text-align:center;padding:8px;
+  font-size:12px;line-height:18px;font-weight:600;
+}
+.sg-shell-rail{flex:0 0 56px;background:var(--fill-primary);color:var(--text-on-primary)}
+.sg-shell-painel{
+  flex:1;min-width:0;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+}
+.sg-shell-assist{flex:0 0 92px;background:var(--fill-primary);color:var(--text-on-primary)}
+.sg-shell-dim{font-size:11px;line-height:16px;font-weight:500;opacity:.72}
+
+.sg-escala{display:flex;flex-direction:column;gap:6px}
+.sg-escala-linha{display:flex;align-items:center;gap:12px}
+.sg-escala-valor{
+  flex:0 0 52px;text-align:right;
+  font-size:12px;line-height:18px;font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+.sg-escala-barra{height:16px;border-radius:3px;background:var(--fill-accent);flex-shrink:0}
+.sg-escala-uso{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+.sg-raios{display:flex;flex-wrap:wrap;gap:16px}
+.sg-raio{
+  width:112px;height:88px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:var(--surface-1);
+  border:1px solid var(--border-strong);
+  font-size:12px;line-height:18px;font-weight:600;
+}
+.sg-raio-val{font-size:11px;line-height:16px;font-weight:500;color:var(--text-secondary)}
+
+.sg-link-inline{color:var(--text-accent);text-decoration:underline;text-underline-offset:2px}
+
+/* ============================================================
+   ÍCONES
+   ============================================================ */
+.sg-icons{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+  gap:12px;
+}
+.sg-icon{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:16px 8px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  text-align:center;
+  transition:box-shadow var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+}
+.sg-icon:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.sg-icon svg{
+  width:24px;height:24px;
+  stroke:var(--text-primary);fill:none;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.sg-icon-nome{font-size:12px;line-height:18px;font-weight:600;word-break:break-all}
+.sg-icon-origem{font-size:10px;line-height:14px;color:var(--text-muted)}
+
+/* ============================================================
+   COMPONENTES — painéis fora do scroll
+   Cada .sg-view é uma "página" à parte: some do fluxo dos
+   fundamentos e só existe quando o link correspondente da barra
+   lateral é clicado. [hidden] explícito porque a regra de layout
+   abaixo (display:block) venceria o [hidden] do navegador na
+   ordem do cascata — mesma guarda usada em .pf-panel[hidden] no
+   resto do produto.
+   ============================================================ */
+.sg-view{display:block;max-width:760px}
+.sg-view[hidden]{display:none}
+/* O foco vai para o h1 ao abrir o painel (leitor de tela acompanha
+   a troca de "página"); sem anel visível, já que não é navegação
+   por teclado que o trouxe até aqui. */
+.sg-view .sg-title:focus{outline:none}
+
+.sg-back{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-bottom:20px;
+  font-size:13px;line-height:20px;font-weight:600;
+  color:var(--text-secondary);
+  border-radius:4px;
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.sg-back:hover{color:var(--text-primary)}
+.sg-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   COMPONENTES — moldura de demonstração
+   Cada componente vive num cartão com três andares: cabeçalho
+   (nome + nível atômico + copiar), palco (fundo --surface-0, onde
+   o componente aparece do tamanho real) e código (a marcação para
+   colar). As classes .btn, .input, .field etc. abaixo de "PEÇAS"
+   são as classes de PRODUÇÃO — as mesmas que login.html usa, char
+   por char, para o guia não poder divergir da tela.
+   ============================================================ */
+.sg-comp{
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  overflow:hidden;
+  margin-bottom:20px;
+}
+.sg-comp-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:16px 20px;
+}
+.sg-comp-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sg-comp-name b{font-size:15px;line-height:22px;font-weight:600}
+.sg-comp-desc{font-size:13px;line-height:20px;color:var(--text-secondary);margin-top:2px}
+.sg-comp-copy{
+  flex-shrink:0;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:12px;line-height:18px;font-weight:600;
+  color:var(--text-secondary);border:1px solid var(--border-strong);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.sg-comp-copy:hover{background:var(--surface-0);color:var(--text-primary)}
+.sg-comp-copy svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.sg-comp-demo{
+  display:flex;flex-wrap:wrap;align-items:flex-start;gap:28px;
+  padding:28px 20px;
+  background:var(--surface-0);
+  border-top:1px solid var(--border);
+}
+.sg-comp-variant{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.sg-comp-variant-label{font-size:12px;line-height:18px;font-weight:600;color:var(--text-muted)}
+
+.sg-comp-code{
+  margin:0;padding:14px 20px;
+  border-top:1px solid var(--border);
+  background:var(--neutral-900);
+  color:var(--neutral-50);
+  font-size:12px;line-height:20px;
+  overflow-x:auto;
+  white-space:pre;
+}
+.sg-comp-code .tok-tag{color:var(--sky-300)}
+.sg-comp-code .tok-attr{color:var(--amber-400)}
+.sg-comp-code .tok-str{color:var(--green-200)}
+
+/* Nível atômico: reaproveita .sg-chip, só muda a cor */
+.sg-chip--atom{background:var(--bg-pro);color:var(--text-pro);border-color:transparent}
+.sg-chip--molecule{background:var(--sky-100);color:var(--blue-700);border-color:transparent}
+.sg-chip--organism{background:var(--bg-success);color:var(--text-success);border-color:transparent}
+
+/* Dimensionamento para o palco de demonstração dos átomos */
+.sg-comp-demo .input{width:220px}
+.sg-comp-demo .btn{width:auto}
+.sg-comp-demo .otp-input{width:44px}
+.sg-comp-demo .alert{width:320px}
+.sg-comp-demo .divider{width:280px}
+
+/* ============================================================
+   PEÇAS — classes de produção, agora em css/components.css
+   ============================================================ */
+
+/* ---- Botão ---- */
+.btn{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  height:var(--field-h);
+  padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.btn svg{width:20px;height:20px;flex-shrink:0}
+.btn:disabled{cursor:not-allowed;opacity:.6}
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover:not(:disabled){background:var(--fill-accent-hover)}
+.btn--google{background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--google:hover:not(:disabled){background:var(--surface-0)}
+.btn--ghost{background:var(--surface-1);color:var(--text-secondary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--ghost:hover:not(:disabled){background:var(--surface-0);color:var(--text-primary)}
+.btn .btn-spinner{display:none;width:20px;height:20px}
+.btn.is-loading{cursor:progress}
+.btn.is-loading .btn-label{display:none}
+.btn.is-loading .btn-loading-label{display:inline}
+.btn.is-loading .btn-spinner{display:block;animation:sg-spin 800ms linear infinite}
+.btn-loading-label{display:none}
+@keyframes sg-spin{to{transform:rotate(360deg)}}
+
+/* ---- Input ---- */
+.input-wrap{position:relative;display:flex;align-items:center}
+.input{
+  width:220px;height:var(--field-h);
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font:inherit;font-size:16px;line-height:24px;color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.input::placeholder{color:var(--text-muted)}
+.input:hover{border-color:var(--neutral-300)}
+.input:focus{outline:none;border-color:var(--fill-accent);box-shadow:var(--shadow-focus)}
+.input:disabled{background:var(--surface-0);color:var(--text-disabled);cursor:not-allowed}
+.input--with-action{padding-right:48px}
+.input-action{
+  position:absolute;right:4px;
+  width:40px;height:40px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  color:var(--text-muted);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.input-action:hover{background:var(--surface-0);color:var(--text-secondary)}
+.input-action svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.input-action .icon-hide{display:none}
+.input-action[aria-pressed="true"] .icon-show{display:none}
+.input-action[aria-pressed="true"] .icon-hide{display:block}
+
+/* ---- Campo ---- */
+.field{display:flex;flex-direction:column;gap:6px}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.field-error{
+  display:flex;align-items:center;gap:6px;
+  font-size:14px;line-height:20px;color:var(--text-danger);
+}
+.field-error[hidden]{display:none}
+.field-error svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.field--error .input{border-color:var(--fill-danger)}
+.field--error .input:focus{box-shadow:var(--shadow-focus-danger)}
+
+/* ---- Alerta ---- */
+.alert{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 14px;width:320px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-danger);
+  background:var(--bg-danger);
+  font-size:14px;line-height:20px;
+  color:var(--text-danger);
+}
+.alert[hidden]{display:none}
+.alert svg{width:18px;height:18px;flex-shrink:0;margin-top:1px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.alert-title{font-weight:600}
+.alert-text{margin-top:2px;font-weight:400}
+.alert--warning{border-color:var(--amber-400);background:var(--bg-warning);color:var(--text-warning)}
+.alert--success{border-color:var(--fill-success);background:var(--bg-success);color:var(--text-success)}
+
+/* ---- Checkbox e link ---- */
+.checkbox{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkbox input{width:16px;height:16px;flex-shrink:0;accent-color:var(--fill-accent);cursor:pointer}
+.checkbox span{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.link{
+  font-size:14px;line-height:20px;font-weight:600;
+  color:var(--text-accent);text-decoration:none;
+  border-radius:4px;
+}
+.link:hover{text-decoration:underline}
+
+/* ---- Divisor ---- */
+.divider{
+  display:flex;align-items:center;gap:16px;
+  width:280px;
+  margin:24px 0;
+  font-size:14px;line-height:20px;color:var(--text-muted);
+}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+
+/* ---- OTP ---- */
+.otp{display:flex;gap:8px;margin-top:20px}
+.otp-input{
+  width:44px;height:56px;
+  text-align:center;
+  font-size:24px;line-height:32px;font-weight:600;
+  font-variant-numeric:tabular-nums;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+  -moz-appearance:textfield;
+}
+.otp-input::-webkit-outer-spin-button,.otp-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.otp-input:hover{border-color:var(--neutral-300)}
+.otp-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:var(--shadow-focus)}
+.otp.is-error .otp-input{border-color:var(--fill-danger)}
+.otp.is-error .otp-input:focus{box-shadow:var(--shadow-focus-danger)}
+
+/* ---- Formulário ---- */
+.form{margin-top:32px;display:flex;flex-direction:column;gap:20px}
+.form-options{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin-top:-4px;
+}
+.form.is-locked{opacity:.55;pointer-events:none;user-select:none}
+
+/* ---- Modal ----
+   Mesma casca de login.html: <dialog> nativo, foco preso e Esc já
+   vêm de graça. */
+.modal{
+  position:fixed;inset:0;margin:auto;
+  width:480px;max-width:calc(100vw - 48px);
+  max-height:calc(100vh - 48px);
+  padding:24px;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+}
+.modal::backdrop{background:var(--overlay)}
+.modal[open]{animation:sg-modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:sg-fade-in var(--dur-base) var(--ease-out)}
+@keyframes sg-modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes sg-fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-header{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modal-rule{height:1px;background:var(--border);margin:24px 0}
+.modal-text{font-size:14px;line-height:22px;color:var(--text-secondary)}
+.modal-text strong{color:var(--text-primary);font-weight:600}
+.modal-error{
+  display:flex;align-items:center;gap:6px;
+  margin-top:10px;
+  font-size:14px;line-height:20px;color:var(--text-danger);
+}
+.modal-error[hidden]{display:none}
+.modal-error svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modal-resend{margin-top:16px;font-size:14px;line-height:20px;color:var(--text-secondary)}
+.modal-resend button{font-weight:600;color:var(--text-accent);border-radius:4px;padding:0}
+.modal-resend button:hover:not(:disabled){text-decoration:underline}
+.modal-resend button:disabled{color:var(--text-muted);cursor:not-allowed;text-decoration:none}
+.modal-footer{display:flex;align-items:center;gap:12px;margin-top:24px}
+.modal-footer .btn{width:auto}
+.modal.is-verifying .otp-input,
+.modal.is-verifying .modal-resend{opacity:.55;pointer-events:none}
+
+/* ---- Pré-visualização estática do modal ----
+   .modal de produção assume um <dialog> aberto em tela cheia
+   (position:fixed;inset:0). Aqui ele precisa só se comportar como
+   um cartão normal, no fluxo da página — daí sobrescrever posição
+   e tamanho, mantendo toda a aparência (cor, raio, sombra, spacing)
+   herdada das mesmas regras acima. */
+.sg-modal-preview{
+  position:static;
+  width:360px;max-width:100%;height:auto;max-height:none;
+  margin:0;
+  box-shadow:var(--shadow-lg);
+}
+.sg-modal-preview .otp-input{display:inline-flex;align-items:center;justify-content:center}
+
+/* ---- Painel de arte lateral ----
+   Mesmo radial-gradient de login.html; aqui numa caixa menor só
+   para caber no palco de demonstração. */
+.sg-arte-caixa{
+  width:320px;height:420px;flex-shrink:0;
+  position:relative;
+  border-radius:var(--radius-panel);
+  overflow:hidden;
+}
+.auth-art::before,
+.sg-arte-caixa::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(110% 100% at 50% -25%,
+    var(--gray-0)      0%,
+    var(--sky-300)    34%,
+    var(--blue-500)   56%,
+    var(--purple-500) 78%,
+    var(--amber-500)  98%,
+    var(--yellow-300) 118%);
+  filter:blur(3px);
+  transform:scale(1.05);
+}
+.auth-art::after,
+.sg-arte-caixa::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg, rgba(10,13,18,.14) 0%, transparent 34%, transparent 62%, rgba(10,13,18,.20) 100%);
+}
+.auth-art-content{
+  position:relative;z-index:1;height:100%;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:32px;color:var(--neutral-0);
+}
+.auth-art-quote{
+  font-size:22px;line-height:30px;font-weight:600;
+  letter-spacing:-.02em;max-width:20ch;
+  text-shadow:0 1px 12px rgba(10,13,18,.22);
+}
+.auth-art-caption{
+  margin-top:12px;font-size:14px;line-height:20px;font-weight:500;
+  opacity:.92;text-shadow:0 1px 10px rgba(10,13,18,.22);
+}
+
+/* ============================================================
+   TEMPLATE — Login
+   A página inteira, remontada só com peças já catalogadas em
+   Átomos/Componentes/Organismos. Não é o .auth de produção (esse
+   exige 100vh de tela) — é o mesmo desenho contido no palco do
+   guia, largo o bastante pras duas colunas convivarem.
+   ============================================================ */
+.sg-view--tpl{max-width:1100px}
+.sg-tpl-shell{
+  display:flex;align-items:stretch;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);border-radius:var(--radius-lg);
+  background:var(--surface-0);
+}
+.sg-tpl-form-col{
+  flex:1 1 auto;min-width:0;
+  display:flex;align-items:center;justify-content:center;
+  padding:48px 32px;
+}
+.sg-tpl-card{width:100%;max-width:400px}
+@media (max-width:900px){
+  .sg-tpl-shell{flex-direction:column}
+}
+
+/* ---------- Logo da marca ----------
+   Molécula Logotipo (ver #logotipo em Componentes), usada em
+   login.html e cadastro.html. */
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:40px}
+.brand-mark{
+  width:48px;height:48px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+}
+.brand-mark svg{width:30px;height:auto;display:block;fill:var(--fill-primary)}
+.brand-name{
+  font-size:16px;line-height:22px;font-weight:600;
+  letter-spacing:-.01em;color:var(--text-primary);
+}
+.brand-name span{display:block;font-weight:500;color:var(--text-secondary)}
+
+/* ---------- Título e rodapé da tela (conteúdo da página, não componente) ---------- */
+.auth-title{
+  font-size:30px;line-height:38px;font-weight:600;
+  letter-spacing:-.02em;color:var(--text-primary);
+}
+.auth-subtitle{margin-top:8px;font-size:16px;line-height:24px;color:var(--text-secondary)}
+.auth-foot{margin-top:32px;font-size:14px;line-height:20px;color:var(--text-secondary);text-align:center}
+
+/* ============================================================
+   AVISO DE CÓPIA
+   ============================================================ */
+.sg-toast{
+  position:fixed;left:50%;bottom:32px;
+  transform:translate(-50%,16px);
+  display:flex;align-items:center;gap:8px;
+  padding:10px 16px;border-radius:999px;
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:13px;line-height:20px;font-weight:600;
+  box-shadow:var(--shadow-lg);
+  opacity:0;pointer-events:none;
+  transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+  z-index:80;
+}
+.sg-toast.is-vis{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:900px){
+  .sg-nav{display:none}
+  .sg-main{padding:32px 20px 64px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ÍCONES — vivem em img/icones.svg, fora desta página.
+     Até 22/08/2026 o sprite era inline aqui, e outro sprite inline
+     no login, e SVG solto no cadastro: três fontes para os mesmos
+     ícones, com traçados que já tinham divergido entre si.
+     Agora há um arquivo só, referenciado por
+     <use href="img/icones.svg#icon-...">.
+     Geometria: Feather Icons v4.
+     ============================================================ -->
+<div class="sg">
+
+  <!-- ===================== NAVEGAÇÃO ===================== -->
+  <nav class="sg-nav" aria-label="Seções do style guide">
+    <div class="sg-brand">
+      <div class="sg-logomark" role="img" aria-label="Plataforma de Design">
+        <svg viewBox="0 0 28.8 22" aria-hidden="true"><use href="img/icones.svg#icon-marca"/></svg>
+      </div>
+      <div class="sg-brand-text">
+        <span class="sg-brand-title">Style guide</span>
+        <span class="sg-brand-sub">Plataforma de Design 2.0</span>
+      </div>
+    </div>
+
+    <!-- Fica no scroll contínuo: clicar rola até a seção. -->
+    <div class="sg-nav-group sg-nav-group--fundamentos">
+      <span class="sg-nav-label">Átomos</span>
+      <a class="sg-nav-link" href="#cores">Cores</a>
+      <a class="sg-nav-link" href="#tipografia">Tipografia</a>
+      <a class="sg-nav-link" href="#elevacao">Elevação</a>
+      <a class="sg-nav-link" href="#efeitos">Efeitos</a>
+      <a class="sg-nav-link" href="#layout">Layout e grid</a>
+      <a class="sg-nav-link" href="#icones">Ícones</a>
+    </div>
+
+    <!-- Fora do scroll: clicar troca o conteúdo por um painel só
+         com a documentação daquele item — ver #painelComponente. -->
+    <div class="sg-nav-group sg-nav-group--componentes">
+      <span class="sg-nav-label">Componentes</span>
+      <a class="sg-nav-link" href="#logotipo">Logotipo</a>
+      <a class="sg-nav-link" href="#botoes">Botões</a>
+      <a class="sg-nav-link" href="#inputs">Inputs</a>
+      <a class="sg-nav-link" href="#campo">Campo</a>
+      <a class="sg-nav-link" href="#alerta">Alerta</a>
+      <a class="sg-nav-link" href="#checkbox-link">Checkbox &amp; link</a>
+      <a class="sg-nav-link" href="#divisor">Divisor</a>
+      <a class="sg-nav-link" href="#forca-senha">Força da senha</a>
+      <a class="sg-nav-link" href="#aceite">Aceite de termos</a>
+    </div>
+
+    <!-- Mesmo comportamento de painel dos Componentes: some do
+         scroll, só aparece ao clicar. -->
+    <div class="sg-nav-group sg-nav-group--organismos">
+      <span class="sg-nav-label">Organismos</span>
+      <a class="sg-nav-link" href="#form-login">Formulário de login</a>
+      <a class="sg-nav-link" href="#modal-otp">Modal de verificação</a>
+      <a class="sg-nav-link" href="#casca-login">Casca de login</a>
+      <a class="sg-nav-link" href="#arte-lateral">Painel de arte lateral</a>
+    </div>
+
+    <!-- Mesmo comportamento de painel dos Componentes/Organismos:
+         a página inteira, composta só com peças já catalogadas. -->
+    <div class="sg-nav-group sg-nav-group--templates">
+      <span class="sg-nav-label">Templates</span>
+      <a class="sg-nav-link" href="#template-login">Login</a>
+    </div>
+  </nav>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="sg-main">
+
+    <header class="sg-head">
+      <span class="sg-eyebrow">Atomic design · Átomos</span>
+      <h1 class="sg-title">Fundamentos visuais</h1>
+      <p class="sg-lede">
+        As unidades indivisíveis do sistema: cor, tipo, elevação, movimento e
+        estrutura. Tudo nesta página é lido de <code>css/tokens.css</code> em
+        tempo real — se um valor mudar lá, muda aqui, e o guia não tem como
+        divergir do produto. Clique em qualquer amostra para copiar o token.
+      </p>
+    </header>
+
+    <!-- ===================== FUNDAMENTOS ═════════════════════
+         Continua num scroll só, como sempre foi. -->
+    <div id="fundamentosFlow">
+
+    <!-- ---------------- CORES ---------------- -->
+    <section class="sg-section" id="cores">
+      <h2 class="sg-section-title">Cores</h2>
+      <p class="sg-section-desc">
+        Três camadas, cada uma olhando só para a de baixo. Um componente nunca
+        consome a camada 1 ou 2: se precisa de <code>--blue-500</code>, o que
+        falta é um token de propósito.
+      </p>
+      <div class="sg-rule"></div>
+
+      <h3 class="sg-sub">Camada 1 · Base</h3>
+      <p class="sg-sub-desc">
+        O valor cru. É o único lugar do sistema onde hexadecimal pode aparecer.
+      </p>
+      <div id="baseRamps"></div>
+
+      <h3 class="sg-sub">Camada 2 · Theme</h3>
+      <p class="sg-sub-desc">
+        A indireção que torna o dark mode viável — um dia <code>--neutral-0</code>
+        aponta para <code>--gray-900</code> e o sistema inteiro se inverte sem
+        que nenhum componente seja tocado.
+      </p>
+      <div id="temaRamps"></div>
+
+      <h3 class="sg-sub">Camada 3 · Purpose</h3>
+      <p class="sg-sub-desc">
+        A intenção. É esta camada que os componentes usam. Cada role responde a
+        uma pergunta diferente: <b>primary</b> é identidade, <b>accent</b> é ação,
+        e os demais são estado.
+      </p>
+      <div class="sg-roles" id="roles"></div>
+
+      <h3 class="sg-sub">Contraste</h3>
+      <p class="sg-sub-desc">
+        Calculado ao vivo pela fórmula WCAG 2.1. <b>AA</b> exige 4,5:1 para texto
+        corrido e 3:1 para texto grande (18px bold ou 24px). <b>AAA</b> exige 7:1.
+      </p>
+      <div class="sg-contrastes" id="contrastes"></div>
+
+      <div class="sg-note">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        </span>
+        <div class="sg-note-body" id="divergencias"></div>
+      </div>
+    </section>
+
+    <!-- ---------------- TIPOGRAFIA ---------------- -->
+    <section class="sg-section" id="tipografia">
+      <h2 class="sg-section-title">Tipografia</h2>
+      <p class="sg-section-desc">
+        Inter em todo o produto, nos pesos 400/500/600/700. A escala abaixo é o
+        que as telas realmente usam hoje — foi medida a partir dos arquivos, não
+        arbitrada.
+      </p>
+      <div class="sg-rule"></div>
+
+      <div class="sg-card" id="tipoEscala"></div>
+
+      <h3 class="sg-sub">Pesos</h3>
+      <p class="sg-sub-desc">
+        Ortogonais à escala: <code>14/20</code> aparece em 400, 500 e 600 sem
+        deixar de ser o mesmo degrau.
+      </p>
+      <div class="sg-pesos" id="tipoPesos"></div>
+
+      <h3 class="sg-sub">Família</h3>
+      <div class="sg-card">
+        <div style="font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh)">
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+        </div>
+        <div style="margin-top:10px">
+          <button type="button" class="sg-type-token mono" data-token="--font-sans"
+                  title="Copiar --font-sans">--font-sans</button>
+          <span class="sg-type-uso" style="margin-left:8px">
+            Inter, com a pilha do sistema como reserva.
+          </span>
+        </div>
+      </div>
+
+      <div class="sg-note">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        </span>
+        <div class="sg-note-body">
+          <strong>Os tokens existem, mas ainda não estão adotados.</strong>
+          As 10 telas continuam escrevendo <code>font-size</code> e
+          <code>line-height</code> à mão — declarar uma custom property não muda
+          nada até alguém usá-la, então nada no produto foi alterado.
+          Esta escala é o alvo da migração, e ela vai precisar resolver a deriva
+          que a medição encontrou: <code>15px</code> em 6 lugares, além de
+          <code>30/40</code>, <code>20/30</code>, <code>16/22</code> e
+          <code>13/32</code> — variantes de uma linha só, sem razão aparente.
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- ELEVAÇÃO ---------------- -->
+    <section class="sg-section" id="elevacao">
+      <h2 class="sg-section-title">Elevação</h2>
+      <p class="sg-section-desc">
+        Cada nível empilha duas sombras: uma difusa, que dá massa ao objeto, e
+        uma curta, que o apoia na superfície. Sombra única sempre parece adesivo.
+      </p>
+      <div class="sg-rule"></div>
+      <div class="sg-shadows" id="sombras"></div>
+    </section>
+
+    <!-- ---------------- EFEITOS ---------------- -->
+    <section class="sg-section" id="efeitos">
+      <h2 class="sg-section-title">Efeitos</h2>
+      <p class="sg-section-desc">
+        Movimento, foco e sobreposição. Todos com escape por
+        <code>prefers-reduced-motion</code>.
+      </p>
+      <div class="sg-rule"></div>
+
+      <h3 class="sg-sub">Curvas</h3>
+      <p class="sg-sub-desc">
+        A curva padrão sai forte e assenta devagar — é como o olho espera que
+        massa se mova. A simétrica fica para o que vai e volta.
+      </p>
+      <div class="sg-efeitos">
+        <div class="sg-card">
+          <div class="sg-curva">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <line class="sg-curva-guia" x1="0" y1="100" x2="100" y2="100"></line>
+              <line class="sg-curva-guia" x1="0" y1="0" x2="0" y2="100"></line>
+              <path class="sg-curva-path" d="M0,100 C16,0 30,0 100,0"></path>
+            </svg>
+            <div class="sg-curva-info">
+              <div class="sg-curva-nome">--ease-out</div>
+              <div class="sg-curva-val mono">cubic-bezier(.16, 1, .3, 1)</div>
+              <div class="sg-curva-uso">Padrão. Entrada, expansão, hover.</div>
+            </div>
+          </div>
+        </div>
+        <div class="sg-card">
+          <div class="sg-curva">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <line class="sg-curva-guia" x1="0" y1="100" x2="100" y2="100"></line>
+              <line class="sg-curva-guia" x1="0" y1="0" x2="0" y2="100"></line>
+              <path class="sg-curva-path" d="M0,100 C40,100 20,0 100,0"></path>
+            </svg>
+            <div class="sg-curva-info">
+              <div class="sg-curva-nome">--ease-in-out</div>
+              <div class="sg-curva-val mono">cubic-bezier(.4, 0, .2, 1)</div>
+              <div class="sg-curva-uso">Simétrica. Abrir e fechar o assistente.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sg-sub">Durações</h3>
+      <p class="sg-sub-desc">Passe o ponteiro sobre as pistas para comparar.</p>
+      <div class="sg-efeitos">
+        <div class="sg-card">
+          <div class="sg-curva-nome">--dur-fast <span class="sg-role-val">150ms</span></div>
+          <div class="sg-curva-uso">Resposta imediata: hover, troca de cor.</div>
+          <div class="sg-pista sg-dur-fast"><span class="sg-bolinha"></span></div>
+        </div>
+        <div class="sg-card">
+          <div class="sg-curva-nome">--dur-base <span class="sg-role-val">300ms</span></div>
+          <div class="sg-curva-uso">Mudança de estado: expandir, abrir modal.</div>
+          <div class="sg-pista sg-dur-base"><span class="sg-bolinha"></span></div>
+        </div>
+        <div class="sg-card">
+          <div class="sg-curva-nome">--dur-slow <span class="sg-role-val">500ms</span></div>
+          <div class="sg-curva-uso">Deslocamento grande, transição de página.</div>
+          <div class="sg-pista sg-dur-slow"><span class="sg-bolinha"></span></div>
+        </div>
+      </div>
+
+      <h3 class="sg-sub">Foco e sobreposição</h3>
+      <div class="sg-efeitos">
+        <div class="sg-card">
+          <div class="sg-curva-nome">--focus-ring</div>
+          <div class="sg-curva-uso" style="margin-bottom:14px">
+            Anel de 2px com 2px de folga. Navegue com Tab para ver.
+          </div>
+          <button type="button" class="sg-btn sg-btn--accent">Me dê foco</button>
+          <button type="button" class="sg-btn" style="margin-left:8px">E em mim</button>
+        </div>
+        <div class="sg-card">
+          <div class="sg-curva-nome">--shadow-focus</div>
+          <div class="sg-curva-uso" style="margin-bottom:14px">
+            Halo de 4px nos campos, em vez do anel.
+          </div>
+          <input type="text" value="Clique aqui" aria-label="Campo de demonstração"
+                 style="width:100%;height:44px;padding:0 14px;font:inherit;font-size:14px;
+                        border-radius:var(--radius);border:1px solid var(--border-strong);
+                        background:var(--surface-1);color:var(--text-primary);outline:none;
+                        transition:border-color var(--dur-fast) var(--ease-out),
+                                   box-shadow var(--dur-fast) var(--ease-out)"
+                 onfocus="this.style.borderColor='var(--fill-accent)';this.style.boxShadow='var(--shadow-focus)'"
+                 onblur="this.style.borderColor='var(--border-strong)';this.style.boxShadow='none'">
+        </div>
+        <div class="sg-card">
+          <div class="sg-curva-nome">--overlay</div>
+          <div class="sg-curva-uso" style="margin-bottom:14px">
+            Véu a 70% com desfoque de 8px. Passe o ponteiro.
+          </div>
+          <div class="sg-overlay-demo" tabindex="0">
+            <span class="sg-overlay-fundo">conteúdo da página</span>
+            <span class="sg-overlay-veu"><span class="sg-overlay-cartao">modal em foco</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- LAYOUT ---------------- -->
+    <section class="sg-section" id="layout">
+      <h2 class="sg-section-title">Layout e grid</h2>
+      <p class="sg-section-desc">
+        A casca é sempre a mesma: um rail fixo à esquerda, o painel de conteúdo
+        no meio e o assistente à direita, que recolhe.
+      </p>
+      <div class="sg-rule"></div>
+
+      <h3 class="sg-sub">Estrutura</h3>
+      <div class="sg-card">
+        <div class="sg-shell" role="img" aria-label="Rail de 80px, painel central com raio de 32px e assistente de 320px que recolhe para 80px">
+          <div class="sg-shell-parte sg-shell-rail">
+            Rail
+            <span class="sg-shell-dim">80px</span>
+          </div>
+          <div class="sg-shell-parte sg-shell-painel">
+            Painel de conteúdo
+            <span class="sg-shell-dim">máx. 1294px · padding 32px · raio 32px</span>
+          </div>
+          <div class="sg-shell-parte sg-shell-assist">
+            Assistente
+            <span class="sg-shell-dim">320 ↔ 80px</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="sg-sub">Escala de espaçamento</h3>
+      <p class="sg-sub-desc">
+        Base 4. Os quatro valores do topo cobrem a maior parte do produto; o
+        resto é ajuste interno de componente.
+      </p>
+      <div class="sg-card"><div class="sg-escala" id="escala"></div></div>
+
+      <h3 class="sg-sub">Raios</h3>
+      <div class="sg-raios" id="raios"></div>
+    </section>
+
+    <!-- ---------------- ÍCONES ---------------- -->
+    <section class="sg-section" id="icones">
+      <h2 class="sg-section-title">Ícones</h2>
+      <p class="sg-section-desc">
+        A biblioteca de ícones do Figma (<a class="sg-link-inline" href="https://www.figma.com/design/ofEacAY6SaATD3FCHJ9MqU/%E2%9D%96-UI-kit-and-design-system-v1.0?node-id=1025-31781" target="_blank" rel="noopener">página "Icons" → "Base icons"</a>)
+        tem 296 ícones — é o <a class="sg-link-inline" href="https://feathericons.com" target="_blank" rel="noopener">Feather Icons</a>
+        completo, a mesma base do "Untitled UI Icons" gratuito. Este catálogo traz
+        só os que <code>login.html</code> já usa (mais o de voltar, que o próprio guia
+        introduziu na navegação dos painéis) — os outros 288 entram conforme cada
+        tela for revisada. Clique num ícone para copiar o SVG.
+      </p>
+
+      <div class="sg-icons" id="icones-grid"></div>
+
+      <div class="sg-note sg-note--info">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div class="sg-note-body">
+          <strong>Como estes 8 foram conferidos.</strong> O CDN de assets do Figma
+          (onde ficam os SVGs exportados) está bloqueado pela rede deste ambiente —
+          não deu para baixar os bytes originais direto. Em vez disso, tirei uma
+          captura de tela de cada ícone (canal separado do MCP do Figma, que
+          funciona) e confirmei visualmente contra a geometria oficial do
+          Feather Icons v4 — a mesma fonte que dá nome às camadas no Figma
+          (<code>eye</code>, <code>alert-circle</code>, <code>lock</code>…).
+          Em 7 dos 8 a correspondência de coordenadas é direta; o <code>eye-off</code>,
+          por ter curvas mais complexas, é o que carrega mais risco de uma pequena
+          divergência de precisão em relação ao arquivo original.
+        </div>
+      </div>
+    </section>
+
+    </div><!-- /fundamentosFlow -->
+
+    <!-- ===================== COMPONENTES ═════════════════════
+         Cada <section class="sg-view"> é um painel independente,
+         fora do scroll dos fundamentos. Fica oculto por padrão
+         ([hidden]) e só aparece quando o link correspondente da
+         barra lateral é clicado — ver o JS ao final do arquivo.
+         ═══════════════════════════════════════════════════════ -->
+
+    <!-- ========== LOGOTIPO ========== -->
+    <section class="sg-view" id="logotipo" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Molécula</span>
+        <h1 class="sg-title" tabindex="-1">Logotipo</h1>
+        <p class="sg-lede">
+          Monograma + nome da marca, sempre juntos e sempre linkando para a
+          home. É molécula, não átomo: o monograma sozinho (um ícone, num
+          selo de cor sólida) já seria reaproveitável por conta própria, mas
+          aqui ele só existe combinado com o texto — dois átomos que juntos
+          formam uma coisa só, com um comportamento próprio (é um link).
+          Usado no topo de login.html e cadastro.html.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Logotipo</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeLogotipo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <!-- Fonte única do Logotipo: o Template · Login clona este
+                 nó via JS em vez de repetir a marcação — ver script. -->
+            <a class="brand" href="#logotipo" id="logotipoFonte" aria-label="Plataforma de Design — página inicial">
+              <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="5.6 9 28.8 22"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+              </span>
+              <span class="brand-name">Plataforma<span>de Design</span></span>
+            </a>
+            <span class="sg-comp-variant-label">padrão</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeLogotipo"><code>&lt;a class="brand" href="/" aria-label="Plataforma de Design — página inicial"&gt;
+  &lt;span class="brand-mark" aria-hidden="true"&gt;
+    &lt;svg viewBox="5.6 9 28.8 22"&gt;&lt;path fill-rule="evenodd" d="…"/&gt;&lt;/svg&gt;
+  &lt;/span&gt;
+  &lt;span class="brand-name"&gt;Plataforma&lt;span&gt;de Design&lt;/span&gt;&lt;/span&gt;
+&lt;/a&gt;
+
+&lt;!-- .brand-mark é o selo de 48×48 com o monograma; .brand-name
+     tem duas linhas — "Plataforma" no peso 600, "de Design" (o
+     &lt;span&gt; interno) no peso 500 e cor secundária. --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== BOTÕES ========== -->
+    <section class="sg-view" id="botoes" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Átomo</span>
+        <h1 class="sg-title" tabindex="-1">Botões</h1>
+        <p class="sg-lede">
+          Altura fixa em <code>--field-h</code> (48px) e ocupam 100% da coluna
+          no formulário real — aqui, largura livre para comparar lado a lado.
+          Repare que o mesmo nome de classe <code>.btn</code> existe em outras
+          telas do produto (<code>empresas.html</code>, <code>projetos.html</code>…)
+          com uma definição diferente — não são o mesmo componente, e um dia vale
+          a pena reconciliar os dois. Este aqui é especificamente o botão de
+          formulário de autenticação, levantado em <code>login.html</code>.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Botão</b>
+            <span class="sg-chip sg-chip--atom">Átomo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeBtn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <button type="button" class="btn btn--primary" style="width:160px">Entrar</button>
+            <span class="sg-comp-variant-label">primary</span>
+          </div>
+          <div class="sg-comp-variant">
+            <button type="button" class="btn btn--google" style="width:200px">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="var(--google-blue)"   d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3.01h3.87c2.26-2.09 3.57-5.17 3.57-8.82Z"/>
+                <path fill="var(--google-green)"  d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3.01c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0 0 12 24Z"/>
+                <path fill="var(--google-yellow)" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.28a12 12 0 0 0 0 10.76l3.99-3.11Z"/>
+                <path fill="var(--google-red)"    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.28 6.62l3.99 3.11C6.22 6.88 8.87 4.75 12 4.75Z"/>
+              </svg>
+              Entrar com Google
+            </button>
+            <span class="sg-comp-variant-label">google</span>
+          </div>
+          <div class="sg-comp-variant">
+            <button type="button" class="btn btn--ghost" style="width:120px">Voltar</button>
+            <span class="sg-comp-variant-label">ghost</span>
+          </div>
+          <div class="sg-comp-variant">
+            <button type="button" class="btn btn--primary is-loading" style="width:160px" disabled>
+              <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+                <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+              <span class="btn-label">Entrar</span>
+              <span class="btn-loading-label">Entrando...</span>
+            </button>
+            <span class="sg-comp-variant-label">is-loading</span>
+          </div>
+          <div class="sg-comp-variant">
+            <button type="button" class="btn btn--primary" style="width:140px" disabled>Entrar</button>
+            <span class="sg-comp-variant-label">disabled</span>
+          </div>
+          <div class="sg-comp-variant">
+            <button type="button" class="modal-close">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-x"/></svg>
+              Fechar
+            </button>
+            <span class="sg-comp-variant-label">modal-close</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeBtn"><code>&lt;button type="button" class="btn btn--primary"&gt;Entrar&lt;/button&gt;
+
+&lt;button type="button" class="btn btn--google"&gt;
+  &lt;svg&gt;…logo do Google…&lt;/svg&gt;
+  Entrar com Google
+&lt;/button&gt;
+
+&lt;button type="button" class="btn btn--ghost"&gt;Voltar&lt;/button&gt;
+
+&lt;!-- carregando: adicionar .is-loading + disabled --&gt;
+&lt;button type="submit" class="btn btn--primary is-loading" disabled&gt;
+  &lt;svg class="btn-spinner"&gt;…&lt;/svg&gt;
+  &lt;span class="btn-label"&gt;Entrar&lt;/span&gt;
+  &lt;span class="btn-loading-label"&gt;Entrando...&lt;/span&gt;
+&lt;/button&gt;
+
+&lt;!-- fechar modal: ícone + texto, sem fundo nem borda --&gt;
+&lt;button type="button" class="modal-close"&gt;
+  &lt;svg&gt;…&lt;/svg&gt;
+  Fechar
+&lt;/button&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== INPUTS ========== -->
+    <section class="sg-view" id="inputs" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Átomo e molécula</span>
+        <h1 class="sg-title" tabindex="-1">Inputs</h1>
+        <p class="sg-lede">
+          Campo de texto padrão, mais duas variações: com ação embutida
+          (mostrar/ocultar senha) e o campo de código de 6 dígitos da
+          verificação em duas etapas. Passe o mouse e clique para ver os
+          estados — são os elementos reais, não uma ilustração.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Input de texto</b>
+            <span class="sg-chip sg-chip--atom">Átomo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeInput">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <input class="input" type="email" placeholder="voce@empresa.com" aria-label="Input padrão, passe o mouse ou clique">
+            <span class="sg-comp-variant-label">default → hover → focus</span>
+          </div>
+          <div class="sg-comp-variant">
+            <input class="input" type="text" value="Texto preenchido" disabled aria-label="Input desabilitado">
+            <span class="sg-comp-variant-label">disabled</span>
+          </div>
+          <div class="sg-comp-variant">
+            <input class="input" type="text" value="valor@errado" style="border-color:var(--fill-danger)" aria-label="Input em estado de erro" aria-invalid="true">
+            <span class="sg-comp-variant-label">erro (ver Campo, abaixo)</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeInput"><code>&lt;input class="input" type="email" placeholder="voce@empresa.com"&gt;
+
+&lt;input class="input" type="text" disabled&gt;</code></pre>
+      </div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Input com ação · mostrar senha</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeInputAction">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <div class="input-wrap">
+              <input class="input input--with-action" type="password" id="sgSenha" value="senha-secreta" aria-describedby="sgSenhaHint">
+              <button type="button" class="input-action" id="sgToggleSenha" aria-pressed="false" aria-controls="sgSenha" aria-label="Mostrar senha">
+                <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye"/></svg>
+                <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye-off"/></svg>
+              </button>
+            </div>
+            <span class="sg-comp-variant-label" id="sgSenhaHint">clique no olho</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeInputAction"><code>&lt;div class="input-wrap"&gt;
+  &lt;input class="input input--with-action" type="password" id="senha"&gt;
+  &lt;button type="button" class="input-action" aria-pressed="false"
+          aria-controls="senha" aria-label="Mostrar senha"&gt;
+    &lt;svg class="icon-show"&gt;…&lt;/svg&gt;
+    &lt;svg class="icon-hide"&gt;…&lt;/svg&gt;
+  &lt;/button&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+// ao clicar: alterna aria-pressed, o texto do aria-label e input.type
+&lt;/script&gt;</code></pre>
+      </div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Código de verificação · OTP</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeOtp">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <!-- margin-top:0 só aqui: no modal de produção o .otp vem
+                 depois do texto e precisa do respiro de 20px; aqui ele
+                 é o primeiro elemento do card, então o respiro já vem
+                 do padding do palco — sem isso, ficaria desalinhado
+                 com a variante ao lado. -->
+            <div class="otp" id="sgOtp" style="margin-top:0" role="group" aria-label="Código de verificação de 6 dígitos, digite para navegar">
+              <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1 de 6">
+              <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2 de 6">
+              <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3 de 6">
+              <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4 de 6">
+              <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5 de 6">
+              <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6 de 6">
+            </div>
+            <span class="sg-comp-variant-label">digite um número — avança sozinho</span>
+          </div>
+          <div class="sg-comp-variant">
+            <div class="otp is-error" role="group" aria-label="Exemplo do estado de erro">
+              <input class="otp-input" type="text" maxlength="1" value="4" readonly aria-label="Dígito 1, exemplo de erro">
+              <input class="otp-input" type="text" maxlength="1" value="2" readonly aria-label="Dígito 2, exemplo de erro">
+              <input class="otp-input" type="text" maxlength="1" value="9" readonly aria-label="Dígito 3, exemplo de erro">
+              <input class="otp-input" type="text" maxlength="1" readonly aria-label="Dígito 4, exemplo de erro">
+              <input class="otp-input" type="text" maxlength="1" readonly aria-label="Dígito 5, exemplo de erro">
+              <input class="otp-input" type="text" maxlength="1" readonly aria-label="Dígito 6, exemplo de erro">
+            </div>
+            <span class="sg-comp-variant-label">is-error</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeOtp"><code>&lt;div class="otp" role="group" aria-label="Código de verificação de 6 dígitos"&gt;
+  &lt;input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1 de 6"&gt;
+  &lt;!-- …repete até o dígito 6… --&gt;
+&lt;/div&gt;
+
+&lt;!-- estado de erro: adicionar .is-error no .otp --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== CAMPO ========== -->
+    <section class="sg-view" id="campo" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Molécula</span>
+        <h1 class="sg-title" tabindex="-1">Campo</h1>
+        <p class="sg-lede">
+          Label, input e mensagem de erro como uma unidade. O erro fica
+          oculto por padrão (<code>hidden</code>) e a classe
+          <code>.field--error</code> no wrapper é quem liga tudo — borda do
+          input, cor da mensagem e o <code>aria-invalid</code> no campo.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Campo</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeCampo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <div class="field" style="width:240px">
+              <label class="label" for="sgEmailOk">E-mail</label>
+              <div class="input-wrap">
+                <input class="input" style="width:100%" type="email" id="sgEmailOk" placeholder="voce@empresa.com">
+              </div>
+            </div>
+            <span class="sg-comp-variant-label">default</span>
+          </div>
+          <div class="sg-comp-variant">
+            <div class="field field--error" style="width:240px">
+              <label class="label" for="sgEmailErro">E-mail</label>
+              <div class="input-wrap">
+                <input class="input" style="width:100%" type="email" id="sgEmailErro" value="nao-e-email" aria-invalid="true" aria-describedby="sgEmailErroMsg">
+              </div>
+              <p class="field-error" id="sgEmailErroMsg">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+                Informe um e-mail válido.
+              </p>
+            </div>
+            <span class="sg-comp-variant-label">field--error</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeCampo"><code>&lt;div class="field" id="fieldEmail"&gt;
+  &lt;label class="label" for="email"&gt;E-mail&lt;/label&gt;
+  &lt;div class="input-wrap"&gt;
+    &lt;input class="input" type="email" id="email" aria-describedby="emailErro"&gt;
+  &lt;/div&gt;
+  &lt;p class="field-error" id="emailErro" hidden&gt;
+    &lt;svg&gt;…&lt;/svg&gt; Informe um e-mail válido.
+  &lt;/p&gt;
+&lt;/div&gt;
+
+&lt;!-- erro: .field--error no wrapper, tirar o hidden do .field-error,
+     aria-invalid="true" no input --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== ALERTA ========== -->
+    <section class="sg-view" id="alerta" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Molécula</span>
+        <h1 class="sg-title" tabindex="-1">Alerta</h1>
+        <p class="sg-lede">
+          Três leituras para o mesmo formato: credencial errada (default),
+          bloqueio por tentativas (warning) e confirmação de envio (success).
+          Na tela ficam ocultos por padrão — cabe à lógica de cada cenário
+          remover o <code>hidden</code> de um por vez.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Alerta</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeAlerta">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <!-- Fonte única: o Template · Login clona este nó (ver script). -->
+            <div class="alert" id="alertaFonte" role="alert">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+              <div>
+                <p class="alert-title">E-mail ou senha incorretos</p>
+                <p class="alert-text">Confira os dados e tente novamente.</p>
+              </div>
+            </div>
+            <span class="sg-comp-variant-label">default (erro)</span>
+          </div>
+          <div class="sg-comp-variant">
+            <div class="alert alert--warning" role="alert">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-lock"/></svg>
+              <div>
+                <p class="alert-title">Muitas tentativas</p>
+                <p class="alert-text">Por segurança, aguarde <strong>30s</strong> para tentar de novo.</p>
+              </div>
+            </div>
+            <span class="sg-comp-variant-label">warning</span>
+          </div>
+          <div class="sg-comp-variant">
+            <div class="alert alert--success" role="status">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-check"/></svg>
+              <div>
+                <p class="alert-title">Link enviado</p>
+                <p class="alert-text">Enviamos as instruções para o seu e-mail.</p>
+              </div>
+            </div>
+            <span class="sg-comp-variant-label">success</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeAlerta"><code>&lt;div class="alert" role="alert"&gt;
+  &lt;svg&gt;…&lt;/svg&gt;
+  &lt;div&gt;
+    &lt;p class="alert-title"&gt;E-mail ou senha incorretos&lt;/p&gt;
+    &lt;p class="alert-text"&gt;Confira os dados e tente novamente.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- variantes: .alert--warning · .alert--success --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== CHECKBOX & LINK ========== -->
+    <section class="sg-view" id="checkbox-link" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Átomo</span>
+        <h1 class="sg-title" tabindex="-1">Checkbox &amp; link</h1>
+        <p class="sg-lede">
+          Os dois átomos que formam a linha "lembrar de mim / esqueci minha
+          senha" do formulário.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Checkbox</b> <span class="sg-chip sg-chip--atom">Átomo</span>
+            <b style="margin-left:8px">Link</b> <span class="sg-chip sg-chip--atom">Átomo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeCheckLink">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <label class="checkbox" for="sgLembrar">
+              <input type="checkbox" id="sgLembrar" checked>
+              <span>Lembrar de mim</span>
+            </label>
+            <span class="sg-comp-variant-label">checkbox</span>
+          </div>
+          <div class="sg-comp-variant">
+            <a class="link" href="#componentes">Esqueci minha senha</a>
+            <span class="sg-comp-variant-label">link</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeCheckLink"><code>&lt;label class="checkbox" for="lembrar"&gt;
+  &lt;input type="checkbox" id="lembrar" name="lembrar"&gt;
+  &lt;span&gt;Lembrar de mim&lt;/span&gt;
+&lt;/label&gt;
+
+&lt;a class="link" href="#"&gt;Esqueci minha senha&lt;/a&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== DIVISOR ========== -->
+    <section class="sg-view" id="divisor" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Átomo</span>
+        <h1 class="sg-title" tabindex="-1">Divisor</h1>
+        <p class="sg-lede">Separa o formulário do login social.</p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Divisor</b>
+            <span class="sg-chip sg-chip--atom">Átomo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeDivisor">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <!-- margin:0 só aqui: no palco isolado não há nada acima/abaixo
+                 pra abrir espaço; em produção (e no Template · Login) o
+                 .divider fica com o margin:24px 0 normal — o script do
+                 Template remove esse style ao clonar. Fonte única. -->
+            <div class="divider" id="divisorFonte" role="presentation" style="margin:0">ou</div>
+            <span class="sg-comp-variant-label">divider</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeDivisor"><code>&lt;div class="divider" role="presentation"&gt;ou&lt;/div&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== FORÇA DA SENHA ========== -->
+    <section class="sg-view" id="forca-senha" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Molécula</span>
+        <h1 class="sg-title" tabindex="-1">Força da senha</h1>
+        <p class="sg-lede">
+          Quatro segmentos que acendem conforme o <b>comprimento</b> da senha —
+          não conforme a variedade de caracteres. A política vigente
+          (CAD-SENHA-003) não exige maiúscula, número nem símbolo, porque
+          o NIST SP 800-63B Rev 4 proíbe exigências de composição: elas
+          produzem <code>Senha1!</code> e rejeitam frases longas, que são
+          muito mais fortes.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Medidor</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeForca">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo" style="flex-direction:column;align-items:stretch;gap:24px">
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <div class="strength" data-nivel="1" style="width:280px">
+              <div class="strength-track" role="img" aria-hidden="true">
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+              </div>
+              <p class="strength-label">Senha curta demais</p>
+            </div>
+            <span class="sg-comp-variant-label">data-nivel="1"</span>
+          </div>
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <div class="strength" data-nivel="2" style="width:280px">
+              <div class="strength-track" role="img" aria-hidden="true">
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+              </div>
+              <p class="strength-label">Senha razoável</p>
+            </div>
+            <span class="sg-comp-variant-label">data-nivel="2"</span>
+          </div>
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <div class="strength" data-nivel="3" style="width:280px">
+              <div class="strength-track" role="img" aria-hidden="true">
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+              </div>
+              <p class="strength-label">Senha boa</p>
+            </div>
+            <span class="sg-comp-variant-label">data-nivel="3"</span>
+          </div>
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <div class="strength" data-nivel="4" style="width:280px">
+              <div class="strength-track" role="img" aria-hidden="true">
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+                <span class="strength-seg"></span><span class="strength-seg"></span>
+              </div>
+              <p class="strength-label">Senha forte</p>
+            </div>
+            <span class="sg-comp-variant-label">data-nivel="4"</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeForca"><code>&lt;div class="strength" data-nivel="0"&gt;
+  &lt;div class="strength-track" role="img" aria-hidden="true"&gt;
+    &lt;span class="strength-seg"&gt;&lt;/span&gt;
+    &lt;span class="strength-seg"&gt;&lt;/span&gt;
+    &lt;span class="strength-seg"&gt;&lt;/span&gt;
+    &lt;span class="strength-seg"&gt;&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;p class="strength-label" role="status"&gt;Força da senha&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;!-- data-nivel vai de 0 a 4 e é escrito pelo JavaScript.
+     Senha na blocklist nunca passa de 1, por mais longa que seja:
+     "senhasenhasenha" é longa e péssima. --&gt;</code></pre>
+      </div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Requisitos</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeRequisitos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <ul class="requisitos" style="margin:0">
+              <li class="requisito">
+                <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-circle"/></svg>
+                <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-check"/></svg>
+                Pelo menos 8 caracteres
+              </li>
+              <li class="requisito is-ok">
+                <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-circle"/></svg>
+                <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-check"/></svg>
+                Não pode ser uma senha comum ou vazada
+              </li>
+            </ul>
+            <span class="sg-comp-variant-label">pendente e atendido</span>
+          </div>
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <p class="campo-dica" style="margin:0;max-width:280px">Uma frase que só você lembraria é mais segura — e mais fácil — do que trocar letras por símbolos.</p>
+            <span class="sg-comp-variant-label">campo-dica</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeRequisitos"><code>&lt;ul class="requisitos"&gt;
+  &lt;li class="requisito" data-regra="tamanho"&gt;
+    &lt;svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"&gt;
+      &lt;use href="img/icones.svg#icon-circle"/&gt;
+    &lt;/svg&gt;
+    &lt;svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"&gt;
+      &lt;use href="img/icones.svg#icon-check"/&gt;
+    &lt;/svg&gt;
+    Pelo menos 8 caracteres
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;!-- .is-ok no &lt;li&gt; troca o círculo pelo check e a cor pelo verde.
+     A dica de apoio vai abaixo, com tom de orientação: --&gt;
+&lt;p class="campo-dica"&gt;Uma frase que só você lembraria…&lt;/p&gt;</code></pre>
+      </div>
+
+      <div class="sg-note">
+        <svg class="sg-note-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+        <div class="sg-note-body">
+          <strong>Marcar conforme digita, não depois do envio.</strong> O
+          checklist existe para que a pessoa saiba onde está antes de
+          apertar o botão. Acusar só no envio transforma o cadastro numa
+          adivinhação.
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== ACEITE DE TERMOS ========== -->
+    <section class="sg-view" id="aceite" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes · Molécula</span>
+        <h1 class="sg-title" tabindex="-1">Aceite de termos</h1>
+        <p class="sg-lede">
+          Caixa de seleção com texto de mais de uma linha. Alinha ao topo,
+          não ao centro — centralizar deixaria a marcação flutuando no meio
+          do parágrafo. Sempre desmarcada por padrão: aceite precisa ser
+          ato deliberado (CAD-ACEITE-001).
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Aceite</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeAceite">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo" style="flex-direction:column;align-items:stretch;gap:24px">
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <div class="field form-aceite" style="max-width:340px">
+              <label class="checkbox checkbox--aceite" for="sgAceite">
+                <input type="checkbox" id="sgAceite">
+                <span>Li e concordo com os <a class="link" href="#aceite">Termos de uso</a> e a <a class="link" href="#aceite">Política de privacidade</a>.</span>
+              </label>
+            </div>
+            <span class="sg-comp-variant-label">padrão</span>
+          </div>
+          <div class="sg-comp-variant" style="align-items:stretch">
+            <div class="field form-aceite field--error" style="max-width:340px">
+              <label class="checkbox checkbox--aceite" for="sgAceiteErro">
+                <input type="checkbox" id="sgAceiteErro">
+                <span>Li e concordo com os <a class="link" href="#aceite">Termos de uso</a> e a <a class="link" href="#aceite">Política de privacidade</a>.</span>
+              </label>
+              <p class="field-error">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+                <span>É preciso aceitar os termos para continuar.</span>
+              </p>
+            </div>
+            <span class="sg-comp-variant-label">field--error</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeAceite"><code>&lt;div class="field form-aceite" id="fieldAceite"&gt;
+  &lt;label class="checkbox checkbox--aceite" for="aceite"&gt;
+    &lt;input type="checkbox" id="aceite" aria-describedby="aceiteErro"&gt;
+    &lt;span&gt;Li e concordo com os &lt;a class="link" href="termos.html"&gt;Termos de uso&lt;/a&gt;
+      e a &lt;a class="link" href="privacidade.html"&gt;Política de privacidade&lt;/a&gt;.&lt;/span&gt;
+  &lt;/label&gt;
+  &lt;p class="field-error" id="aceiteErro" hidden&gt;…&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+      </div>
+
+      <div class="sg-note">
+        <svg class="sg-note-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+        <div class="sg-note-body">
+          <strong>Registre o que foi aceito.</strong> Guardar a marcação não
+          basta: a conta precisa gravar <em>data</em> e <em>versão</em> dos
+          documentos (CAD-ACEITE-002). Sem versionar, não há como demonstrar
+          depois o que a pessoa aceitou. E link de termos apontando para
+          <code>#</code> não sustenta aceite nenhum.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ORGANISMOS ═════════════════════ -->
+
+    <!-- ========== FORMULÁRIO DE LOGIN ========== -->
+    <section class="sg-view" id="form-login" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Organismo</span>
+        <h1 class="sg-title" tabindex="-1">Formulário de login</h1>
+        <p class="sg-lede">
+          Campo + campo + linha de opções + botão, com a validação real
+          por trás — preencha e envie para ver. Vazio, mostra os dois
+          erros de uma vez; preenchido, passa 900ms em <code>is-loading</code>
+          antes de "confirmar" (aqui só um aviso; em produção, abre o
+          modal de verificação ao lado).
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Formulário de login</b>
+            <span class="sg-chip sg-chip--organism">Organismo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeFormLogin">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <!-- margin-top:0 só aqui: no palco isolado do componente não
+               há um subtítulo acima pra abrir espaço; em produção (e no
+               Template · Login) o .form fica com o margin-top:32px normal. -->
+          <form class="form" id="sgLoginForm" novalidate style="width:320px;margin-top:0">
+            <div class="field" id="sgLoginFieldEmail">
+              <label class="label" for="sgLoginEmail">E-mail</label>
+              <div class="input-wrap">
+                <input class="input" style="width:100%" type="email" id="sgLoginEmail"
+                       placeholder="voce@empresa.com" aria-describedby="sgLoginEmailErro">
+              </div>
+              <p class="field-error" id="sgLoginEmailErro" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+                Informe um e-mail válido.
+              </p>
+            </div>
+            <div class="field" id="sgLoginFieldSenha">
+              <label class="label" for="sgLoginSenha">Senha</label>
+              <div class="input-wrap">
+                <input class="input input--with-action" style="width:100%" type="password" id="sgLoginSenha"
+                       placeholder="Digite sua senha" aria-describedby="sgLoginSenhaErro">
+                <button type="button" class="input-action" id="sgLoginToggleSenha"
+                        aria-pressed="false" aria-controls="sgLoginSenha" aria-label="Mostrar senha">
+                  <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye"/></svg>
+                  <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye-off"/></svg>
+                </button>
+              </div>
+              <p class="field-error" id="sgLoginSenhaErro" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+                A senha é obrigatória.
+              </p>
+            </div>
+            <div class="form-options">
+              <label class="checkbox" for="sgLoginLembrar">
+                <input type="checkbox" id="sgLoginLembrar">
+                <span>Lembrar de mim</span>
+              </label>
+              <a class="link" href="#form-login">Esqueci minha senha</a>
+            </div>
+            <button type="submit" class="btn btn--primary" id="sgLoginBtn">
+              <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+                <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+              <span class="btn-label">Entrar</span>
+              <span class="btn-loading-label">Entrando...</span>
+            </button>
+          </form>
+        </div>
+        <pre class="sg-comp-code mono" id="codeFormLogin"><code>&lt;form class="form" novalidate&gt;
+  &lt;div class="field"&gt;
+    &lt;label class="label" for="email"&gt;E-mail&lt;/label&gt;
+    &lt;div class="input-wrap"&gt;&lt;input class="input" type="email" id="email"&gt;&lt;/div&gt;
+    &lt;p class="field-error" hidden&gt;…&lt;/p&gt;
+  &lt;/div&gt;
+
+  &lt;div class="field"&gt;… campo de senha, com .input-wrap + .input-action …&lt;/div&gt;
+
+  &lt;div class="form-options"&gt;
+    &lt;label class="checkbox" for="lembrar"&gt;&lt;input type="checkbox" id="lembrar"&gt;&lt;span&gt;Lembrar de mim&lt;/span&gt;&lt;/label&gt;
+    &lt;a class="link" href="#"&gt;Esqueci minha senha&lt;/a&gt;
+  &lt;/div&gt;
+
+  &lt;button type="submit" class="btn btn--primary"&gt;
+    &lt;svg class="btn-spinner"&gt;…&lt;/svg&gt;
+    &lt;span class="btn-label"&gt;Entrar&lt;/span&gt;
+    &lt;span class="btn-loading-label"&gt;Entrando...&lt;/span&gt;
+  &lt;/button&gt;
+&lt;/form&gt;
+
+&lt;!-- comportamento: valida no submit (e-mail vazio/inválido, senha
+     vazia), marca .field--error por campo, e liga .is-loading no
+     botão enquanto "envia" — ver login.html para a implementação
+     completa. --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== MODAL DE VERIFICAÇÃO (OTP) ========== -->
+    <section class="sg-view" id="modal-otp" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Organismo</span>
+        <h1 class="sg-title" tabindex="-1">Modal de verificação</h1>
+        <p class="sg-lede">
+          O organismo mais reaproveitável dos três — cabeçalho, texto,
+          código de 6 dígitos, erro, reenvio com contagem regressiva e
+          rodapé com dois botões. É um <code>&lt;dialog&gt;</code> nativo de
+          verdade: abre com foco preso, Esc fecha sozinho. Clique para abrir.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Modal de verificação</b>
+            <span class="sg-chip sg-chip--organism">Organismo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeModalOtp">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <!-- Pré-visualização estática: o mesmo miolo do <dialog>,
+                 sempre visível, sem precisar abrir nada — inclui o
+                 "Fechar" que some dentro do modal real até clicar. -->
+            <div class="modal sg-modal-preview" aria-hidden="true">
+              <div class="modal-header">
+                <h2 class="modal-title">
+                  <span class="modal-title-icon">
+                    <svg viewBox="0 0 24 24"><use href="img/icones.svg#icon-mail"/></svg>
+                  </span>
+                  Verifique seu e-mail
+                </h2>
+                <button type="button" class="modal-close" tabindex="-1">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-x"/></svg>
+                  Fechar
+                </button>
+              </div>
+              <div class="modal-rule"></div>
+              <p class="modal-text">Enviamos um código de 6 dígitos para <strong>voce@empresa.com</strong>.</p>
+              <div class="otp">
+                <span class="otp-input">4</span><span class="otp-input">2</span><span class="otp-input">9</span>
+                <span class="otp-input">1</span><span class="otp-input"></span><span class="otp-input"></span>
+              </div>
+              <p class="modal-resend">Não recebeu? <button type="button" tabindex="-1" disabled>Reenviar código em <span>30s</span></button></p>
+              <div class="modal-footer">
+                <span class="btn btn--primary" style="width:auto">Confirmar</span>
+                <span class="btn btn--ghost" style="width:auto">Voltar</span>
+              </div>
+            </div>
+            <span class="sg-comp-variant-label">pré-visualização</span>
+          </div>
+          <div class="sg-comp-variant">
+            <button type="button" class="btn btn--primary" id="sgAbrirModalOtp" style="width:200px">Abrir modal de exemplo</button>
+            <span class="sg-comp-variant-label">interativo — dígite e confirme</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeModalOtp"><code>&lt;dialog class="modal" id="codeModal" aria-labelledby="codeModalTitle"&gt;
+  &lt;div class="modal-header"&gt;
+    &lt;h2 class="modal-title" id="codeModalTitle"&gt;
+      &lt;span class="modal-title-icon"&gt;&lt;svg&gt;…&lt;/svg&gt;&lt;/span&gt;
+      Verifique seu e-mail
+    &lt;/h2&gt;
+    &lt;button type="button" class="modal-close"&gt;&lt;svg&gt;…&lt;/svg&gt; Fechar&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class="modal-rule"&gt;&lt;/div&gt;
+  &lt;p class="modal-text"&gt;Enviamos um código de 6 dígitos para &lt;strong&gt;…&lt;/strong&gt;.&lt;/p&gt;
+
+  &lt;form&gt;
+    &lt;div class="otp" role="group" aria-label="Código de 6 dígitos"&gt;
+      &lt;input class="otp-input" maxlength="1"&gt; &lt;!-- ×6 --&gt;
+    &lt;/div&gt;
+    &lt;p class="modal-error" hidden&gt;&lt;svg&gt;…&lt;/svg&gt; Digite os 6 dígitos do código.&lt;/p&gt;
+    &lt;p class="modal-resend"&gt;Não recebeu?
+      &lt;button type="button" disabled&gt;Reenviar código em &lt;span&gt;30s&lt;/span&gt;&lt;/button&gt;
+    &lt;/p&gt;
+    &lt;div class="modal-footer"&gt;
+      &lt;button type="submit" class="btn btn--primary"&gt;…Confirmar…&lt;/button&gt;
+      &lt;button type="button" class="btn btn--ghost"&gt;Voltar&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/form&gt;
+&lt;/dialog&gt;
+
+&lt;!-- comportamento: dígito preenchido avança pro próximo campo;
+     Backspace em campo vazio volta; colar distribui os 6 dígitos;
+     reenvio fica desabilitado 30s; confirmar liga .is-verifying
+     na modal — ver login.html para a implementação completa. --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- Mesma casca de login.html, com ids próprios para não colidir
+         com nada mais na página. Fica fora do fluxo dos painéis — só
+         existe quando aberta via .showModal(). -->
+    <dialog class="modal" id="sgModalOtp" aria-labelledby="sgModalOtpTitle">
+      <div class="modal-header">
+        <h2 class="modal-title" id="sgModalOtpTitle">
+          <span class="modal-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><use href="img/icones.svg#icon-mail"/></svg>
+          </span>
+          Verifique seu e-mail
+        </h2>
+        <button type="button" class="modal-close" id="sgModalOtpClose">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-x"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <div class="modal-rule" role="presentation"></div>
+
+      <p class="modal-text">
+        Enviamos um código de 6 dígitos para <strong>voce@empresa.com</strong>.
+        Informe o código abaixo para continuar.
+      </p>
+
+      <form id="sgModalOtpForm" novalidate>
+        <div class="otp" id="sgModalOtpGroup" role="group" aria-labelledby="sgModalOtpLabel" aria-describedby="sgModalOtpErro">
+          <span class="sr-only" id="sgModalOtpLabel">Código de verificação de 6 dígitos</span>
+          <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1 de 6">
+          <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2 de 6">
+          <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3 de 6">
+          <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4 de 6">
+          <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5 de 6">
+          <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6 de 6">
+        </div>
+
+        <p class="modal-error" id="sgModalOtpErro" role="alert" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+          <span id="sgModalOtpErroTexto">Digite os 6 dígitos do código.</span>
+        </p>
+
+        <p class="modal-resend">
+          Não recebeu?
+          <button type="button" id="sgModalOtpResend" disabled>Reenviar código em <span id="sgModalOtpCountdown">30s</span></button>
+        </p>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn--primary" id="sgModalOtpConfirm">
+            <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+            <span class="btn-label">Confirmar</span>
+            <span class="btn-loading-label">Validando...</span>
+          </button>
+          <button type="button" class="btn btn--ghost" id="sgModalOtpBack">Voltar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== PAINEL DE ARTE LATERAL ========== -->
+    <section class="sg-view" id="arte-lateral" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Organismo</span>
+        <h1 class="sg-title" tabindex="-1">Painel de arte lateral</h1>
+        <p class="sg-lede">
+          O bloco decorativo ao lado do formulário de login — um
+          <code>radial-gradient</code> só com tokens da paleta (sem imagem),
+          mais uma citação. Em produção ocupa 688px de largura e a altura
+          inteira da tela; aqui, numa caixa de 320×420 só para caber no
+          palco. A marcação copiada não carrega esse redimensionamento.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Painel de arte lateral</b>
+            <span class="sg-chip sg-chip--organism">Organismo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeArteLateral">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <!-- Fonte única: o Template · Login clona este nó e só troca a
+               largura (420px lá, mais espaço de sobra que aqui). -->
+          <aside class="sg-arte-caixa" id="arteLateralFonte" aria-hidden="true">
+            <div class="auth-art-content">
+              <p class="auth-art-quote">Tire sua ideia da cabeça, organize os próximos passos e transforme tudo em realidade.</p>
+              <p class="auth-art-caption">Utilize a inteligência artificial da Plataforma de Design para tirar o seu projeto do papel.</p>
+            </div>
+          </aside>
+        </div>
+        <pre class="sg-comp-code mono" id="codeArteLateral"><code>&lt;aside class="auth-art" aria-hidden="true"&gt;
+  &lt;div class="auth-art-content"&gt;
+    &lt;p class="auth-art-quote"&gt;Tire sua ideia da cabeça, organize os próximos passos e transforme tudo em realidade.&lt;/p&gt;
+    &lt;p class="auth-art-caption"&gt;Utilize a inteligência artificial da Plataforma de Design para tirar o seu projeto do papel.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/aside&gt;
+
+&lt;!-- .auth-art::before é o gradiente, ::after é o véu escuro que dá
+     contraste pro texto branco embaixo — ambos só CSS, sem asset. --&gt;</code></pre>
+      </div>
+    </section>
+
+    <!-- ========== CASCA DE LOGIN ========== -->
+    <section class="sg-view" id="casca-login" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Organismo</span>
+        <h1 class="sg-title" tabindex="-1">Casca de login</h1>
+        <p class="sg-lede">
+          O layout de duas colunas que envolve o formulário e a arte lateral.
+          Em telas acima de 1100px mantém as duas colunas lado a lado; abaixo
+          disso, a arte desaparece e o formulário ocupa toda a largura. As classes
+          <code>.auth</code> (container principal), <code>.auth-form-col</code>
+          (coluna do formulário) e <code>.auth-card</code> (cartão interno) formam
+          a estrutura.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Casca de login</b>
+            <span class="sg-chip sg-chip--organism">Organismo</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeCascaLogin">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo" style="background:var(--surface-1);padding:0;overflow:auto;max-height:600px">
+          <div class="auth" style="gap:0;padding:0;min-height:600px">
+            <div class="auth-form-col">
+              <div class="auth-card">
+                <div class="brand">
+                  <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="5.6 9 28.8 22"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+                  </span>
+                  <span class="brand-name">Plataforma<span>de Design</span></span>
+                </div>
+                <h1 class="auth-title">Entrar na sua conta</h1>
+                <p class="auth-subtitle">Bem-vindo de volta.</p>
+              </div>
+            </div>
+            <aside class="auth-art" aria-hidden="true">
+              <div class="auth-art-content">
+                <p class="auth-art-quote">Tire sua ideia da cabeça, organize os próximos passos e transforme tudo em realidade.</p>
+                <p class="auth-art-caption">Conhecimento em um só lugar.</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeCascaLogin"><code>&lt;main class="auth"&gt;
+  &lt;!-- Coluna do formulário --&gt;
+  &lt;div class="auth-form-col"&gt;
+    &lt;div class="auth-card"&gt;
+      &lt;!-- Logotipo, título, e componentes aqui --&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Coluna de arte lateral (oculta em mobile) --&gt;
+  &lt;aside class="auth-art" aria-hidden="true"&gt;
+    &lt;div class="auth-art-content"&gt;
+      &lt;p class="auth-art-quote"&gt;Citação&lt;/p&gt;
+      &lt;p class="auth-art-caption"&gt;Legenda&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/aside&gt;
+&lt;/main&gt;</code></pre>
+      </div>
+
+      <div class="sg-note sg-note--info">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div class="sg-note-body">
+          <strong>Responsividade:</strong> Acima de 1100px, o layout mostra as duas
+          colunas lado a lado. Abaixo disso, <code>.auth-art</code> é ocultado com
+          <code>display:none</code> e a coluna do formulário expande para preencher
+          a tela. O painel de arte tem 688px de largura fixa.
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TEMPLATE · LOGIN ========== -->
+    <section class="sg-view sg-view--tpl" id="template-login" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Template</span>
+        <h1 class="sg-title" tabindex="-1">Login</h1>
+        <p class="sg-lede">
+          A tela inteira, remontada só com peças já catalogadas: a molécula
+          <a class="sg-link-inline" href="#logotipo">Logotipo</a>, os organismos
+          <a class="sg-link-inline" href="#form-login">Formulário de login</a>,
+          <a class="sg-link-inline" href="#modal-otp">Modal de verificação</a> e
+          <a class="sg-link-inline" href="#arte-lateral">Painel de arte lateral</a>, mais o
+          componente <a class="sg-link-inline" href="#alerta">Alerta</a> (oculto por padrão,
+          como em produção) e o <a class="sg-link-inline" href="#divisor">Divisor</a>.
+          Preencha e envie: abre a mesma modal de verificação documentada ao lado.
+        </p>
+        <div class="sg-note sg-note--info">
+          <span class="sg-note-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          </span>
+          <div class="sg-note-body">
+            <strong>Nada aqui é cópia.</strong> Logotipo, Alerta, Divisor e Painel de arte
+            lateral são clonados por JS a partir do nó real documentado em Componentes/
+            Organismos; a Modal de verificação é a mesma instância (não uma segunda modal).
+            Só o Formulário de login segue com marcação própria — como organismo interativo,
+            não dá pra ter dois formulários com os mesmos ids na página.
+          </div>
+        </div>
+      </header>
+      <div class="sg-rule"></div>
+
+      <div class="sg-tpl-shell">
+        <div class="sg-tpl-form-col">
+          <div class="sg-tpl-card">
+
+            <!-- Molécula Logotipo — não duplica a marcação: recebe um
+                 clone do nó real de #logotipo em Componentes via JS
+                 (ver "Template · Login" no script). Sem JS, fica vazio. -->
+            <div id="sgTplLogoSlot"></div>
+
+            <!-- Título da tela — conteúdo da página, não componente.
+                 h2 aqui (não h1) porque o h1 do painel é "Login", logo
+                 acima; em produção este mesmo texto é o h1 da página. -->
+            <h2 class="auth-title">Entrar na sua conta</h2>
+            <p class="auth-subtitle">Bem-vindo de volta. Informe seus dados para continuar.</p>
+
+            <!-- Componente Alerta — clonado de #alertaFonte (ver script);
+                 fica oculto por padrão, igual produção. -->
+            <div id="sgTplAlertSlot"></div>
+
+            <!-- Organismo Formulário de login — ids próprios (sgTpl),
+                 validação real; ao confirmar abre a modal de verificação
+                 (a mesma instância documentada em #modal-otp). -->
+            <form class="form" id="sgTplLoginForm" novalidate>
+              <div class="field" id="sgTplFieldEmail">
+                <label class="label" for="sgTplEmail">E-mail</label>
+                <div class="input-wrap">
+                  <input class="input" style="width:100%" type="email" id="sgTplEmail"
+                         placeholder="voce@empresa.com" autocomplete="email"
+                         aria-describedby="sgTplEmailErro">
+                </div>
+                <p class="field-error" id="sgTplEmailErro" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+                  Informe um e-mail válido.
+                </p>
+              </div>
+
+              <div class="field" id="sgTplFieldSenha">
+                <label class="label" for="sgTplSenha">Senha</label>
+                <div class="input-wrap">
+                  <input class="input input--with-action" style="width:100%" type="password" id="sgTplSenha"
+                         placeholder="Digite sua senha" autocomplete="current-password"
+                         aria-describedby="sgTplSenhaErro">
+                  <button type="button" class="input-action" id="sgTplToggleSenha"
+                          aria-pressed="false" aria-controls="sgTplSenha" aria-label="Mostrar senha">
+                    <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye"/></svg>
+                    <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye-off"/></svg>
+                  </button>
+                </div>
+                <p class="field-error" id="sgTplSenhaErro" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+                  A senha é obrigatória.
+                </p>
+              </div>
+
+              <div class="form-options">
+                <label class="checkbox" for="sgTplLembrar">
+                  <input type="checkbox" id="sgTplLembrar">
+                  <span>Lembrar de mim</span>
+                </label>
+                <a class="link" href="#template-login">Esqueci minha senha</a>
+              </div>
+
+              <button type="submit" class="btn btn--primary" id="sgTplLoginBtn">
+                <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+                <span class="btn-label">Entrar</span>
+                <span class="btn-loading-label">Entrando...</span>
+              </button>
+            </form>
+
+            <!-- Divisor — clonado de #divisorFonte (ver script) -->
+            <div id="sgTplDividerSlot"></div>
+
+            <!-- width:100% explícito: este botão é irmão do .form, não
+                 filho — não herda o stretch automático do flex column
+                 que o "Entrar" ganha de graça lá dentro. -->
+            <button type="button" class="btn btn--google" style="width:100%" id="sgTplGoogle">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="var(--google-blue)"   d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3.01h3.87c2.26-2.09 3.57-5.17 3.57-8.82Z"/>
+                <path fill="var(--google-green)"  d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3.01c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0 0 12 24Z"/>
+                <path fill="var(--google-yellow)" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.28a12 12 0 0 0 0 10.76l3.99-3.11Z"/>
+                <path fill="var(--google-red)"    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.28 6.62l3.99 3.11C6.22 6.88 8.87 4.75 12 4.75Z"/>
+              </svg>
+              Entrar com Google
+            </button>
+
+            <p class="auth-foot">
+              Não tem uma conta? <a class="link" href="cadastro.html">Criar conta</a>
+            </p>
+
+          </div>
+        </div>
+
+        <!-- Organismo Painel de arte lateral — clonado de
+             #arteLateralFonte (ver script); só a largura muda (420px
+             aqui, mais espaço de sobra que no palco de Organismos).
+             flex:0 0 420px fica aqui porque é o encaixe deste layout,
+             não do componente em si. -->
+        <div id="sgTplArteSlot" style="flex:0 0 420px"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="sg-toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   O guia se monta a partir dos tokens, não de uma lista copiada.
+   Todo valor exibido é resolvido pelo próprio navegador a partir
+   de css/tokens.css — inclusive as cadeias var()→var()→hex.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  /* ---------- Resolver o valor final de um token ----------
+     getPropertyValue devolve o texto cru ("var(--blue-500)"), então
+     não serve. Pintamos uma sonda com o token e perguntamos ao
+     navegador que cor saiu: aí a cadeia inteira já foi resolvida. */
+  var sonda = document.createElement('span');
+  sonda.style.display = 'none';
+  document.body.appendChild(sonda);
+
+  function corResolvida(token){
+    sonda.style.color = '';
+    sonda.style.color = 'var(' + token + ')';
+    return getComputedStyle(sonda).color;      // sempre rgb()/rgba()
+  }
+
+  function bruto(token){
+    return getComputedStyle(document.documentElement)
+             .getPropertyValue(token).trim();
+  }
+
+  /* ---------- Contraste WCAG 2.1 ---------- */
+  function paraRGB(cor){
+    var m = cor.match(/rgba?\(([^)]+)\)/);
+    if(!m) return null;
+    var p = m[1].split(',').map(function(x){ return parseFloat(x); });
+    return {r:p[0], g:p[1], b:p[2], a:p.length > 3 ? p[3] : 1};
+  }
+
+  /* Cor com alfa não tem luminância própria: precisa ser achatada
+     sobre o fundo real antes de comparar. */
+  function achatar(frente, fundo){
+    if(frente.a >= 1) return frente;
+    return {
+      r: frente.r * frente.a + fundo.r * (1 - frente.a),
+      g: frente.g * frente.a + fundo.g * (1 - frente.a),
+      b: frente.b * frente.a + fundo.b * (1 - frente.a),
+      a: 1
+    };
+  }
+
+  function luminancia(c){
+    var canal = [c.r, c.g, c.b].map(function(v){
+      v = v / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * canal[0] + 0.7152 * canal[1] + 0.0722 * canal[2];
+  }
+
+  function razao(corFrente, corFundo){
+    var f = paraRGB(corFrente), b = paraRGB(corFundo);
+    if(!f || !b) return null;
+    f = achatar(f, b);
+    var l1 = luminancia(f), l2 = luminancia(b);
+    var claro = Math.max(l1, l2), escuro = Math.min(l1, l2);
+    return (claro + 0.05) / (escuro + 0.05);
+  }
+
+  function selo(r){
+    if(r === null) return '';
+    if(r >= 7)   return '<span class="sg-wcag sg-wcag--aaa">AAA</span>';
+    if(r >= 4.5) return '<span class="sg-wcag sg-wcag--aa">AA</span>';
+    if(r >= 3)   return '<span class="sg-wcag sg-wcag--aa18">AA grande</span>';
+    return '<span class="sg-wcag sg-wcag--fail">Insuficiente</span>';
+  }
+
+  /* ---------- Copiar o nome do token ---------- */
+  var toast = document.getElementById('toast');
+  var relogioToast;
+
+  function avisar(texto){
+    toast.textContent = texto;
+    toast.classList.add('is-vis');
+    clearTimeout(relogioToast);
+    relogioToast = setTimeout(function(){ toast.classList.remove('is-vis'); }, 1600);
+  }
+
+  function copiar(texto){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(texto).then(function(){
+        avisar(texto + ' copiado');
+      }, function(){ avisar(texto); });
+    } else {
+      var campo = document.createElement('textarea');
+      campo.value = texto;
+      document.body.appendChild(campo);
+      campo.select();
+      try{ document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(campo);
+      avisar(texto + ' copiado');
+    }
+  }
+
+  document.addEventListener('click', function(ev){
+    var alvo = ev.target.closest('[data-token]');
+    if(alvo) copiar(alvo.dataset.token);
+  });
+
+  /* ==========================================================
+     CAMADA 1 e 2 — rampas
+     ========================================================== */
+  var BASE = [
+    {nome:'Cinzas',  desc:'Untitled UI. Texto, bordas e superfícies.',
+     tokens:['--gray-0','--gray-50','--gray-100','--gray-200','--gray-300','--gray-400','--gray-500','--gray-600','--gray-700','--gray-900']},
+    {nome:'Amarelo', desc:'A cor da marca. Rail, logo, destaque.',
+     tokens:['--yellow-50','--yellow-100','--yellow-200','--yellow-300','--yellow-400']},
+    {nome:'Limão',   desc:'Separado do amarelo da marca: é o papel do post-it, não a identidade.',
+     tokens:['--lemon-50','--lemon-100']},
+    {nome:'Azul e céu', desc:'A cor de ação: botão primário, foco, link, grafo.',
+     tokens:['--sky-100','--sky-200','--sky-300','--blue-500','--blue-600','--blue-700','--blue-800','--blue-900']},
+    {nome:'Verde',   desc:'Sucesso, conclusão, progresso.',
+     tokens:['--green-50','--green-100','--green-200','--green-500','--green-600']},
+    {nome:'Âmbar',   desc:'Atenção.',
+     tokens:['--amber-50','--amber-400','--amber-500','--amber-600']},
+    {nome:'Vermelho',desc:'Erro e ação destrutiva.',
+     tokens:['--red-50','--red-100','--red-200','--red-500','--red-600']},
+    {nome:'Roxo',    desc:'Reservado ao plano Pro.',
+     tokens:['--purple-50','--purple-500','--purple-600']},
+    {nome:'Marca de terceiro', desc:'Propriedade do Google. Só o botão de login pode usá-las.',
+     tokens:['--google-blue','--google-green','--google-yellow','--google-red']}
+  ];
+
+  var TEMA = [
+    {nome:'Neutral', desc:'Hoje espelha os cinzas. É o ponto onde o dark mode vai entrar.',
+     tokens:['--neutral-0','--neutral-50','--neutral-100','--neutral-200','--neutral-300','--neutral-400','--neutral-500','--neutral-600','--neutral-700','--neutral-900']}
+  ];
+
+  function montarRampas(destino, dados){
+    var html = dados.map(function(rampa){
+      var amostras = rampa.tokens.map(function(t){
+        var cru = bruto(t);
+        var fim = corResolvida(t);
+        /* Mostra o hex quando o token É o hex; senão, mostra para onde aponta */
+        var legenda = /^#/.test(cru) ? cru.toUpperCase() : cru;
+        return '<button type="button" class="sg-swatch" data-token="' + t + '" ' +
+               'title="Copiar ' + t + '">' +
+                 '<span class="sg-swatch-chip" style="--amostra:' + fim + '"></span>' +
+                 '<span class="sg-swatch-meta">' +
+                   '<span class="sg-swatch-token mono">' + t + '</span>' +
+                   '<span class="sg-swatch-value mono">' + legenda + '</span>' +
+                 '</span>' +
+               '</button>';
+      }).join('');
+
+      return '<div class="sg-ramp">' +
+               '<div class="sg-ramp-head">' +
+                 '<span class="sg-ramp-name">' + rampa.nome + '</span>' +
+                 '<span class="sg-ramp-desc">' + rampa.desc + '</span>' +
+               '</div>' +
+               '<div class="sg-swatches">' + amostras + '</div>' +
+             '</div>';
+    }).join('');
+    document.getElementById(destino).innerHTML = html;
+  }
+
+  montarRampas('baseRamps', BASE);
+  montarRampas('temaRamps', TEMA);
+
+  /* ==========================================================
+     CAMADA 3 — roles semânticas
+     ========================================================== */
+  var ROLES = [
+    {nome:'Texto', uso:'Hierarquia de leitura sobre fundo claro',
+     demoFill:'--surface-1', demoText:'--text-primary', demoRotulo:'Aa',
+     tokens:['--text-primary','--text-secondary','--text-muted','--text-disabled']},
+    {nome:'Superfícies', uso:'Os três planos de fundo',
+     demoFill:'--surface-0', demoText:'--text-primary', demoRotulo:'Aa',
+     tokens:['--surface-0','--surface-1','--surface-2']},
+    {nome:'Primary', uso:'Identidade — rail, logo, destaque da marca',
+     demoFill:'--fill-primary', demoText:'--text-on-primary', demoRotulo:'Marca',
+     tokens:['--fill-primary','--fill-primary-hover','--fill-primary-strong','--bg-primary','--bg-primary-strong','--text-on-primary','--bg-on-primary','--bg-on-primary-hover']},
+    {nome:'Accent', uso:'Ação — botão primário, foco, link',
+     demoFill:'--fill-accent', demoText:'--text-on-accent', demoRotulo:'Ação',
+     tokens:['--fill-accent','--fill-accent-hover','--bg-accent','--text-accent','--text-on-accent']},
+    {nome:'Success', uso:'Conclusão e progresso',
+     demoFill:'--fill-success', demoText:'--text-on-success', demoRotulo:'Feito',
+     tokens:['--fill-success','--fill-success-hover','--bg-success','--text-success','--text-on-success']},
+    {nome:'Warning', uso:'Atenção',
+     demoFill:'--fill-warning', demoText:'--text-on-warning', demoRotulo:'Atenção',
+     tokens:['--fill-warning','--fill-warning-hover','--bg-warning','--text-warning','--text-on-warning']},
+    {nome:'Danger', uso:'Erro e ação destrutiva',
+     demoFill:'--fill-danger', demoText:'--text-on-danger', demoRotulo:'Erro',
+     tokens:['--fill-danger','--bg-danger','--text-danger','--text-on-danger','--border-danger']},
+    {nome:'Pro', uso:'Plano pago',
+     demoFill:'--fill-pro', demoText:'--text-on-pro', demoRotulo:'Pro',
+     tokens:['--fill-pro','--fill-pro-hover','--bg-pro','--text-pro','--text-on-pro']},
+    {nome:'Bordas', uso:'Em rgba, para funcionar sobre branco, cinza e amarelo',
+     demoFill:'--surface-1', demoText:'--text-secondary', demoRotulo:'—',
+     tokens:['--border','--border-strong']}
+  ];
+
+  document.getElementById('roles').innerHTML = ROLES.map(function(role){
+    var linhas = role.tokens.map(function(t){
+      return '<button type="button" class="sg-role-row" data-token="' + t + '" title="Copiar ' + t + '">' +
+               '<span class="sg-role-dot" style="--amostra:' + corResolvida(t) + '"></span>' +
+               '<span class="sg-role-token mono">' + t + '</span>' +
+               '<span class="sg-role-val mono">' + bruto(t) + '</span>' +
+             '</button>';
+    }).join('');
+
+    return '<article class="sg-role">' +
+             '<div class="sg-role-head">' +
+               '<div>' +
+                 '<div class="sg-role-name">' + role.nome + '</div>' +
+                 '<div class="sg-role-use">' + role.uso + '</div>' +
+               '</div>' +
+               '<span class="sg-role-demo" style="background:var(' + role.demoFill + ');' +
+                 'color:var(' + role.demoText + ');' +
+                 (role.nome === 'Texto' || role.nome === 'Superfícies' || role.nome === 'Bordas'
+                    ? 'border:1px solid var(--border-strong);' : '') +
+                 '">' + role.demoRotulo + '</span>' +
+             '</div>' +
+             '<div class="sg-role-rows">' + linhas + '</div>' +
+           '</article>';
+  }).join('');
+
+  /* ==========================================================
+     Contraste — os pares que de fato aparecem na interface
+     ========================================================== */
+  var PARES = [
+    {frente:'--text-primary',    fundo:'--surface-1', rotulo:'Texto principal', nota:'corpo e títulos sobre card branco'},
+    {frente:'--text-secondary',  fundo:'--surface-1', rotulo:'Texto de apoio',  nota:'descrições e legendas'},
+    {frente:'--text-muted',      fundo:'--surface-1', rotulo:'Texto apagado',   nota:'placeholder e captions'},
+    {frente:'--text-accent',     fundo:'--surface-1', rotulo:'Link',            nota:'texto em azul sobre branco'},
+    {frente:'--text-success',    fundo:'--surface-1', rotulo:'Sucesso',         nota:'texto verde sobre branco'},
+    {frente:'--text-warning',    fundo:'--surface-1', rotulo:'Atenção',         nota:'texto âmbar sobre branco'},
+    {frente:'--text-danger',     fundo:'--surface-1', rotulo:'Erro',            nota:'texto vermelho sobre branco'},
+    {frente:'--text-on-primary', fundo:'--fill-primary', rotulo:'Sobre a marca', nota:'itens do rail sobre o amarelo'},
+    {frente:'--text-on-accent',  fundo:'--fill-accent',  rotulo:'Sobre ação',    nota:'botão primário'},
+    {frente:'--text-on-success', fundo:'--fill-success', rotulo:'Sobre sucesso', nota:'botão de confirmação'},
+    {frente:'--text-on-warning', fundo:'--fill-warning', rotulo:'Sobre atenção', nota:'selo de aviso'},
+    {frente:'--text-on-danger',  fundo:'--fill-danger',  rotulo:'Sobre erro',    nota:'botão destrutivo'}
+  ];
+
+  document.getElementById('contrastes').innerHTML = PARES.map(function(par){
+    var cf = corResolvida(par.frente), cb = corResolvida(par.fundo);
+    var r = razao(cf, cb);
+    var precisaBorda = par.fundo === '--surface-1';
+    return '<div class="sg-contraste">' +
+             '<span class="sg-contraste-amostra" style="background:' + cb + ';color:' + cf + ';' +
+               (precisaBorda ? 'border:1px solid var(--border-strong);' : '') + '">' + par.rotulo + '</span>' +
+             '<span class="sg-contraste-desc"><b>' + par.frente + '</b> sobre <b>' + par.fundo + '</b> — ' + par.nota + '</span>' +
+             '<span class="sg-ratio">' + (r ? r.toFixed(2) + ':1' : '—') + '</span>' +
+             selo(r) +
+           '</div>';
+  }).join('');
+
+  /* ---------- Divergências ainda em aberto ---------- */
+  document.getElementById('divergencias').innerHTML =
+    '<strong>Três divergências herdadas, registradas para decisão.</strong> ' +
+    'Ao consolidar os 10 blocos <code>:root</code> num arquivo só, três tokens ' +
+    'tinham valores diferentes conforme a página. Os dois primeiros continuam ' +
+    'sobrescritos localmente em <code>login.html</code> e <code>cadastro.html</code>, ' +
+    'para não mudar a aparência dessas telas sem a sua decisão: ' +
+    '<code>--text-danger</code> (--red-500 em 8 páginas, --red-600 nas 2 de acesso) e ' +
+    '<code>--radius-panel</code> (32px contra 24px). ' +
+    'O terceiro era acidental — <code>--red-200</code> aparecia como #FECDCA e #FECACA — ' +
+    'e foi unificado no primeiro, que é o da paleta Untitled UI usada no resto do sistema.';
+
+  /* ==========================================================
+     TIPOGRAFIA — a escala medida nos arquivos
+     ========================================================== */
+  /* A escala vem dos tokens; o guia não repete número nenhum. */
+  var TIPOS = [
+    {base:'--type-display',  rotulo:'Display',   peso:'--font-semibold', uso:'Título de página',            amostra:'Plataforma de Design'},
+    {base:'--type-title',    rotulo:'Título',    peso:'--font-semibold', uso:'Título de seção',             amostra:'Sobre a empresa'},
+    {base:'--type-heading',  rotulo:'Cabeçalho', peso:'--font-semibold', uso:'Modal, painel, assistente',   amostra:'Créditos de uso'},
+    {base:'--type-body-lg',  rotulo:'Corpo grande', peso:'--font-regular', uso:'Leitura confortável, nome de item', amostra:'Os nossos serviços geram renda interna.'},
+    {base:'--type-body',     rotulo:'Corpo',     peso:'--font-regular',  uso:'O tamanho padrão do produto', amostra:'Acompanhe quando e onde os seus créditos foram usados.'},
+    {base:'--type-body-sm',  rotulo:'Pequeno',   peso:'--font-medium',   uso:'Legenda de apoio',            amostra:'Aponte a câmera do celular para pagar via Pix'},
+    {base:'--type-caption',  rotulo:'Caption',   peso:'--font-regular',  uso:'Dica de campo, metadados',    amostra:'1 crédito equivale a R$ 1,00.'},
+    {base:'--type-overline', rotulo:'Overline',  peso:'--font-semibold', uso:'Data e rótulo em caixa alta', amostra:'10 de ago de 2026', maiuscula:true}
+  ];
+
+  document.getElementById('tipoEscala').innerHTML = TIPOS.map(function(t){
+    var track = bruto(t.base + '-track');          /* nem todo degrau tem */
+    var estilo = 'font-size:var(' + t.base + ');' +
+                 'line-height:var(' + t.base + '-lh);' +
+                 'font-weight:var(' + t.peso + ');' +
+                 (track ? 'letter-spacing:var(' + t.base + '-track);' : '') +
+                 (t.maiuscula ? 'text-transform:uppercase;' : '');
+
+    return '<div class="sg-type-row">' +
+             '<div class="sg-type-specimen" style="' + estilo + '">' + t.amostra + '</div>' +
+             '<div class="sg-type-meta">' +
+               '<span class="sg-type-role">' + t.rotulo + '</span>' +
+               '<button type="button" class="sg-type-token mono" data-token="' + t.base + '" ' +
+                 'title="Copiar ' + t.base + '">' + t.base + '</button>' +
+               '<span class="sg-type-specs mono">' + bruto(t.base) + ' / ' + bruto(t.base + '-lh') +
+                 (track ? ' · ' + track : '') + ' · ' + bruto(t.peso) + '</span>' +
+               '<span class="sg-type-uso">' + t.uso + '</span>' +
+             '</div>' +
+           '</div>';
+  }).join('');
+
+  /* ---- Pesos: ortogonais à escala ---- */
+  var PESOS = [
+    {token:'--font-regular',  uso:'Texto corrido'},
+    {token:'--font-medium',   uso:'Rótulo de campo, item de menu'},
+    {token:'--font-semibold', uso:'Botão, título, ênfase'},
+    {token:'--font-bold',     uso:'Número em destaque'}
+  ];
+
+  document.getElementById('tipoPesos').innerHTML = PESOS.map(function(p){
+    return '<button type="button" class="sg-peso" data-token="' + p.token + '" title="Copiar ' + p.token + '">' +
+             '<span class="sg-peso-amostra" style="font-weight:var(' + p.token + ')">Ag</span>' +
+             '<span class="sg-peso-token mono">' + p.token + '</span>' +
+             '<span class="sg-peso-val mono">' + bruto(p.token) + '</span>' +
+             '<span class="sg-peso-uso">' + p.uso + '</span>' +
+           '</button>';
+  }).join('');
+
+  /* ==========================================================
+     ELEVAÇÃO
+     ========================================================== */
+  var SOMBRAS = [
+    {token:'--shadow-xs',    uso:'Repouso. Botão, campo, card no fluxo.'},
+    {token:'--shadow-lg',    uso:'Card levantado, hover de item da lista.'},
+    {token:'--shadow-menu',  uso:'Menu suspenso. Traz uma borda de 1px junto.'},
+    {token:'--shadow-modal', uso:'Modal sobre o véu.'}
+  ];
+
+  document.getElementById('sombras').innerHTML = SOMBRAS.map(function(s){
+    return '<button type="button" class="sg-shadow" data-token="' + s.token + '" ' +
+             'style="box-shadow:var(' + s.token + ')" title="Copiar ' + s.token + '">' +
+             '<span class="sg-shadow-token mono">' + s.token + '</span>' +
+             '<span class="sg-shadow-uso">' + s.uso + '</span>' +
+           '</button>';
+  }).join('');
+
+  /* ==========================================================
+     ESPAÇAMENTO E RAIOS
+     ========================================================== */
+  var ESCALA = [
+    {v:4,  uso:'Colar rótulo ao seu valor'},
+    {v:8,  uso:'Ícone e texto dentro de um botão'},
+    {v:12, uso:'Itens de uma mesma linha'},
+    {v:16, uso:'Entre cards de uma lista · padding de card pequeno'},
+    {v:24, uso:'Padding de card · entre blocos irmãos'},
+    {v:32, uso:'Padding do painel · entre seções'},
+    {v:48, uso:'Respiro no rodapé do painel'},
+    {v:80, uso:'Largura do rail'}
+  ];
+
+  document.getElementById('escala').innerHTML = ESCALA.map(function(e){
+    return '<div class="sg-escala-linha">' +
+             '<span class="sg-escala-valor mono">' + e.v + 'px</span>' +
+             '<span class="sg-escala-barra" style="width:' + e.v + 'px"></span>' +
+             '<span class="sg-escala-uso">' + e.uso + '</span>' +
+           '</div>';
+  }).join('');
+
+  var RAIOS = [
+    {token:'--radius',       uso:'Botão, campo, chip'},
+    {token:'--radius-lg',    uso:'Card, modal'},
+    {token:'--radius-panel', uso:'Painel do app'}
+  ];
+
+  document.getElementById('raios').innerHTML = RAIOS.map(function(r){
+    return '<button type="button" class="sg-raio" data-token="' + r.token + '" ' +
+             'style="border-radius:var(' + r.token + ')" title="Copiar ' + r.token + '">' +
+             '<span class="mono">' + r.token.replace('--radius', 'radius') + '</span>' +
+             '<span class="sg-raio-val mono">' + bruto(r.token) + '</span>' +
+           '</button>';
+  }).join('');
+
+  /* ==========================================================
+     ÍCONES — os 8 já usados no login.html (mais o de voltar,
+     introduzido pela navegação dos painéis deste guia). Geometria
+     do Feather Icons v4, conferida contra o Figma por screenshot
+     — ver nota na seção. Cada botão copia o <svg> inteiro.
+     ========================================================== */
+  var ICONES = [
+    {nome:'alert-circle', origem:'login.html'},
+    {nome:'lock', origem:'login.html'},
+    {nome:'check', origem:'login.html'},
+    {nome:'eye', origem:'login.html'},
+    {nome:'eye-off', origem:'login.html'},
+    {nome:'mail', origem:'login.html'},
+    {nome:'x', origem:'login.html'},
+    {nome:'chevron-left', origem:'guia (voltar)'}
+  ];
+
+  /* A geometria de cada ícone mora só no sprite (símbolos no topo do
+     <body>). Aqui a gente só lê o que já está no DOM — nunca duplica. */
+  function geometriaIcone(nome){
+    var simbolo = document.getElementById('icon-' + nome);
+    return simbolo ? simbolo.innerHTML.trim() : '';
+  }
+
+  document.getElementById('icones-grid').innerHTML = ICONES.map(function(ic, i){
+    return '<button type="button" class="sg-icon" data-icone="' + i + '" title="Copiar SVG de ' + ic.nome + '">' +
+             '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-' + ic.nome + '"/></svg>' +
+             '<span class="sg-icon-nome mono">' + ic.nome + '</span>' +
+             '<span class="sg-icon-origem">' + ic.origem + '</span>' +
+           '</button>';
+  }).join('');
+
+  document.getElementById('icones-grid').addEventListener('click', function(ev){
+    var botao = ev.target.closest('[data-icone]');
+    if(!botao) return;
+    var ic = ICONES[Number(botao.dataset.icone)];
+    var marcacao = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+                   'stroke-linecap="round" stroke-linejoin="round">' + geometriaIcone(ic.nome) + '</svg>';
+    copiar(marcacao);
+  });
+
+  /* ==========================================================
+     Navegação — fundamentos: marca a seção visível no scroll
+     ========================================================== */
+  var linksFund = Array.prototype.slice.call(
+    document.querySelectorAll('.sg-nav-group--fundamentos .sg-nav-link[href^="#"]'));
+  var secoesFund = linksFund.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+
+  if('IntersectionObserver' in window){
+    var vistas = new Set();
+    var observador = new IntersectionObserver(function(entradas){
+      entradas.forEach(function(e){
+        if(e.isIntersecting) vistas.add(e.target); else vistas.delete(e.target);
+      });
+      /* A primeira seção visível na ordem do documento é a "atual".
+         Enquanto um painel de componente está aberto, o wrapper dos
+         fundamentos fica [hidden] — suas seções nunca intersectam,
+         então este laço simplesmente não marca nada como ativo, sem
+         precisar de um "if" à parte para esse caso. */
+      var atual = secoesFund.find(function(s){ return vistas.has(s); });
+      linksFund.forEach(function(a, i){
+        a.classList.toggle('is-active', secoesFund[i] === atual);
+      });
+    }, {rootMargin:'-10% 0px -70% 0px'});
+    secoesFund.forEach(function(s){ if(s) observador.observe(s); });
+  }
+
+  /* ==========================================================
+     Navegação — componentes: painel único fora do scroll
+     Clicar num item da lateral troca o conteúdo por essa peça só;
+     os fundamentos saem do fluxo ([hidden]) enquanto isso.
+     ========================================================== */
+  var fundamentosFlow = document.getElementById('fundamentosFlow');
+  var linksComp = Array.prototype.slice.call(document.querySelectorAll(
+    '.sg-nav-group--componentes .sg-nav-link[href^="#"], .sg-nav-group--organismos .sg-nav-link[href^="#"], .sg-nav-group--templates .sg-nav-link[href^="#"]'));
+  var paineis = Array.prototype.slice.call(document.querySelectorAll('.sg-view'));
+
+  function abrirPainel(id){
+    var alvo = document.getElementById(id);
+    if(!alvo || !alvo.classList.contains('sg-view')) return false;
+
+    fundamentosFlow.hidden = true;
+    paineis.forEach(function(p){ p.hidden = (p !== alvo); });
+    linksComp.forEach(function(a){
+      a.classList.toggle('is-active', a.getAttribute('href') === '#' + id);
+    });
+    linksFund.forEach(function(a){ a.classList.remove('is-active'); });
+    window.scrollTo(0, 0);
+    alvo.querySelector('.sg-title').focus({preventScroll:true});
+    return true;
+  }
+
+  function fecharPainel(idAlvoFundamentos){
+    fundamentosFlow.hidden = false;
+    paineis.forEach(function(p){ p.hidden = true; });
+    linksComp.forEach(function(a){ a.classList.remove('is-active'); });
+    if(idAlvoFundamentos){
+      var alvo = document.getElementById(idAlvoFundamentos);
+      if(alvo) alvo.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  }
+
+  linksComp.forEach(function(a){
+    a.addEventListener('click', function(ev){
+      ev.preventDefault();
+      var id = a.getAttribute('href').slice(1);
+      if(abrirPainel(id)) history.pushState(null, '', '#' + id);
+    });
+  });
+
+  /* Link "Voltar aos fundamentos" dentro de cada painel */
+  document.querySelectorAll('.sg-back').forEach(function(a){
+    a.addEventListener('click', function(ev){
+      ev.preventDefault();
+      var id = a.getAttribute('href').slice(1);
+      fecharPainel(id);
+      history.pushState(null, '', '#' + id);
+    });
+  });
+
+  /* Voltar pelo botão do navegador: reavalia o hash atual */
+  window.addEventListener('popstate', function(){
+    var id = location.hash.slice(1);
+    if(!abrirPainel(id)) fecharPainel(id);
+  });
+
+  /* Link direto para um painel (ex.: colado de outra aba) já abre nele */
+  (function(){
+    var id = location.hash.slice(1);
+    if(id) abrirPainel(id);
+  })();
+
+  /* ---------- Demonstração das durações ---------- */
+  document.querySelectorAll('.sg-pista').forEach(function(pista){
+    pista.addEventListener('mouseenter', function(){ pista.classList.add('is-fim'); });
+    pista.addEventListener('mouseleave', function(){ pista.classList.remove('is-fim'); });
+  });
+
+  /* ==========================================================
+     COMPONENTES — a mesma interação das telas de produção,
+     restrita aos elementos de demonstração desta seção.
+     ========================================================== */
+
+  /* ---- Mostrar/ocultar senha (mesmo comportamento de login.html) ---- */
+  var sgToggleSenha = document.getElementById('sgToggleSenha');
+  if(sgToggleSenha){
+    sgToggleSenha.addEventListener('click', function(){
+      var senha = document.getElementById('sgSenha');
+      var mostrando = sgToggleSenha.getAttribute('aria-pressed') === 'true';
+      sgToggleSenha.setAttribute('aria-pressed', String(!mostrando));
+      sgToggleSenha.setAttribute('aria-label', mostrando ? 'Mostrar senha' : 'Ocultar senha');
+      senha.type = mostrando ? 'password' : 'text';
+    });
+  }
+
+  /* ---- OTP: mesma navegação de login.html — só a demonstração
+     interativa; a variante "is-error" ao lado é só ilustrativa
+     (campos readonly), por isso fica de fora deste laço. ---- */
+  var sgOtp = document.getElementById('sgOtp');
+  if(sgOtp){
+    var sgDigitos = Array.prototype.slice.call(sgOtp.querySelectorAll('.otp-input'));
+    sgDigitos.forEach(function(input, i){
+      input.addEventListener('input', function(){
+        input.value = input.value.replace(/\D/g, '').slice(0, 1);
+        if(input.value && i < sgDigitos.length - 1) sgDigitos[i + 1].focus();
+      });
+      input.addEventListener('keydown', function(e){
+        if(e.key === 'Backspace' && !input.value && i > 0){
+          sgDigitos[i - 1].focus();
+          sgDigitos[i - 1].value = '';
+          e.preventDefault();
+        }
+        if(e.key === 'ArrowLeft'  && i > 0)                    { sgDigitos[i - 1].focus(); e.preventDefault(); }
+        if(e.key === 'ArrowRight' && i < sgDigitos.length - 1) { sgDigitos[i + 1].focus(); e.preventDefault(); }
+      });
+    });
+  }
+
+  /* ---- Copiar o bloco de código de um componente ---- */
+  document.addEventListener('click', function(ev){
+    var botao = ev.target.closest('[data-copy-target]');
+    if(!botao) return;
+    var bloco = document.getElementById(botao.dataset.copyTarget);
+    if(bloco) copiar(bloco.textContent.trim());
+  });
+
+  /* ==========================================================
+     ORGANISMOS — mesmo comportamento de login.html, só com ids
+     próprios para não colidir com as demos de Componentes.
+     ========================================================== */
+
+  /* ---- Formulário de login ---- */
+  var sgLoginForm = document.getElementById('sgLoginForm');
+  if(sgLoginForm){
+    var sgLoginEmail = document.getElementById('sgLoginEmail');
+    var sgLoginSenha = document.getElementById('sgLoginSenha');
+    var sgLoginBtn   = document.getElementById('sgLoginBtn');
+
+    function sgMarcarCampo(input, mensagem){
+      var campo = input.closest('.field');
+      var alvo  = document.getElementById(input.getAttribute('aria-describedby'));
+      var temErro = Boolean(mensagem);
+      campo.classList.toggle('field--error', temErro);
+      input.setAttribute('aria-invalid', String(temErro));
+      alvo.hidden = !temErro;
+      if(temErro) alvo.lastChild.textContent = ' ' + mensagem;
+    }
+
+    function sgValidarLogin(){
+      var ok = true;
+      var v = sgLoginEmail.value.trim();
+      if(!v){ sgMarcarCampo(sgLoginEmail, 'Informe seu e-mail.'); ok = false; }
+      else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ sgMarcarCampo(sgLoginEmail, 'Informe um e-mail válido.'); ok = false; }
+      else{ sgMarcarCampo(sgLoginEmail, ''); }
+
+      if(!sgLoginSenha.value){ sgMarcarCampo(sgLoginSenha, 'A senha é obrigatória.'); ok = false; }
+      else{ sgMarcarCampo(sgLoginSenha, ''); }
+      return ok;
+    }
+
+    sgLoginForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(!sgValidarLogin()) return;
+      sgLoginBtn.classList.add('is-loading');
+      sgLoginBtn.disabled = true;
+      setTimeout(function(){
+        sgLoginBtn.classList.remove('is-loading');
+        sgLoginBtn.disabled = false;
+        avisar('Válido — em produção abriria o modal de verificação');
+      }, 900);
+    });
+
+    document.getElementById('sgLoginToggleSenha').addEventListener('click', function(){
+      var botao = document.getElementById('sgLoginToggleSenha');
+      var mostrando = botao.getAttribute('aria-pressed') === 'true';
+      botao.setAttribute('aria-pressed', String(!mostrando));
+      botao.setAttribute('aria-label', mostrando ? 'Mostrar senha' : 'Ocultar senha');
+      sgLoginSenha.type = mostrando ? 'password' : 'text';
+    });
+  }
+
+  /* ---- Modal de verificação (OTP) ---- */
+  var sgModalOtp = document.getElementById('sgModalOtp');
+  if(sgModalOtp){
+    var SG_REENVIO_S  = 30;
+    var sgModalForm   = document.getElementById('sgModalOtpForm');
+    var sgModalGrupo  = document.getElementById('sgModalOtpGroup');
+    var sgModalDigitos = Array.prototype.slice.call(sgModalGrupo.querySelectorAll('.otp-input'));
+    var sgModalErro   = document.getElementById('sgModalOtpErro');
+    var sgModalConfirmar = document.getElementById('sgModalOtpConfirm');
+    var sgModalResend = document.getElementById('sgModalOtpResend');
+    var sgModalContagem = document.getElementById('sgModalOtpCountdown');
+    var sgModalTimerId = null;
+    // Quem abriu por último — pode ser o gatilho do organismo ou o
+    // botão "Entrar" do Template; o foco volta pra ele ao fechar.
+    var sgModalOpener = null;
+
+    /* var, não function declaration: precisa ficar acessível fora
+       deste bloco também — o Template de Login reaproveita esta
+       mesma modal em vez de duplicar a lógica. */
+    var sgCarregando = function(botao, ligado){
+      botao.classList.toggle('is-loading', ligado);
+      botao.disabled = ligado;
+    };
+
+    var sgLimparCodigo = function(){
+      sgModalDigitos.forEach(function(d){ d.value = ''; d.disabled = false; });
+      sgModalGrupo.classList.remove('is-error');
+      sgModalErro.hidden = true;
+      sgModalOtp.classList.remove('is-verifying');
+      sgCarregando(sgModalConfirmar, false);
+    };
+
+    var sgIniciarContagem = function(){
+      var restante = SG_REENVIO_S;
+      sgModalResend.disabled = true;
+      sgModalContagem.textContent = restante + 's';
+      sgModalResend.firstChild.textContent = 'Reenviar código em ';
+      clearInterval(sgModalTimerId);
+      sgModalTimerId = setInterval(function(){
+        restante -= 1;
+        if(restante <= 0){
+          clearInterval(sgModalTimerId);
+          sgModalResend.disabled = false;
+          sgModalResend.firstChild.textContent = 'Reenviar código';
+          sgModalContagem.textContent = '';
+          return;
+        }
+        sgModalContagem.textContent = restante + 's';
+      }, 1000);
+    };
+
+    document.getElementById('sgAbrirModalOtp').addEventListener('click', function(){
+      sgModalOpener = this;
+      sgLimparCodigo();
+      sgModalOtp.showModal();
+      sgModalDigitos[0].focus();
+      sgIniciarContagem();
+    });
+
+    sgModalDigitos.forEach(function(input, i){
+      input.addEventListener('input', function(){
+        input.value = input.value.replace(/\D/g, '').slice(0, 1);
+        sgModalGrupo.classList.remove('is-error');
+        sgModalErro.hidden = true;
+        if(input.value && i < sgModalDigitos.length - 1) sgModalDigitos[i + 1].focus();
+      });
+      input.addEventListener('keydown', function(e){
+        if(e.key === 'Backspace' && !input.value && i > 0){
+          sgModalDigitos[i - 1].focus();
+          sgModalDigitos[i - 1].value = '';
+          e.preventDefault();
+        }
+        if(e.key === 'ArrowLeft'  && i > 0)                          { sgModalDigitos[i - 1].focus(); e.preventDefault(); }
+        if(e.key === 'ArrowRight' && i < sgModalDigitos.length - 1)  { sgModalDigitos[i + 1].focus(); e.preventDefault(); }
+      });
+      input.addEventListener('paste', function(e){
+        var texto = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+        if(!texto) return;
+        e.preventDefault();
+        texto.slice(0, sgModalDigitos.length - i).split('').forEach(function(ch, k){
+          sgModalDigitos[i + k].value = ch;
+        });
+        var proximo = Math.min(i + texto.length, sgModalDigitos.length - 1);
+        sgModalDigitos[proximo].focus();
+      });
+    });
+
+    sgModalForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      var codigo = sgModalDigitos.map(function(d){ return d.value; }).join('');
+      if(codigo.length < sgModalDigitos.length){
+        sgModalGrupo.classList.add('is-error');
+        sgModalErro.hidden = false;
+        (sgModalDigitos.filter(function(d){ return !d.value; })[0] || sgModalDigitos[0]).focus();
+        return;
+      }
+      sgModalOtp.classList.add('is-verifying');
+      sgCarregando(sgModalConfirmar, true);
+      // Protótipo: qualquer código de 6 dígitos "confirma".
+      setTimeout(function(){
+        sgModalOtp.close();
+        avisar('Código validado — protótipo, sem backend real');
+      }, 900);
+    });
+
+    sgModalResend.addEventListener('click', function(){
+      sgLimparCodigo();
+      sgModalDigitos[0].focus();
+      sgIniciarContagem();
+    });
+
+    document.getElementById('sgModalOtpClose').addEventListener('click', function(){ sgModalOtp.close(); });
+    document.getElementById('sgModalOtpBack').addEventListener('click', function(){ sgModalOtp.close(); });
+
+    sgModalOtp.addEventListener('click', function(e){
+      var r = sgModalOtp.getBoundingClientRect();
+      var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                   e.clientY >= r.top  && e.clientY <= r.bottom;
+      if(!dentro) sgModalOtp.close();
+    });
+
+    sgModalOtp.addEventListener('close', function(){
+      clearInterval(sgModalTimerId);
+      sgLimparCodigo();
+      if(sgModalOpener) sgModalOpener.focus();
+    });
+  }
+
+  /* ---- Template · Login: recebe o Logotipo de Componentes ----
+     Nada de marcação duplicada: o Template clona o nó real de
+     #logotipoFonte (a demo do componente "Logotipo") e só ajusta
+     o href, que na demo aponta pra ele mesmo. Se o logotipo mudar
+     em Componentes, o Template muda junto — mesma lógica de fonte
+     única já usada no sprite de ícones. */
+  var sgTplLogoSlot = document.getElementById('sgTplLogoSlot');
+  var logotipoFonte = document.getElementById('logotipoFonte');
+  if(sgTplLogoSlot && logotipoFonte){
+    var logotipoClone = logotipoFonte.cloneNode(true);
+    logotipoClone.removeAttribute('id');
+    logotipoClone.setAttribute('href', '#template-login');
+    sgTplLogoSlot.appendChild(logotipoClone);
+  }
+
+  /* Alerta — clona a variante "default (erro)" de #alertaFonte
+     (Componentes) e garante que comece oculta, igual produção. */
+  var sgTplAlertSlot = document.getElementById('sgTplAlertSlot');
+  var alertaFonte = document.getElementById('alertaFonte');
+  if(sgTplAlertSlot && alertaFonte){
+    var alertaClone = alertaFonte.cloneNode(true);
+    alertaClone.removeAttribute('id');
+    alertaClone.hidden = true;
+    sgTplAlertSlot.appendChild(alertaClone);
+  }
+
+  /* Divisor — clona #divisorFonte (Componentes) e remove o
+     margin:0 do palco isolado, pra voltar ao margin:24px 0 normal. */
+  var sgTplDividerSlot = document.getElementById('sgTplDividerSlot');
+  var divisorFonte = document.getElementById('divisorFonte');
+  if(sgTplDividerSlot && divisorFonte){
+    var divisorClone = divisorFonte.cloneNode(true);
+    divisorClone.removeAttribute('id');
+    divisorClone.removeAttribute('style');
+    sgTplDividerSlot.appendChild(divisorClone);
+  }
+
+  /* Painel de arte lateral — clona #arteLateralFonte (Organismos) e
+     troca só o tamanho: aqui ocupa 100% do slot de 420px em vez dos
+     320×420 fixos do palco de demonstração. */
+  var sgTplArteSlot = document.getElementById('sgTplArteSlot');
+  var arteLateralFonte = document.getElementById('arteLateralFonte');
+  if(sgTplArteSlot && arteLateralFonte){
+    var arteClone = arteLateralFonte.cloneNode(true);
+    arteClone.removeAttribute('id');
+    arteClone.style.width = '100%';
+    arteClone.style.height = '100%';
+    sgTplArteSlot.appendChild(arteClone);
+  }
+
+  /* ---- Template · Login: formulário ----
+     Mesma validação dos outros dois formulários da página (cada
+     painel tem os próprios ids para não colidir), mas ao confirmar
+     abre a modal de verificação REAL — a mesma instância de
+     #sgModalOtp documentada em Organismos, não uma cópia. */
+  var sgTplLoginForm = document.getElementById('sgTplLoginForm');
+  if(sgTplLoginForm){
+    var sgTplEmail = document.getElementById('sgTplEmail');
+    var sgTplSenha = document.getElementById('sgTplSenha');
+    var sgTplBtn   = document.getElementById('sgTplLoginBtn');
+
+    function sgTplMarcarCampo(input, mensagem){
+      var campo = input.closest('.field');
+      var alvo  = document.getElementById(input.getAttribute('aria-describedby'));
+      var temErro = Boolean(mensagem);
+      campo.classList.toggle('field--error', temErro);
+      input.setAttribute('aria-invalid', String(temErro));
+      alvo.hidden = !temErro;
+      if(temErro) alvo.lastChild.textContent = ' ' + mensagem;
+    }
+
+    function sgTplValidarLogin(){
+      var ok = true;
+      var v = sgTplEmail.value.trim();
+      if(!v){ sgTplMarcarCampo(sgTplEmail, 'Informe seu e-mail.'); ok = false; }
+      else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ sgTplMarcarCampo(sgTplEmail, 'Informe um e-mail válido.'); ok = false; }
+      else{ sgTplMarcarCampo(sgTplEmail, ''); }
+
+      if(!sgTplSenha.value){ sgTplMarcarCampo(sgTplSenha, 'A senha é obrigatória.'); ok = false; }
+      else{ sgTplMarcarCampo(sgTplSenha, ''); }
+      return ok;
+    }
+
+    sgTplLoginForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(!sgTplValidarLogin()) return;
+
+      sgTplBtn.classList.add('is-loading');
+      sgTplBtn.disabled = true;
+      setTimeout(function(){
+        sgTplBtn.classList.remove('is-loading');
+        sgTplBtn.disabled = false;
+        if(sgModalOtp){
+          sgModalOpener = sgTplBtn;
+          sgLimparCodigo();
+          sgModalOtp.showModal();
+          sgModalDigitos[0].focus();
+          sgIniciarContagem();
+        }
+      }, 900);
+    });
+
+    document.getElementById('sgTplToggleSenha').addEventListener('click', function(){
+      var botao = document.getElementById('sgTplToggleSenha');
+      var mostrando = botao.getAttribute('aria-pressed') === 'true';
+      botao.setAttribute('aria-pressed', String(!mostrando));
+      botao.setAttribute('aria-label', mostrando ? 'Mostrar senha' : 'Ocultar senha');
+      sgTplSenha.type = mostrando ? 'password' : 'text';
+    });
+
+    document.getElementById('sgTplGoogle').addEventListener('click', function(){
+      avisar('Entrar com Google — sem OAuth real neste protótipo');
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

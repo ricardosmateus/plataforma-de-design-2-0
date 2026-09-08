@@ -1,0 +1,3391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Idéias · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/esqueleto.css">
+<style>
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   Espelha o :root de meus-projetos.html, acrescido da camada de
+   Motion (--dur-*, --ease-*) e de --bg-primary-strong, usado nos
+   cabeçalhos das colunas do board.
+
+   Tokens do sistema: css/tokens.css
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+  min-width:1024px;
+}
+body.modal-open{overflow:hidden}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+img{display:block;max-width:100%}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;
+  padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ---------- Acessibilidade: focus rings ---------- */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:var(--focus-offset);
+}
+.nav-item:focus-visible{
+  outline:2px solid var(--neutral-900);
+  outline-offset:var(--focus-offset);
+  border-radius:var(--radius);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:flex;min-height:100vh}
+
+/* ---------- Rail ---------- */
+.rail{
+  width:var(--rail-w);
+  flex:0 0 var(--rail-w);
+  background:var(--fill-primary);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 24px;
+  position:sticky;top:0;height:100vh;
+  z-index:10;
+}
+/* Símbolo da marca: mesma caixa de 44px dos itens do menu, para o
+   logo e a "bolacha" do Início ficarem alinhados e do mesmo tamanho.
+   Monograma PD geométrico — contra-formas circulares, em amarelo
+   sobre bolacha preta. */
+.logomark{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+  margin-bottom:24px;
+}
+.logomark svg{width:28px;height:auto;display:block;fill:var(--fill-primary)}
+.rail-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.rail-spacer{flex:1}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.rail-divider{width:40px;height:1px;background:var(--border-strong)}
+
+.nav-item{
+  position:relative;
+  width:44px;height:44px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-on-primary);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover{background:var(--fill-primary-hover)}
+.nav-item[aria-current="page"]{background:var(--fill-primary-hover)}
+.nav-item::after{
+  content:attr(data-label);
+  position:absolute;left:calc(100% + 10px);top:50%;
+  transform:translateY(-50%) translateX(-4px);
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:12px;font-weight:500;line-height:18px;
+  padding:6px 10px;border-radius:var(--radius);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;
+  transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+  z-index:60;
+}
+.nav-item:hover::after,.nav-item:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  overflow:hidden;background:var(--fill-primary-hover);
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Painel ---------- */
+.panel{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;
+  background:var(--surface-1);
+  border-radius:var(--radius-panel);
+  margin-top:12px;
+  min-height:calc(100vh - 12px);
+  padding:0 32px 32px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header{
+  width:100%;
+  padding:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+/* 48px em cima e embaixo = "Respiro no rodapé do painel" na escala do
+   styleguide, o mesmo token que empresas.html e projetos.html usam.
+   O padding é do título (não do header) para que as três páginas
+   tenham exatamente a mesma altura de cabeçalho: 96px. */
+.page-title{
+  display:flex;align-items:center;gap:12px;
+  padding:48px 0;
+}
+/* line-height:0 é o que faz a caixa do texto colapsar e a altura do
+   cabeçalho vir só do padding — mesmo recurso já usado nas outras
+   duas páginas. Sem isto o cabeçalho ficaria 38px mais alto que o
+   das telas anteriores. */
+.page-title-main{
+  font-size:30px;line-height:0;font-weight:600;
+  letter-spacing:-.02em;color:var(--text-primary);
+}
+
+.section-head{width:100%}
+/* Sem margem no topo: o respiro antes de cada régua vem de quem está
+   acima dela (o padding do título, a margem do breadcrumb, a margem
+   da barra). Margem dos dois lados somaria aos dois e faria as
+   réguas flutuarem. */
+.rule{height:1px;background:var(--border);margin:0 0 24px}
+
+/* ---------- Breadcrumb ---------- */
+.breadcrumb{display:flex;align-items:center;margin-bottom:24px}
+.breadcrumb-list{display:flex;align-items:center;flex-wrap:wrap;gap:4px;list-style:none}
+.breadcrumb-item{display:flex;align-items:center;gap:4px}
+.breadcrumb-link,
+.breadcrumb-current{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 8px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;
+}
+.breadcrumb-link{
+  color:var(--text-secondary);text-decoration:none;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.breadcrumb-link:hover{background:var(--surface-0);color:var(--text-primary)}
+.breadcrumb-current{background:var(--surface-0);color:var(--text-primary);font-weight:600}
+.breadcrumb-sep{
+  width:16px;height:16px;flex-shrink:0;color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.breadcrumb-back{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:var(--radius);
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  font-size:14px;line-height:20px;font-weight:500;
+  text-decoration:none;white-space:nowrap;
+  margin-right:12px;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.breadcrumb-back:hover{background:var(--surface-0);color:var(--text-primary);border-color:var(--text-secondary)}
+.breadcrumb-back:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+/* Sem isto, o atributo [hidden] perde para o "display:inline-flex"
+   acima — mesma especificidade, e regra de autor sempre vence a folha
+   padrão do navegador. É o que esconde "Nova idéia" de quem não pode
+   criar. Mesmo conserto já aplicado em projetos.html, onde o bug
+   chegou a aparecer de verdade. */
+.btn[hidden]{display:none}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--secondary{
+  width:100%;height:40px;
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  font-size:14px;line-height:20px;
+}
+.btn--secondary:hover{background:var(--sky-100);color:var(--text-primary)}
+.btn--lg{width:auto;height:48px;padding:0 24px;font-size:16px;line-height:24px;gap:10px}
+.btn--lg svg{width:22px;height:22px}
+.btn--ghost{
+  height:40px;padding:0 16px;
+  color:var(--text-secondary);
+  font-size:14px;line-height:20px;font-weight:500;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+}
+.btn--ghost:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* ============================================================
+   TOOLBAR — busca + filtro
+   ============================================================ */
+.toolbar{
+  width:100%;
+  padding:0;
+  margin-bottom:24px;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.field-search{position:relative;width:380px;max-width:100%}
+.field-search svg{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;pointer-events:none;
+  color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.field-search .input{padding-left:44px}
+.input::placeholder{color:var(--text-muted)}
+.input:focus{
+  outline:none;
+  border-color:var(--fill-accent);
+  box-shadow:0 0 0 4px var(--sky-100);
+}
+.input[type="search"]::-webkit-search-cancel-button{cursor:pointer}
+
+.field-filter{position:relative;width:380px;max-width:100%}
+.select{
+  width:100%;height:44px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:0 14px 0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  color:var(--text-primary);
+  cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.select svg{
+  width:20px;height:20px;flex-shrink:0;
+  color:var(--text-secondary);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.select[aria-expanded="true"],.select:focus-visible{
+  outline:none;
+  border-color:var(--fill-accent);
+  box-shadow:0 0 0 4px var(--sky-100);
+}
+.select-menu{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-menu);
+  padding:4px;
+  z-index:40;
+  display:none;
+}
+.select-menu button{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+}
+.select-menu button svg{
+  width:16px;height:16px;flex-shrink:0;
+  color:var(--fill-accent);
+  stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+  opacity:0;
+}
+.select-menu button:hover{background:var(--surface-0);color:var(--text-primary)}
+.select-menu button[aria-selected="true"]{color:var(--text-primary);font-weight:600}
+.select-menu button[aria-selected="true"] svg{opacity:1}
+
+/* ============================================================
+   BOARD
+   ============================================================ */
+.board-wrap{
+  width:100%;
+}
+.board{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  align-items:stretch;
+}
+/* align-items:stretch faz cada .column ocupar a altura da linha do
+   grid, que por sua vez é ditada pela coluna mais alta — assim as
+   três colunas sempre terminam no mesmo ponto. */
+.column{display:flex;flex-direction:column}
+
+/* O cabeçalho gruda no topo da janela assim que a rolagem da página
+   o alcança — sticky é relativo ao scroller do documento, já que
+   nenhum ancestral entre .column-head e <body> define overflow. */
+.column-head{
+  position:sticky;top:0;z-index:3;
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  height:40px;padding:0 16px;
+  background:var(--bg-primary-strong);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-on-primary);
+  box-shadow:0 1px 0 var(--border-strong);
+}
+.column-count{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  min-width:24px;height:24px;padding:0 8px;
+  display:grid;place-items:center;
+  border-radius:999px;
+  background:var(--surface-1);
+  font-size:12px;line-height:18px;font-weight:600;
+  color:var(--text-secondary);
+}
+
+.column-body{
+  flex:1;
+  display:flex;flex-direction:column;
+  background:var(--surface-0);
+  border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  padding:16px;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+
+.card-list{list-style:none;display:flex;flex-direction:column;gap:16px}
+
+/* ---------- Medidas do esqueleto nesta tela ----------
+   As peças e a animação vêm de css/esqueleto.css; aqui ficam só os
+   tamanhos, que são desta página. O card de esqueleto reusa a classe
+   .idea para herdar fundo, borda, raio e padding do card de verdade —
+   assim a silhueta acerta sozinha e não sai de sincronia quando o
+   card mudar. */
+.esq-barra--pagina{width:300px;height:26px}
+.esq-coluna .column-body{gap:16px}
+.esq-idea .esq-icone{width:32px;height:32px;flex-shrink:0}
+.esq-idea .esq-head{width:100%}
+
+/* Enquanto o quadro carrega, a busca não tem o que filtrar. Fica
+   visível (some-la empurraria o board quando voltasse) mas inerte. */
+body.is-carregando-quadro .toolbar{opacity:.5;pointer-events:none}
+
+/* Falha de carga do quadro. Ocupa a linha inteira da grade de três
+   colunas: não é uma coluna vazia, é o motivo de não haver coluna
+   nenhuma. E "falhou" nunca pode ser lido como "não tem nada"
+   (IDEIA-QUADRO-008). */
+.board-falha{
+  grid-column:1 / -1;
+  display:flex;align-items:center;justify-content:center;
+  padding:48px 32px;text-align:center;
+  background:var(--surface-0);
+  border-radius:var(--radius-lg);
+  color:var(--text-secondary);
+  font-size:14px;line-height:22px;
+}
+
+/* Um botão que não responde precisa PARECER que não responde — mesma
+   lição de BOARD-IA-001, ausente também nesta tela. */
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- Card de idéia ---------- */
+.idea{
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  padding:16px;
+  display:flex;flex-direction:column;gap:16px;
+  transition:box-shadow var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.idea:hover{box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+.idea.is-entering{animation:idea-in var(--dur-base) var(--ease-out)}
+@keyframes idea-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.idea:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Arrastar e soltar entre colunas ---------- */
+/* draggable só fica "true" quando o gesto não começou num botão, então
+   o cursor de arraste também só aparece nesse caso. */
+.idea[draggable="true"]{cursor:grab}
+.idea.is-dragging{
+  opacity:.5;
+  cursor:grabbing;
+  box-shadow:var(--shadow-lg);
+  border-color:var(--border-strong);
+}
+/* Realce só nas colunas que de fato aceitam o card (a de origem não). */
+.column-body.is-drop-target{
+  background:var(--bg-primary);
+  outline:2px dashed var(--fill-primary-strong);
+  outline-offset:-2px;
+}
+
+/* Card fake — adicionar nova idéia (apenas coluna "ideias") */
+.idea-add{
+  background:var(--surface-0);
+  border:1px dashed var(--border-strong);
+  border-radius:var(--radius-lg);
+  padding:16px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.idea-add:hover{border-color:var(--fill-accent);background:var(--surface-1)}
+.idea-add:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.idea-add-icon{
+  width:28px;height:28px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--surface-1);
+  border:1px dashed var(--border-strong);
+  color:var(--text-secondary);
+}
+.idea-add-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.idea-add-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary)}
+
+.idea-head{display:flex;align-items:center;gap:12px}
+.idea-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--bg-primary-strong);
+  color:var(--text-on-primary);
+}
+.idea-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.idea-icon.is-done{
+  background:var(--green-500);
+  color:var(--neutral-0);
+}
+.idea-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+.idea-stars-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.idea-stars{display:flex;align-items:center;gap:2px}
+.idea-stars svg{width:16px;height:16px;fill:var(--text-muted)}
+.idea-stars svg.is-on{fill:var(--green-500)}
+.idea-date{font-size:13px;line-height:18px;font-weight:500;color:var(--text-muted);white-space:nowrap}
+.idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary)}
+
+/* ---------- Card ilustrado (ex.: "Matriz CSD") ----------
+   Variante do Figma sem estrelas/descrição: no lugar entra uma
+   ilustração quadrada de 209x210, herdada do frame "Idéias". */
+.idea-illustration{
+  width:100%;aspect-ratio:5/4;
+  border-radius:var(--radius);
+  object-fit:contain;
+  background:var(--surface-1);
+}
+
+/* ---------- Menu de ações do card (kebab) ---------- */
+.idea{position:relative}
+.idea:has(.card-menu[aria-expanded="true"]){border-color:var(--border-strong);box-shadow:var(--shadow-lg);z-index:40}
+.card-menu{
+  position:absolute;top:8px;right:8px;
+  width:32px;height:32px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-secondary);
+  transition:background .15s ease,color .15s ease;
+  z-index:2;
+}
+.card-menu:hover,.card-menu[aria-expanded="true"]{background:rgba(255,255,255,.9);color:var(--text-primary)}
+.card-menu svg{width:20px;height:20px;fill:currentColor}
+.menu{
+  position:absolute;top:48px;right:16px;
+  min-width:184px;padding:4px;
+  background:var(--surface-1);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-menu);
+  z-index:30;
+  display:none;
+}
+.menu.is-open{display:block}
+.menu button{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+}
+.menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.menu button:hover{background:var(--surface-0)}
+.menu .sep{height:1px;background:var(--border);margin:4px}
+.menu .danger{color:var(--text-danger)}
+.menu .danger:hover{background:var(--bg-danger)}
+
+/* ---------- Empty state por coluna ---------- */
+.column-empty{
+  flex:1;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:32px 16px;text-align:center;
+}
+.column-empty svg{
+  width:28px;height:28px;color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;
+}
+.column-empty p{font-size:14px;line-height:22px;color:var(--text-muted)}
+
+/* ============================================================
+   EMPTY STATE — nenhuma idéia cadastrada
+   ============================================================ */
+.empty-wrap{
+  width:100%;
+  /* Sem margem própria: os 24px acima já vêm da margem da régua
+     anterior. Somar os dois abria um vão de 48px só no estado vazio. */
+  margin:0;
+  display:none;
+}
+body.is-empty .empty-wrap{
+  display:flex;flex-direction:column;
+  height:100%;
+  flex:1;
+}
+.empty{
+  width:100%;height:100%;
+  padding:48px 32px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  background:var(--neutral-50);
+  border-radius:var(--radius-lg);
+  flex:1;
+}
+/* Ilustração do empty state: substitui o antigo selo de 56px por
+   uma arte de largura maior, sem moldura nem fundo. */
+.empty-art{
+  width:220px;height:auto;
+  margin-bottom:24px;
+  display:block;
+}
+.empty h2{font-size:18px;line-height:28px;font-weight:600;margin-bottom:8px;color:var(--text-primary)}
+.empty p{font-size:14px;line-height:22px;color:var(--text-secondary);max-width:380px;margin-bottom:32px}
+.empty-actions{display:flex;align-items:center;gap:12px}
+
+/* Estado alternado */
+body.is-empty .page-header .btn--primary{display:none}
+body.is-empty .toolbar{display:none}
+body.is-empty .board-wrap{display:none}
+body.is-empty .rule--hide-on-empty{display:none}
+/* No estado vazio a régua anterior mantém seus 24px — é ela que dá o
+   respiro até a ilustração, já que a barra de busca e a terceira
+   régua saem da tela. */
+
+
+/* ============================================================
+   MODAL — nova idéia
+   ============================================================ */
+.modal{
+  position:fixed;inset:0;margin:auto;
+  width:480px;max-width:calc(100vw - 48px);
+  height:fit-content;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.modal::backdrop{background:var(--overlay)}
+.modal[open]{animation:modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:fade-in var(--dur-base) var(--ease-out)}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-header{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.np-shell{display:flex;flex-direction:column;height:auto;min-height:0}
+
+.np-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;
+  padding:20px 24px;
+  overflow:visible;
+}
+
+.modal-form{display:flex;flex-direction:column;gap:14px;margin-top:18px;flex:0 0 auto}
+.field{display:flex;flex-direction:column;gap:6px}
+
+/* Estrelas de classificação (régua de radio) */
+.radio-stars{display:flex;align-items:center;gap:0px}
+.radio-star{
+  width:32px;height:32px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  color:var(--text-muted);
+  transition:color var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+}
+.radio-star svg{width:22px;height:22px;fill:currentColor}
+.radio-star:hover{transform:scale(1.08)}
+.radio-star:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.radio-star[aria-checked="true"]{color:var(--green-500)}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.textarea{
+  width:100%;min-height:104px;resize:vertical;
+  padding:10px 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.textarea::placeholder{color:var(--text-muted)}
+.textarea:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+
+.modal-footer{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:auto;padding-top:16px}
+.modal-divider{height:1px;background:var(--border);flex-shrink:0;margin:0}
+.modal-footer .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px}
+.modal .btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.modal .btn--primary:hover{background:var(--fill-accent-hover)}
+.modal .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.modal .btn--secondary:hover{background:var(--surface-0)}
+.modal .btn--danger{background:var(--fill-danger);color:var(--text-on-danger);box-shadow:var(--shadow-xs)}
+.modal .btn--danger:hover{filter:brightness(.92)}
+
+/* Modais de confirmação (Excluir / Duplicar) */
+.modal--stacked{width:440px;padding:24px}
+.modal-shell{display:flex;flex-direction:column;height:100%;gap:0}
+.modal-confirm{display:flex;flex-direction:column;align-items:flex-start;gap:24px}
+.modal-confirm-text{font-size:15px;line-height:24px;color:var(--text-primary);margin:0;margin-top:24px;max-width:360px}
+.modal-confirm-actions{display:flex;align-items:center;gap:12px;width:100%}
+
+/* ============================================================
+   ASSISTANT — coluna à direita, sobre o fundo amarelo da página
+   Não é overlay: entra como terceiro filho flex de .app, então o
+   painel branco encolhe em vez de ficar coberto.
+   ============================================================ */
+.assistant{
+  flex:0 0 320px;
+  align-self:flex-start;
+  position:sticky;top:0;
+  height:100vh;
+  overflow:hidden;
+  transition:flex-basis var(--dur-base) var(--ease-in-out);
+}
+/* Fechado o painel nao some: encolhe ate a faixa de 80px que sobra
+   a direita, exatamente como no Figma. */
+body.is-assistant-closed .assistant{flex-basis:80px}
+
+/* O gatilho fica FORA de .assistant-inner para nao desaparecer junto
+   com o conteudo. right:16px o deixa centrado na faixa de 80px
+   (80 - 48 - 16 = 16) e a 16px da borda quando aberto. */
+.assistant-toggle{
+  position:absolute;top:32px;right:32px;z-index:2;
+  width:48px;height:48px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  background:var(--fill-primary-hover);
+  color:var(--text-on-primary);
+  transition:box-shadow var(--dur-fast) var(--ease-out),right var(--dur-base) var(--ease-in-out);
+}
+/* Fechado: 80 - 48 - 16 = 16, ou seja, centrado na faixa. */
+body.is-assistant-closed .assistant-toggle{right:16px}
+.assistant-toggle:hover{box-shadow:inset 0 0 0 999px var(--bg-on-primary)}
+.assistant-toggle:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+.assistant-toggle svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+/* Ícone de IA (sparkles) é preenchido, não contornado — sobrescreve
+   a regra genérica de stroke acima. */
+.assistant-toggle .icon-ai{fill:currentColor;stroke:none}
+.assistant-toggle .icon-ai{display:none}
+body.is-assistant-closed .assistant-toggle .icon-collapse{display:none}
+body.is-assistant-closed .assistant-toggle .icon-ai{display:block}
+
+/* Largura fixa no miolo: enquanto a coluna encolhe, o conteudo desliza
+   para fora em vez de refluir e embaralhar o texto. */
+.assistant-inner{
+  width:320px;height:100%;
+  display:flex;flex-direction:column;
+  padding:32px 32px 24px;
+  transition:opacity var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out);
+}
+body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
+
+@media (prefers-reduced-motion:reduce){
+  .assistant,.assistant-inner{transition-duration:1ms}
+}
+
+
+/* ---------- Cabeçalho ---------- */
+.assistant-head{
+  display:flex;align-items:center;
+  height:48px;flex-shrink:0;
+  padding-right:64px;            /* 48 do gatilho + 16 de folga */
+}
+.assistant-heading{
+  font-size:18px;line-height:28px;font-weight:600;
+  color:var(--text-on-primary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.assistant-rule{
+  height:1px;flex-shrink:0;
+  margin:24px 0;
+  background:var(--bg-on-primary);
+}
+
+/* ---------- Thread ---------- */
+.assistant-thread{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  display:flex;flex-direction:column;gap:24px;
+  padding:0 16px;
+}
+.assistant-thread::-webkit-scrollbar{width:8px}
+.assistant-thread::-webkit-scrollbar-thumb{background:var(--bg-on-primary-hover);border-radius:999px}
+.assistant-thread::-webkit-scrollbar-track{background:transparent}
+
+/* Cada mensagem: avatar em cima, balão embaixo. */
+.msg{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.msg--user{align-items:flex-end}
+
+.msg-avatar{
+  width:24px;height:24px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;
+  background:var(--surface-1);
+}
+.msg-avatar img{width:100%;height:100%;object-fit:cover}
+.msg-avatar--bot{
+  display:grid;place-items:center;
+  background:var(--bg-primary-strong);
+  color:var(--text-primary);
+}
+.msg-avatar--bot svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Mensagem sem balão: o texto assenta direto sobre o amarelo do
+   painel, ocupando a largura inteira da thread. Sem fundo, sem
+   padding e sem raio — o alinhamento é o que distingue quem falou. */
+.msg-bubble{
+  width:100%;
+  font-size:14px;line-height:20px;
+  color:var(--text-secondary);
+}
+.msg--user .msg-bubble{text-align:right}
+
+/* ---------- Composer ---------- */
+.composer{
+  flex-shrink:0;
+  display:flex;flex-direction:column;gap:20px;
+  padding:16px;
+  background:var(--surface-1);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  transition:box-shadow var(--dur-fast) var(--ease-out);
+}
+.composer:focus-within{box-shadow:0 0 0 4px var(--sky-100)}
+
+.composer-input{
+  width:100%;min-height:44px;
+  border:none;background:none;resize:none;
+  font-size:14px;line-height:22px;
+  color:var(--text-primary);
+}
+.composer-input::placeholder{color:var(--text-muted)}
+.composer-input:focus{outline:none}
+
+.composer-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+
+.composer-send{
+  display:inline-flex;align-items:center;gap:8px;
+  height:36px;padding:0 16px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);
+  color:var(--text-on-accent);
+  font-size:14px;line-height:20px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.composer-send:hover{background:var(--fill-accent-hover)}
+.composer-send:disabled{opacity:.5;cursor:not-allowed}
+.composer-send:disabled:hover{background:var(--fill-accent)}
+.composer-input:disabled{opacity:.6;cursor:not-allowed}
+
+/* Aviso curto ao lado do Enviar: sem crédito, provedor fora, IA não
+   configurada. Fica no compositor, e não como mensagem na conversa,
+   porque não é algo que o assistente disse. */
+.composer-aviso{
+  flex:1;min-width:0;
+  font-size:12px;line-height:16px;
+  color:var(--text-on-primary);
+  opacity:.85;
+}
+.composer-aviso:empty{display:none}
+
+/* ---------- Estado vazio da conversa ---------- */
+.ia-convite{
+  display:flex;flex-direction:column;gap:6px;
+  padding:16px 0;
+  color:var(--text-on-primary);
+}
+.ia-convite b{font-size:14px;line-height:20px;font-weight:600}
+.ia-convite span{font-size:13px;line-height:20px;opacity:.85}
+
+/* ---------- "Pensando" ----------
+   IA-CONV-008: resposta de IA leva segundos, e silêncio sem sinal é
+   indistinguível de tela travada. Nenhuma outra parte da plataforma
+   precisa disso porque nenhuma outra demora tanto. */
+.ia-pensando{display:flex;align-items:center;gap:8px;padding:4px 0}
+.ia-pensando span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--text-on-primary);opacity:.5;
+  animation:ia-pulso 1.2s var(--ease-in-out) infinite;
+}
+.ia-pensando span:nth-child(2){animation-delay:.15s}
+.ia-pensando span:nth-child(3){animation-delay:.3s}
+@keyframes ia-pulso{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){
+  .ia-pensando span{animation:none;opacity:.6}
+}
+
+/* ---------- Procedência (IA-GARANT) ----------
+   A marcação é visual e explícita, não só de tom (decisão A1):
+   distinção que existe apenas na frase se perde na leitura rápida,
+   que é como se lê um chat. */
+.ia-fontes{
+  display:flex;flex-wrap:wrap;gap:6px;
+  margin-top:8px;
+}
+.ia-fonte{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 8px;border-radius:999px;
+  font-size:11px;line-height:16px;font-weight:600;
+}
+.ia-fonte svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.ia-fonte--validada{background:var(--bg-success);color:var(--text-success)}
+.ia-fonte--hipotese{background:var(--bg-warning);color:var(--text-warning)}
+
+/* Aviso de que a resposta não se apoia em nada validado
+   (IA-VAZIO-001). Precisa ser lido antes da resposta, não depois. */
+.ia-sem-verdade{
+  display:flex;align-items:flex-start;gap:8px;
+  margin-bottom:8px;padding:8px 10px;
+  border-radius:var(--radius);
+  background:var(--bg-warning);color:var(--text-warning);
+  font-size:12px;line-height:18px;font-weight:500;
+}
+.ia-sem-verdade svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Orientação num projeto em branco (IA-VAZIO-005) não é alerta: a
+   sugestão nunca alegou ser fato, e o âmbar acusaria algo que não
+   aconteceu. Azul de informação, mesma estrutura.
+
+   NÃO usa --bg-accent/--text-accent: os dois apontam para
+   --blue-500, o que daria texto azul sobre fundo azul. Aqui vale o
+   mesmo padrão do warning (tinta clara + texto escuro):
+   blue-700 sobre sky-100 dá 5,10:1, acima do mínimo AA de 4,5 e na
+   mesma faixa do par âmbar já aprovado (5,20:1). */
+.ia-sem-verdade--guia{background:var(--sky-100);color:var(--blue-700)}
+
+.ia-erro{
+  padding:8px 10px;border-radius:var(--radius);
+  background:var(--bg-danger);color:var(--text-danger);
+  font-size:12px;line-height:18px;font-weight:500;
+}
+
+/* ---------- Ação proposta (IA-ACAO) ----------
+   O balão do assistente assenta direto sobre o amarelo do painel
+   (comentário acima), mas uma proposta pendente é a única parte da
+   conversa que pede uma DECISÃO — por isso ela ganha superfície
+   própria (surface-1, a mesma do compositor), destacada do texto
+   solto ao redor em vez de se misturar a ele. */
+.ia-acao{
+  display:flex;flex-direction:column;gap:10px;
+  margin-top:8px;padding:10px 12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+}
+.ia-acao-corpo{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:12px;line-height:18px;font-weight:500;
+  color:var(--text-primary);
+}
+.ia-acao-corpo svg{
+  width:14px;height:14px;flex-shrink:0;margin-top:2px;
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.ia-acao-botoes{display:flex;gap:8px}
+.ia-acao-btn{
+  flex:1;height:30px;padding:0 12px;
+  border-radius:var(--radius);
+  font-size:12px;line-height:16px;font-weight:600;
+  transition:background var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+}
+.ia-acao-btn:disabled{opacity:.5;cursor:not-allowed}
+.ia-acao-btn--confirmar{background:var(--fill-accent);color:var(--text-on-accent)}
+.ia-acao-btn--confirmar:hover:not(:disabled){background:var(--fill-accent-hover)}
+.ia-acao-btn--descartar{background:var(--surface-2);color:var(--text-secondary)}
+.ia-acao-btn--descartar:hover:not(:disabled){background:var(--border)}
+
+/* Estado final — sem botão nenhum, só o registro do que aconteceu.
+   Um segundo clique não existe mais para existir (IA-ACAO-006). */
+.ia-acao--feita,.ia-acao--descartada{
+  display:flex;align-items:center;gap:8px;
+  margin-top:8px;padding:8px 10px;
+  border-radius:var(--radius);
+  font-size:12px;line-height:18px;font-weight:500;
+}
+.ia-acao--feita{background:var(--bg-success);color:var(--text-success)}
+.ia-acao--feita svg{width:14px;height:14px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ia-acao--descartada{background:var(--surface-2);color:var(--text-muted)}
+
+.composer-send svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Toast de feedback ---------- */
+.toast{
+  position:fixed;
+  left:50%;bottom:32px;
+  transform:translateX(-50%) translateY(12px);
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  border-radius:var(--radius);
+  background:var(--fill-success);
+  color:var(--text-on-success);
+  box-shadow:var(--shadow-lg);
+  font-size:14px;line-height:20px;font-weight:500;
+  z-index:100;
+  opacity:0;
+  /* Mesmo problema do `.dup-alerta` (ver comentário lá): `display:flex`
+     aqui tem a mesma especificidade do `[hidden]{display:none}` do
+     navegador, e a regra de autor vence — o toast ficava ocupando
+     espaço (só invisível) e barrando clique em qualquer coisa por
+     baixo dele mesmo com `hidden` presente. */
+  pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.toast[hidden]{display:none}
+.toast.is-visible{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+/* Variante de erro. Sem ela, "Não foi possível excluir a idéia"
+   apareceria em verde e com um ✓ ao lado — a cor e o ícone diriam
+   "deu certo" enquanto o texto diz o contrário, e é a cor que se lê
+   primeiro. */
+.toast--erro{background:var(--fill-danger);color:var(--text-on-danger)}
+.toast--erro .toast-check{display:none}
+.toast-alerta{display:none;width:20px;height:20px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.toast--erro .toast-alerta{display:block}
+.toast-check{width:20px;height:20px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.toast-close{
+  display:grid;place-items:center;
+  width:24px;height:24px;flex-shrink:0;
+  margin-left:12px;
+  border-radius:6px;
+  color:inherit;
+  background:transparent;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.toast-close:hover{background:rgba(255,255,255,.2)}
+.toast-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Alerta flutuante de duplicidade (IDEIA-DUPL-004) ----------
+   Deliberadamente NÃO é uma <dialog> modal como a de excluir: fica no
+   topo da tela, sobre o quadro, mas não bloqueia nem escurece o resto —
+   a pessoa pode continuar vendo as colunas atrás dele enquanto decide.
+   Cor de aviso (warning), não de erro: não é uma falha, é uma pausa
+   para uma escolha (IDEIA-DUPL-001, IA-ACAO como precedente). */
+.dup-alerta{
+  position:fixed;
+  left:50%;top:24px;
+  transform:translateX(-50%) translateY(-12px);
+  width:min(640px, calc(100vw - 32px));
+  display:flex;flex-direction:column;gap:12px;
+  padding:16px;
+  border-radius:var(--radius-lg);
+  background:var(--bg-warning);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-lg);
+  z-index:110;
+  opacity:0;
+  /* Sem isto, o `hidden` do HTML não bastava: `display:flex` acima
+     tem a mesma especificidade do `[hidden]{display:none}` do
+     navegador, e como regra de autor sempre vence a do navegador em
+     empate, o elemento continuava OCUPANDO ESPAÇO — só invisível
+     (opacity:0) — e barrando clique em tudo por baixo dele, "Nova
+     idéia" incluso, mesmo com o alerta escondido. `pointer-events`
+     garante que só aceita clique no exato momento em que está
+     realmente visível (`.is-visible`); o `[hidden]` abaixo cobre o
+     estado de repouso, com especificidade maior de propósito. */
+  pointer-events:none;
+  transition:opacity var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out);
+}
+.dup-alerta[hidden]{display:none}
+.dup-alerta.is-visible{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.dup-alerta-corpo{display:flex;gap:10px;align-items:flex-start}
+.dup-alerta-icon{
+  width:20px;height:20px;flex-shrink:0;margin-top:2px;
+  color:var(--text-warning);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.dup-alerta-conteudo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.dup-alerta-conteudo p{margin:0;font-size:14px;line-height:20px;color:var(--text-warning)}
+.dup-alerta-ver{
+  align-self:flex-start;
+  font-size:13px;font-weight:600;
+  color:var(--text-warning);
+  text-decoration:underline;
+  text-underline-offset:2px;
+  background:transparent;
+}
+.dup-alerta-botoes{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.dup-alerta-btn{width:auto;height:36px;padding:0 14px;font-size:13px;line-height:18px}
+
+/* ---------- Conteúdo expandível dentro de um card (.pf-row) ----------
+   Usado pelo "Histórico de uso" e por "Comprar créditos": vive dentro
+   do próprio card, por isso não tem borda/fundo próprios — só um
+   respiro e uma linha fina separando do cabeçalho do card. */
+.pf-row-expand{
+  width:100%;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+
+@keyframes expandDown{
+  from{opacity:0;transform:translateY(-8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.pf-row-expand[hidden]{
+  display:none;
+}
+
+.timeline-container{
+  display:flex;flex-direction:column;gap:0;
+}
+
+.timeline-item{
+  display:flex;gap:16px;padding:12px 0;
+  position:relative;
+  padding-left:20px;
+}
+
+.timeline-item:not(:last-child)::before{
+  content:"";
+  position:absolute;
+  left:7px;top:0;
+  width:2px;height:100%;
+  background:var(--border-strong);
+}
+
+.timeline-dot{
+  position:absolute;left:0;top:12px;
+  width:16px;height:16px;flex-shrink:0;
+  border-radius:50%;
+  background:var(--fill-accent);
+  border:3px solid var(--surface-0);
+  box-shadow:0 0 0 1px var(--border-strong);
+}
+
+.timeline-content{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:0}
+
+.timeline-date{
+  font-size:11px;line-height:16px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+.timeline-task{
+  font-size:13px;line-height:20px;font-weight:500;color:var(--text-primary);
+}
+
+.timeline-cost{
+  font-size:12px;line-height:18px;font-weight:500;color:var(--text-secondary);
+}
+
+.timeline-cost strong{color:var(--text-primary);font-weight:700}
+
+.timeline-item:first-child .timeline-dot{
+  background:var(--fill-success);
+  box-shadow:0 0 0 3px var(--green-100),0 0 0 4px var(--border-strong);
+}
+
+/* ---------- Compra de créditos via Pix ---------- */
+.pf-compra-form{display:flex;flex-direction:column;gap:16px}
+
+.pf-valor-wrap{
+  display:flex;align-items:center;gap:8px;
+  height:44px;padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-valor-wrap:focus-within{border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-valor-prefixo{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);flex-shrink:0}
+.pf-input--valor{
+  border:none;padding:0;height:auto;box-shadow:none;
+  font-size:16px;font-weight:600;
+}
+.pf-input--valor:focus{box-shadow:none}
+
+.pf-btn--success{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+.pf-btn--success:hover{filter:brightness(.96)}
+.pf-btn--accent{background:var(--fill-accent);color:var(--text-on-accent);border-color:transparent}
+.pf-btn--accent:hover{background:var(--fill-accent-hover)}
+.pf-btn--accent:disabled{opacity:.5;cursor:not-allowed}
+.pf-btn--accent:disabled:hover{background:var(--fill-accent)}
+
+.pf-pix{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  margin-top:4px;padding:20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+.pf-pix[hidden]{display:none}
+
+.pf-pix-qr{
+  padding:12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+  line-height:0;
+}
+.pf-pix-qr canvas{display:block;width:176px;height:176px}
+
+.pf-pix-legenda{font-size:13px;line-height:20px;font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
+
+.pf-pix-copia{display:flex;align-items:center;gap:8px;width:100%}
+.pf-pix-codigo{
+  flex:1;min-width:0;height:40px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--surface-1);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;color:var(--text-secondary);
+  text-overflow:ellipsis;
+}
+.pf-pix-copia .pf-btn{flex-shrink:0;height:40px}
+.pf-pix-copia .pf-btn.is-copiado{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+
+
+/* ============================================================
+   MODAL — perfil do usuário
+   Mesma casca da modal "Novo projeto": 825x674, lateral de 192 e
+   conteúdo de 632. <dialog> nativo, então foco preso e Esc já vêm
+   de graça. Componente autocontido (.pf-*) para poder viver em
+   qualquer página que tenha o menu lateral.
+   ============================================================ */
+body.modal-open{overflow:hidden}
+
+.pf-modal{
+  position:fixed;inset:0;margin:auto;
+  width:825px;max-width:calc(100vw - 48px);
+  height:674px;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.pf-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.pf-modal[open]{animation:pf-in var(--dur-base) var(--ease-out)}
+.pf-modal[open]::backdrop{animation:pf-fade var(--dur-base) var(--ease-out)}
+@keyframes pf-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes pf-fade{from{opacity:0}to{opacity:1}}
+
+/* 192 + 1 do divisor + 632 = 825 */
+.pf-shell{display:flex;height:100%}
+
+/* ---------- Lateral: seções ---------- */
+.pf-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.pf-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-side-item:hover{background:var(--surface-0)}
+.pf-side-item[aria-current="true"]{background:var(--sky-200)}
+.pf-side-spacer{flex:1;min-height:12px}
+.pf-side-item--danger{color:var(--text-danger)}
+.pf-side-item--danger:hover{background:var(--bg-danger)}
+
+.pf-divider{flex:0 0 1px;background:var(--border)}
+
+/* ---------- Conteúdo ---------- */
+.pf-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:32px;
+  padding:24px 32px;
+}
+.pf-head{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  height:48px;
+}
+.pf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.pf-title-icon{
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+  box-shadow:0 0 0 6px var(--bg-primary);
+}
+.pf-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pf-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.pf-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Área rolável, com a barra afastada do conteúdo */
+.pf-body{flex:1;min-height:0;overflow-y:auto;padding-right:16px}
+.pf-body::-webkit-scrollbar{width:10px}
+.pf-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.pf-body::-webkit-scrollbar-track{background:transparent}
+
+.pf-panel{display:flex;flex-direction:column;gap:24px}
+/* A regra acima venceria o display:none do atributo [hidden] na
+   ordem do cascata — daí esta guarda explícita. */
+.pf-panel[hidden]{display:none}
+
+/* ---------- Foto ---------- */
+.pf-avatar-row{display:flex;align-items:center;gap:20px}
+.pf-avatar{
+  width:80px;height:80px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;background:var(--surface-0);
+}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-avatar-actions{display:flex;align-items:center;gap:8px}
+
+.pf-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 14px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.pf-btn:hover{background:var(--surface-0)}
+.pf-btn--danger{color:var(--text-danger);border-color:var(--border-strong)}
+.pf-btn--danger:hover{background:var(--bg-danger);border-color:var(--fill-danger)}
+
+/* ---------- Campos ---------- */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pf-label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.pf-input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font:inherit;font-size:14px;line-height:20px;
+  color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-input::placeholder{color:var(--text-muted)}
+.pf-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-hint{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+/* Saldo e extrato reais — mesma folha de empresas.html (Fase 1/4).
+   Chegaram aqui junto com js/creditos.js, que substituiu o saldo
+   fixo de "500 créditos" e a timeline inventada. */
+.pf-saldo{margin:4px 0 0;display:flex;align-items:baseline;gap:8px}
+.pf-saldo-valor{
+  font-size:28px;line-height:34px;font-weight:600;
+  color:var(--text-primary);font-variant-numeric:tabular-nums;
+}
+/* Falha de carregamento tem cor própria: ela não pode ser lida como
+   um saldo baixo (DIN-006). */
+.pf-saldo-falha{color:var(--text-warning)}
+.pf-extrato{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.pf-extrato-item{
+  display:flex;align-items:baseline;gap:12px;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px;line-height:18px;
+}
+.pf-extrato-item:last-child{border-bottom:0}
+.pf-extrato-desc{flex:1;color:var(--text-primary)}
+/* Linha de detalhe da recarga: explica por que o crédito é menor que
+   o valor pago (taxa do PSP). Só aparece quando houve taxa. */
+.pf-extrato-detalhe{
+  display:block;margin-top:2px;
+  color:var(--text-muted);font-size:12px;line-height:16px;
+  font-variant-numeric:tabular-nums;
+}
+.pf-extrato-data{color:var(--text-muted);font-size:12px}
+.pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.pf-extrato-valor.is-entrada{color:var(--text-success)}
+.pf-extrato-valor.is-saida{color:var(--text-secondary)}
+.pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
+
+/* Barra de evolução do crédito: o trecho disponível encolhe conforme
+   o uso aumenta (a faixa restante da barra representa o usado). */
+.pf-credito-barra{
+  width:100%;height:12px;
+  border-radius:999px;
+  background:var(--border-strong);
+  overflow:hidden;
+}
+.pf-credito-uso{
+  height:100%;
+  border-radius:999px;
+  background:var(--fill-accent);
+  transition:width var(--dur-base) var(--ease-out);
+}
+.pf-credito-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:12px;line-height:18px;font-weight:600;color:var(--text-secondary);
+}
+
+/* ---------- Linha com interruptor ---------- */
+.pf-row{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+/* Efeito de âncora: pisca uma vez para guiar o olhar até a sessão
+   que acabou de aparecer/expandir, sem deixar destaque permanente.
+   Em box-shadow para funcionar sobre qualquer card (.pf-row, .pf-pix
+   etc.) sem brigar com o background/borda próprios do elemento. */
+@keyframes pf-anchor-flash{
+  0%{box-shadow:0 0 0 4px var(--sky-100), 0 0 0 1px var(--fill-accent) inset}
+  100%{box-shadow:0 0 0 0 transparent, 0 0 0 0 transparent}
+}
+.pf-anchor-flash{
+  animation:pf-anchor-flash 1.1s var(--ease-out);
+}
+.pf-row--stack{flex-direction:column}
+.pf-row--stack .pf-row-actions{width:100%}
+.pf-row-actions{display:flex;align-items:flex-start}
+.pf-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pf-row-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.pf-row-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+
+.pf-switch{
+  appearance:none;-webkit-appearance:none;
+  position:relative;flex-shrink:0;
+  width:44px;height:24px;margin-top:2px;
+  border-radius:999px;
+  background:var(--neutral-300);
+  cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.pf-switch:checked{background:var(--fill-accent)}
+.pf-switch:checked::after{transform:translateX(20px)}
+.pf-switch:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Cartões de escolha (tema) ---------- */
+.pf-option{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.pf-option:hover{border-color:var(--border-strong)}
+.pf-option[aria-checked="true"]{background:var(--neutral-100);border-color:var(--neutral-300)}
+.pf-option-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pf-option-mark{
+  width:16px;height:16px;flex-shrink:0;margin-top:2px;
+  display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);color:transparent;
+}
+.pf-option-mark svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;display:block}
+.pf-option[aria-checked="true"] .pf-option-mark{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--text-on-accent)}
+
+/* ---------- Rodapé ---------- */
+.pf-rule{flex-shrink:0;height:1px;background:var(--border)}
+.pf-foot{flex-shrink:0;display:flex;align-items:center;gap:12px;height:48px}
+.pf-save{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:48px;padding:0 24px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-save:hover{background:var(--fill-accent-hover)}
+.pf-cancel{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:48px;padding:0 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-cancel:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* Avatar do menu vira o gatilho da modal */
+.avatar{padding:0;cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-out)}
+.avatar:hover{box-shadow:0 0 0 2px var(--text-primary)}
+.avatar:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+</style>
+</head>
+<!-- Nasce CARREGANDO, não vazio. `is-empty` na marcação inicial fazia
+     a tela abrir afirmando "Nenhuma idéia por aqui ainda" — uma
+     resposta ao banco antes de perguntar. É o quarto estado que
+     IDEIA-QUADRO-008 já pedia e que `mostrar()` não implementava. -->
+<body class="is-carregando-quadro">
+
+<div class="app">
+
+  <!-- ===================== RAIL ===================== -->
+  <aside class="rail">
+    <div class="logomark" role="img" aria-label="Plataforma de Design">
+      <svg viewBox="5.6 9 28.8 22" aria-hidden="true"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegação principal">
+      <button type="button" class="nav-item" data-label="Início">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Empresas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Projetos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      </button>
+      <button type="button" class="nav-item" aria-current="page" data-label="Idéias">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Sobre a empresa">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5Z"/><path d="M13 3v5.5H18.5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+      </button>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-foot">
+      <button type="button" class="nav-item" data-label="Configurações">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="rail-divider"></div>
+      <button type="button" class="avatar" id="avatarBtn"
+              aria-haspopup="dialog" aria-label="Abrir perfil de Ricardo Mateus">
+        <img src="https://i.pravatar.cc/80?img=47" alt="">
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="panel">
+
+    <header class="page-header">
+      <h1 class="page-title is-carregando" id="tituloProjeto" aria-busy="true">
+        <span class="esqueleto" aria-hidden="true">
+          <span class="esq-barra esq-barra--pagina"></span>
+        </span>
+        <span class="page-title-main" id="pageTitle"></span>
+      </h1>
+      <button class="btn btn--primary" id="openModal" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Nova idéia
+      </button>
+    </header>
+
+    <div class="section-head">
+      <div class="rule"></div>
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <ol class="breadcrumb-list">
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-back" href="projetos.html" id="crumbVoltar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              Voltar
+            </a>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="empresas.html">
+              Empresas
+            </a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="projetos.html" id="crumbProjetos">Projetos</a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <span class="breadcrumb-current" aria-current="page">Visão do projeto</span>
+          </li>
+        </ol>
+      </nav>
+      <div class="rule"></div>
+    </div>
+
+    <!-- ---------- Toolbar ---------- -->
+    <div class="toolbar">
+      <div class="field-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="input" type="search" id="search" placeholder="Pesquisar" aria-label="Pesquisar idéias">
+      </div>
+
+      <div class="field-filter">
+        <button type="button" class="select" id="filter" data-value="recentes" aria-haspopup="listbox" aria-expanded="false" aria-label="Filtrar por">
+          <span id="filterLabel">Mais recente</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="select-menu" role="listbox" aria-labelledby="filterLabel">
+          <button type="button" role="option" aria-selected="true" data-value="recentes">
+            Mais recente
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+          <button type="button" role="option" aria-selected="false" data-value="relevancia">
+            Maior relevância
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+          <button type="button" role="option" aria-selected="false" data-value="data">
+            Por data
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head rule--hide-on-empty"><div class="rule"></div></div>
+
+    <!-- ---------- Board ---------- -->
+    <div class="board-wrap">
+      <!-- Os rótulos das colunas são fixos no código (COLUNAS), não
+           dados — mostrá-los enquanto carrega não afirma nada sobre o
+           projeto. O que é dado (as idéias e a contagem) fica em
+           esqueleto. `desenhar()` reescreve este bloco inteiro. -->
+      <div class="board" id="board">
+        <section class="column esq-coluna" aria-hidden="true">
+          <h2 class="column-head">Minhas idéias</h2>
+          <div class="column-body">
+            <span class="idea esq-idea">
+              <span class="esq-head"><span class="esq-pill esq-icone"></span><span class="esq-barra esq-barra--titulo"></span></span>
+              <span class="esq-barra esq-barra--curta"></span>
+              <span class="esq-texto"><span class="esq-barra"></span><span class="esq-barra esq-barra--curta"></span></span>
+            </span>
+            <span class="idea esq-idea">
+              <span class="esq-head"><span class="esq-pill esq-icone"></span><span class="esq-barra esq-barra--titulo"></span></span>
+              <span class="esq-barra esq-barra--curta"></span>
+              <span class="esq-texto"><span class="esq-barra"></span><span class="esq-barra esq-barra--curta"></span></span>
+            </span>
+          </div>
+        </section>
+        <section class="column esq-coluna" aria-hidden="true">
+          <h2 class="column-head">Em andamento</h2>
+          <div class="column-body">
+            <span class="idea esq-idea">
+              <span class="esq-head"><span class="esq-pill esq-icone"></span><span class="esq-barra esq-barra--titulo"></span></span>
+              <span class="esq-barra esq-barra--curta"></span>
+              <span class="esq-texto"><span class="esq-barra"></span><span class="esq-barra esq-barra--curta"></span></span>
+            </span>
+            <span class="idea esq-idea">
+              <span class="esq-head"><span class="esq-pill esq-icone"></span><span class="esq-barra esq-barra--titulo"></span></span>
+              <span class="esq-barra esq-barra--curta"></span>
+              <span class="esq-texto"><span class="esq-barra"></span><span class="esq-barra esq-barra--curta"></span></span>
+            </span>
+          </div>
+        </section>
+        <section class="column esq-coluna" aria-hidden="true">
+          <h2 class="column-head">Finalizado</h2>
+          <div class="column-body">
+            <span class="idea esq-idea">
+              <span class="esq-head"><span class="esq-pill esq-icone"></span><span class="esq-barra esq-barra--titulo"></span></span>
+              <span class="esq-barra esq-barra--curta"></span>
+              <span class="esq-texto"><span class="esq-barra"></span><span class="esq-barra esq-barra--curta"></span></span>
+            </span>
+            <span class="idea esq-idea">
+              <span class="esq-head"><span class="esq-pill esq-icone"></span><span class="esq-barra esq-barra--titulo"></span></span>
+              <span class="esq-barra esq-barra--curta"></span>
+              <span class="esq-texto"><span class="esq-barra"></span><span class="esq-barra esq-barra--curta"></span></span>
+            </span>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ---------- Empty state ---------- -->
+    <div class="empty-wrap">
+      <section class="empty" aria-label="Nenhuma idéia cadastrada">
+        <img class="empty-art" src="img/ideia-lampada.svg" alt="" aria-hidden="true" width="1000" height="1000">
+        <h2>Nenhuma idéia por aqui ainda</h2>
+        <p>Crie sua primeira idéia para começar a organizar o que ainda está na cabeça em um só lugar.</p>
+        <div class="empty-actions">
+          <!-- O botão "Gerar com ajuda da IA" saiu daqui: a IA foi adiada
+               (decisão I3, ideias-quadro.md). Volta junto da funcionalidade
+               de verdade — IDEIA-VAZIO-003. -->
+          <button class="btn btn--primary" id="openModalEmpty" type="button" hidden>
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Nova idéia
+          </button></div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Mensagem de feedback (toast) -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <svg class="toast-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+    <svg class="toast-alerta" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16.5h.01"/></svg>
+    <span id="toastText"></span>
+    <button type="button" class="toast-close" id="toastClose" aria-label="Fechar mensagem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Alerta flutuante de possível duplicidade (IDEIA-DUPL-003/004).
+       Não é a modal de excluir: não bloqueia a tela, e não trava o
+       resto da interface — a pessoa pode continuar olhando o quadro
+       por trás dele. Só existe enquanto há uma criação/edição
+       pendente de decisão. -->
+  <div class="dup-alerta" id="dupAlerta" role="alertdialog" aria-live="assertive"
+       aria-labelledby="dupAlertaTexto" hidden>
+    <div class="dup-alerta-corpo">
+      <svg class="dup-alerta-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7.5v5"/><path d="M12 16.5h.01"/>
+      </svg>
+      <div class="dup-alerta-conteudo">
+        <p id="dupAlertaTexto">
+          Encontramos uma idéia parecida: “<b id="dupAlertaTitulo"></b>”, na coluna <span id="dupAlertaColuna"></span>.
+        </p>
+        <button type="button" class="dup-alerta-ver" id="dupAlertaVer">Ver idéia parecida</button>
+      </div>
+    </div>
+    <div class="dup-alerta-botoes">
+      <button type="button" class="btn btn--secondary dup-alerta-btn" id="dupAlertaManterAtual">Cancelar</button>
+      <button type="button" class="btn btn--primary dup-alerta-btn" id="dupAlertaManterNova">Criar</button>
+    </div>
+  </div>
+
+  <!-- ===================== ASSISTANT (visual) ===================== -->
+  <aside class="assistant" id="assistant" aria-labelledby="assistantHeading">
+    <button type="button" class="assistant-toggle" id="assistantToggle"
+            aria-controls="assistantInner" aria-expanded="true" aria-label="Fechar assistente">
+      <svg class="icon-collapse" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <svg class="icon-ai" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+    </button>
+
+    <div class="assistant-inner" id="assistantInner">
+
+      <div class="assistant-head">
+        <h2 class="assistant-heading" id="assistantHeading">Assistente de IA</h2>
+      </div>
+      <div class="assistant-rule" role="presentation"></div>
+
+      <!-- A conversa falsa que vivia aqui saiu (IA-CONV-006): era texto
+           fixo sobre inadimplência e e-commerce, assunto de outro
+           projeto. Quem abrisse a página veria uma conversa que nunca
+           aconteceu. O conteúdo agora vem de js/ia.js. -->
+      <div class="assistant-thread" id="iaThread" aria-live="polite" aria-busy="false">
+      </div>
+
+      <div class="assistant-rule" role="presentation"></div>
+
+    <div class="composer">
+      <label class="sr-only" for="assistantInput">Mensagem para o assistente</label>
+      <textarea class="composer-input" id="assistantInput" rows="2" placeholder="Digite sua mensagem"></textarea>
+      <div class="composer-actions">
+        <!-- O botão de anexo saiu (decisão A13): não há funcionalidade de
+             anexo, e botão que não faz nada é pior que botão nenhum. -->
+        <span class="composer-aviso" id="iaAviso" role="status"></span>
+        <button type="button" class="composer-send" id="iaEnviar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Enviar
+        </button>
+      </div>
+    </div>
+
+   </div>
+  </aside>
+
+</div>
+
+<!-- Região viva: anuncia movimentações de card a leitores de tela -->
+<p class="sr-only" role="status" aria-live="polite" id="liveRegion"></p>
+<p class="sr-only" id="dragHelp">Arraste o card para outra coluna ou use as setas esquerda e direita para movê-lo.</p>
+
+<!-- ===================== MODAL: nova idéia ===================== -->
+<dialog class="modal" id="modal" aria-labelledby="modalTitle">
+  <div class="np-shell">
+
+    <div class="np-main">
+
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">
+          <span class="modal-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+          </span>
+          <span id="modalTitleText">Nova idéia</span>
+        </h2>
+<button class="modal-close" id="closeModal">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  Fechar
+</button>
+      </div>
+
+      <form class="modal-form" id="ideaForm" method="dialog">
+        <div class="field">
+          <label class="label" for="ideaTitle">Título</label>
+          <input class="input" type="text" id="ideaTitle" name="title" required maxlength="260">
+        </div>
+
+        <div class="field">
+          <label class="label" for="ideaDesc">Descrição</label>
+          <textarea class="textarea" id="ideaDesc" name="desc" required maxlength="280"></textarea>
+        </div>
+
+        <div class="field">
+          <span class="label" id="ideaImportanceLabel">Importância da idéia</span>
+          <div class="radio-stars" id="ideaStars" role="radiogroup" aria-labelledby="ideaImportanceLabel">
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 1 de 5" data-value="1">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 2 de 5" data-value="2">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 3 de 5" data-value="3">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 4 de 5" data-value="4">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 5 de 5" data-value="5">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+          </div>
+        </div>
+
+<div class="modal-divider"></div>
+<div class="modal-footer">
+          <button type="submit" class="btn btn--primary">Salvar</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL EXCLUIR IDÉIA ===================== -->
+<dialog class="modal modal--stacked" id="ideiaDeleteModal" aria-labelledby="ideiaDeleteTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="ideiaDeleteTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+        </span>
+        Excluir idéia
+      </h2>
+      <button type="button" class="modal-close" id="closeIdeaDeleteBtn" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-confirm">
+      <p class="modal-confirm-text">Tem certeza que deseja excluir essa idéia? Esta ação não pode ser desfeita.</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn btn--danger" id="confirmIdeaDeleteBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+          Excluir
+        </button>
+        <button type="button" class="btn btn--secondary" id="cancelIdeaDeleteBtn">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+
+
+<script>
+/* ------------------------------------------------------------
+   Esta página DESENHA. js/ideias.js DECIDE o que desenhar e fala
+   com a API — mesma separação de empresas.html e projetos.html.
+
+   O que muda aqui: busca, ordenação e arrastar são decisões de
+   APRESENTAÇÃO, então a lista carregada fica neste escopo. Tudo o
+   que precisa virar gravação no banco sai por window.IdeiasAcoes,
+   que js/ideias.js preenche.
+   ------------------------------------------------------------ */
+(function(){
+  'use strict';
+
+  /* IDEIA-QUADRO-001: três colunas fixas. `next` é para onde o
+     botão do card manda, e é o que fecha o ciclo no teclado. */
+  var COLUNAS = [
+    { id:'ideias',     rotulo:'Minhas idéias', next:'andamento'  },
+    { id:'andamento',  rotulo:'Em andamento',  next:'finalizado' },
+    { id:'finalizado', rotulo:'Finalizado',    next:'ideias'     }
+  ];
+
+  var IDEIAS = [];
+  var papelAtual = null;
+  var entrandoId = null;
+
+  var board  = document.getElementById('board');
+  var busca  = document.getElementById('search');
+  var filtro = document.getElementById('filter');
+  var live   = document.getElementById('liveRegion');
+
+  var ICON_IDEIA =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M9 18h6"/><path d="M10 22h4"/>' +
+    '<path d="M12 2a7 7 0 0 0-4.1 12.7c.8.7 1.1 1.4 1.1 2.3h6c0-.9.3-1.6 1.1-2.3A7 7 0 0 0 12 2Z"/>' +
+    '</svg>';
+  var ICON_FEITO =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  var ICON_VAZIO =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M9 18h6"/><path d="M10 21h4"/>' +
+    '<path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/>' +
+    '</svg>';
+  var ICON_PONTOS =
+    '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>';
+
+  /* Título e descrição são texto livre digitado e vão para innerHTML.
+     Sem escapar, uma idéia chamada <img onerror=...> executaria
+     script na tela de todo mundo do projeto. */
+  function escapar(t){
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* IDEIA-CRIA-004 e IDEIA-EXCL-002. O servidor é quem faz valer
+     isto (403); aqui só decide o que mostrar. */
+  function podeEscrever(papel){
+    return papel === 'proprietario' || papel === 'membro' || papel === 'especialista';
+  }
+  function podeExcluir(papel){
+    return papel === 'proprietario' || papel === 'membro';
+  }
+
+  /* IDEIA-QUADRO-006: data real, não mais a string fixa "10/02/2027"
+     que o protótipo mostrava em todo card. */
+  function formatarData(iso){
+    if(!iso) return '';
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    var dois = function(n){ return String(n).padStart(2,'0'); };
+    return dois(d.getDate()) + '/' + dois(d.getMonth()+1) + '/' + d.getFullYear();
+  }
+
+  function porId(id){
+    for(var i=0;i<IDEIAS.length;i++){ if(IDEIAS[i].id === id) return IDEIAS[i]; }
+    return null;
+  }
+  function colunaPorId(id){
+    for(var i=0;i<COLUNAS.length;i++){ if(COLUNAS[i].id === id) return COLUNAS[i]; }
+    return null;
+  }
+
+  /* Menu do card — IDEIA-MENU-001/002. "Duplicar" saiu (decisão I12).
+     Sem permissão de excluir, o item nem é desenhado: menu não mostra
+     porta trancada. */
+  function menuDoCard(ideia){
+    var itens =
+      '<button role="menuitem" data-acao="editar" data-id="' + escapar(ideia.id) + '">' +
+        '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>Editar idéia</button>';
+    if(podeExcluir(papelAtual)){
+      itens +=
+        '<div class="sep"></div>' +
+        '<button role="menuitem" class="danger" data-acao="excluir" data-id="' + escapar(ideia.id) + '">' +
+          '<svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir</button>';
+    }
+    return '<div class="menu" role="menu">' + itens + '</div>';
+  }
+
+  function estrelas(n){
+    var out = '<div class="idea-stars" aria-label="Importância ' + (n||0) + ' de 5">';
+    for(var i=1;i<=5;i++){
+      out += '<svg class="' + ((n||0) >= i ? 'is-on' : '') + '" viewBox="0 0 24 24">' +
+             '<path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>';
+    }
+    return out + '</div>';
+  }
+
+  function cardDeIdeia(ideia, coluna){
+    var operavel = podeEscrever(papelAtual);
+    var temMenu  = operavel || podeExcluir(papelAtual);
+    return (
+      '<li class="idea' + (ideia.id === entrandoId ? ' is-entering' : '') + '"' +
+          ' data-id="' + escapar(ideia.id) + '"' +
+          (operavel ? ' draggable="true"' : '') +
+          ' tabindex="0" aria-roledescription="Card arrastável" aria-describedby="dragHelp">' +
+        (temMenu
+          ? '<button type="button" class="card-menu" aria-haspopup="true" aria-expanded="false"' +
+            ' aria-label="Opções de ' + escapar(ideia.titulo) + '">' + ICON_PONTOS + '</button>'
+          : '') +
+        '<div class="idea-head">' +
+          '<span class="idea-icon' + (coluna.id === 'finalizado' ? ' is-done' : '') + '">' +
+            (coluna.id === 'finalizado' ? ICON_FEITO : ICON_IDEIA) +
+          '</span>' +
+          '<h3 class="idea-title">' + escapar(ideia.titulo) + '</h3>' +
+        '</div>' +
+        '<div class="idea-stars-row">' +
+          estrelas(ideia.importancia) +
+          '<span class="idea-date">' + escapar(formatarData(ideia.criado_em)) + '</span>' +
+        '</div>' +
+        '<p class="idea-desc">' + escapar(ideia.descricao) + '</p>' +
+        (coluna.id === 'ideias' ? '' :
+          '<button type="button" class="btn btn--secondary" data-mover="' + escapar(ideia.id) + '">' +
+            'Acessar<span class="sr-only"> a idéia ' + escapar(ideia.titulo) + '</span>' +
+          '</button>') +
+        (temMenu ? menuDoCard(ideia) : '') +
+      '</li>'
+    );
+  }
+
+  /* ---------- Busca e ordenação (IDEIA-BUSCA) ---------- */
+  function modoOrdenacao(){
+    return filtro.getAttribute('data-value');
+  }
+
+  function visiveis(){
+    var termo = busca.value.trim().toLowerCase();
+    var lista = IDEIAS.filter(function(i){
+      if(!termo) return true;
+      return (i.titulo + ' ' + i.descricao).toLowerCase().indexOf(termo) !== -1;
+    });
+    var modo = modoOrdenacao();
+    return lista.slice().sort(function(a,b){
+      if(modo === 'relevancia') return (b.importancia||0) - (a.importancia||0);
+      if(modo === 'data')       return new Date(a.criado_em) - new Date(b.criado_em);
+      return new Date(b.criado_em) - new Date(a.criado_em);
+    });
+  }
+
+  /* ---------- Desenho ---------- */
+  function desenhar(){
+    var mostradas = visiveis();
+    var filtrando = busca.value.trim() !== '';
+    var operavel  = podeEscrever(papelAtual);
+
+    board.innerHTML = COLUNAS.map(function(col){
+      var itens = mostradas.filter(function(i){ return i.status === col.id; });
+      var headId = 'col-' + col.id;
+
+      var corpo;
+      if(itens.length){
+        corpo = '<ul class="card-list">' +
+          itens.map(function(i){ return cardDeIdeia(i, col); }).join('') +
+          /* O "+ Nova idéia" no fim da primeira coluna só existe para
+             quem pode criar. */
+          (col.id === 'ideias' && operavel
+            ? '<li class="idea-add" role="button" tabindex="0">' +
+                '<span class="idea-add-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>' +
+                '<span class="idea-add-title">Nova idéia</span>' +
+              '</li>'
+            : '') +
+        '</ul>';
+      } else {
+        /* IDEIA-BUSCA-002: "não achei com esse texto" e "aqui não tem
+           nada" pedem ações opostas do usuário, então são mensagens
+           diferentes. */
+        corpo = '<div class="column-empty">' + ICON_VAZIO +
+          '<p>' + (filtrando ? 'Nenhuma idéia corresponde à busca.' : 'Nenhuma idéia por aqui ainda.') + '</p>' +
+        '</div>';
+      }
+
+      return (
+        '<section class="column" aria-labelledby="' + headId + '">' +
+          '<h2 class="column-head" id="' + headId + '">' +
+            escapar(col.rotulo) +
+            '<span class="column-count" aria-hidden="true">' + itens.length + '</span>' +
+            '<span class="sr-only">, ' + itens.length + ' idéia' + (itens.length === 1 ? '' : 's') + '</span>' +
+          '</h2>' +
+          '<div class="column-body" data-status="' + col.id + '">' + corpo + '</div>' +
+        '</section>'
+      );
+    }).join('');
+
+    entrandoId = null;
+  }
+
+  /* ------------------------------------------------------------
+     Mover — porta única (IDEIA-MOV-009)
+     ------------------------------------------------------------
+     Arrastar, teclado e botão chegam todos aqui. Nenhum deles mexe
+     em `status` por conta própria: se fossem três caminhos
+     independentes, bastaria corrigir a regra em um para os outros
+     dois divergirem.
+
+     Otimista com reversão obrigatória (IDEIA-MOV-011/012): o card
+     anda na hora, e volta para a coluna de origem se o servidor
+     recusar. Otimismo sem reversão seria o card mentindo sobre o
+     que está salvo.
+     ------------------------------------------------------------ */
+  function mover(id, statusDestino, focar){
+    if(!podeEscrever(papelAtual)) return false;
+
+    var ideia = porId(id);
+    if(!ideia || ideia.status === statusDestino) return false;   // IDEIA-MOV-003
+
+    var destino = colunaPorId(statusDestino);
+    if(!destino) return false;
+
+    var origem = ideia.status;
+    ideia.status = destino.id;
+    entrandoId = id;
+    desenhar();
+    live.textContent = '“' + ideia.titulo + '” movida para ' + destino.rotulo + '.';
+
+    if(focar){
+      var alvo = focar === 'botao'
+        ? board.querySelector('[data-mover="' + id + '"]')
+        : board.querySelector('.idea[data-id="' + id + '"]');
+      if(alvo) alvo.focus();
+    }
+
+    if(window.IdeiasAcoes && window.IdeiasAcoes.mover){
+      window.IdeiasAcoes.mover(id, destino.id).catch(function(){
+        var atual = porId(id);
+        if(atual){ atual.status = origem; desenhar(); }
+      });
+    }
+    return true;
+  }
+
+  /* ATV-ACESSO-001: "Acessar" garante que a idéia está em "Em
+     andamento" e abre a atividade dela. Hoje o botão só aparece já
+     dentro de "andamento"/"finalizado" (cardDeIdeia acima), então o
+     `mover` abaixo normalmente é um no-op — mas a função cobre o
+     caso de a idéia ainda estar em "Minhas idéias" mesmo assim, para
+     não deixar a regra escrita só valer por acaso. */
+  function irParaAtividade(id){
+    if(!EmpresaAtual || !ProjetoAtual) return;
+    var ideia = porId(id);
+    if(!ideia) return;
+
+    if(ideia.status !== 'andamento'){
+      mover(id, 'andamento');
+    }
+
+    location.href = 'atividade.html' +
+      '?empresa=' + encodeURIComponent(EmpresaAtual.id) +
+      '&projeto=' + encodeURIComponent(ProjetoAtual.id) +
+      '&ideia=' + encodeURIComponent(id);
+  }
+
+  /* ---------- Menus do card ---------- */
+  function fecharMenus(){
+    Array.prototype.forEach.call(board.querySelectorAll('.menu.is-open'), function(m){
+      m.classList.remove('is-open');
+    });
+    Array.prototype.forEach.call(board.querySelectorAll('.card-menu[aria-expanded="true"]'), function(b){
+      b.setAttribute('aria-expanded','false');
+    });
+  }
+
+  board.addEventListener('click', function(e){
+    var kebab = e.target.closest('.card-menu');
+    if(kebab){
+      var menu = kebab.parentElement.querySelector('.menu');
+      var aberto = menu && menu.classList.contains('is-open');
+      fecharMenus();
+      if(menu && !aberto){
+        menu.classList.add('is-open');
+        kebab.setAttribute('aria-expanded','true');
+      }
+      e.stopPropagation();
+      return;
+    }
+
+    var item = e.target.closest('.menu [data-acao]');
+    if(item){
+      var id = item.dataset.id;
+      var acao = item.dataset.acao;
+      fecharMenus();
+      if(acao === 'editar')  abrirModalEdicao(id);
+      if(acao === 'excluir') abrirModalExclusao(id);
+      return;
+    }
+
+    var add = e.target.closest('.idea-add');
+    if(add){ abrirModalCriacao(); return; }
+
+    var btn = e.target.closest('[data-mover]');
+    if(btn){
+      /* ATV-ACESSO-001 (atividade-lista.md §1.1): "Acessar" abre
+         a atividade. Para "andamento", também move a idéia (se ainda
+         não estiver lá). Para "finalizado", abre a atividade sem
+         mover o card, como indicado pelo usuário. */
+      var ideia = porId(btn.dataset.mover);
+      if(!ideia) return;
+
+      if(ideia.status === 'andamento'){
+        irParaAtividade(ideia.id);
+        return;
+      }
+
+      if(ideia.status === 'finalizado'){
+        /* Abre a atividade SEM mover o card de volta para Minhas idéias */
+        if(!EmpresaAtual || !ProjetoAtual) return;
+        location.href = 'atividade.html' +
+          '?empresa=' + encodeURIComponent(EmpresaAtual.id) +
+          '&projeto=' + encodeURIComponent(ProjetoAtual.id) +
+          '&ideia=' + encodeURIComponent(ideia.id);
+        return;
+      }
+
+      var col = colunaPorId(ideia.status);
+      if(col) mover(ideia.id, col.next, 'botao');
+      return;
+    }
+  });
+
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.menu') || e.target.closest('.card-menu')) return;
+    fecharMenus();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') fecharMenus();
+  });
+
+  /* ---------- Teclado: setas movem o card em foco ---------- */
+  board.addEventListener('keydown', function(e){
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    var card = e.target.closest('.idea');
+    if(!card) return;
+
+    var ideia = porId(card.dataset.id);
+    if(!ideia) return;
+
+    var i = COLUNAS.findIndex(function(c){ return c.id === ideia.status; });
+    var destino = e.key === 'ArrowRight' ? COLUNAS[i+1] : COLUNAS[i-1];
+    if(!destino) return;
+
+    e.preventDefault();
+    mover(ideia.id, destino.id, 'card');
+  });
+
+  /* ---------- Arrastar e soltar ---------- */
+  var arrastandoId = null;
+
+  function limparAlvos(){
+    Array.prototype.forEach.call(board.querySelectorAll('.column-body.is-drop-target'), function(el){
+      el.classList.remove('is-drop-target');
+    });
+  }
+
+  /* Um card inteiro arrastável engoliria o clique no botão "Acessar",
+     porque o mousedown no botão inicia o arraste do ancestral. Então
+     o atributo só é ligado quando o gesto NÃO começa num botão. */
+  board.addEventListener('pointerdown', function(e){
+    var card = e.target.closest('.idea');
+    if(card && podeEscrever(papelAtual)) card.draggable = !e.target.closest('button');
+  });
+
+  board.addEventListener('dragstart', function(e){
+    var card = e.target.closest('.idea');
+    if(!card || !podeEscrever(papelAtual)) return;
+    arrastandoId = card.dataset.id;
+    card.classList.add('is-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(arrastandoId));
+  });
+
+  board.addEventListener('dragover', function(e){
+    if(arrastandoId === null) return;
+    var alvo = e.target.closest('.column-body');
+    var ideia = porId(arrastandoId);
+    if(!alvo || !ideia) return;
+
+    /* Soltar na coluna de origem não muda nada — sem preventDefault,
+       o cursor mostra "não permitido" (IDEIA-MOV-003). */
+    if(alvo.dataset.status === ideia.status){ limparAlvos(); return; }
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    limparAlvos();
+    alvo.classList.add('is-drop-target');
+  });
+
+  board.addEventListener('dragleave', function(e){
+    var alvo = e.target.closest('.column-body');
+    if(alvo) alvo.classList.remove('is-drop-target');
+  });
+
+  board.addEventListener('drop', function(e){
+    var alvo = e.target.closest('.column-body');
+    if(!alvo || arrastandoId === null) return;
+    e.preventDefault();
+    limparAlvos();
+    mover(arrastandoId, alvo.dataset.status, 'card');
+    arrastandoId = null;
+  });
+
+  board.addEventListener('dragend', function(){
+    limparAlvos();
+    Array.prototype.forEach.call(board.querySelectorAll('.is-dragging'), function(el){
+      el.classList.remove('is-dragging');
+    });
+    arrastandoId = null;
+  });
+
+  /* ---------- Barra: busca e ordenação ---------- */
+  busca.addEventListener('input', desenhar);
+
+  var menuFiltro = document.querySelector('.select-menu');
+  var rotuloFiltro = document.getElementById('filterLabel');
+
+  filtro.addEventListener('click', function(e){
+    e.stopPropagation();
+    var aberto = menuFiltro.classList.toggle('is-open');
+    filtro.setAttribute('aria-expanded', String(aberto));
+  });
+  menuFiltro.addEventListener('click', function(e){
+    var opcao = e.target.closest('[role="option"]');
+    if(!opcao) return;
+    filtro.setAttribute('data-value', opcao.dataset.value);
+    rotuloFiltro.textContent = opcao.textContent.trim();
+    Array.prototype.forEach.call(menuFiltro.querySelectorAll('[role="option"]'), function(b){
+      b.setAttribute('aria-selected', String(b === opcao));
+    });
+    menuFiltro.classList.remove('is-open');
+    filtro.setAttribute('aria-expanded','false');
+    desenhar();
+  });
+  document.addEventListener('click', function(){
+    menuFiltro.classList.remove('is-open');
+    filtro.setAttribute('aria-expanded','false');
+  });
+
+  /* IDEIA-BUSCA-004: depois de salvar, nenhum filtro pode esconder a
+     idéia que a pessoa acabou de escrever. */
+  function limparFiltros(){
+    busca.value = '';
+    filtro.setAttribute('data-value','recentes');
+    rotuloFiltro.textContent = 'Mais recente';
+    Array.prototype.forEach.call(menuFiltro.querySelectorAll('[role="option"]'), function(b){
+      b.setAttribute('aria-selected', String(b.dataset.value === 'recentes'));
+    });
+  }
+
+  /* ---------- Modal de idéia (criar e editar) ---------- */
+  var modal        = document.getElementById('modal');
+  var form         = document.getElementById('ideaForm');
+  var tituloModal  = document.getElementById('modalTitleText');
+  var campoTitulo  = document.getElementById('ideaTitle');
+  var campoDesc    = document.getElementById('ideaDesc');
+  var grupoEstrelas= document.getElementById('ideaStars');
+  var botoesEstrela= Array.prototype.slice.call(grupoEstrelas.querySelectorAll('.radio-star'));
+  var botaoSalvar  = form.querySelector('button[type="submit"]');
+
+  var editandoId = null;
+  var importancia = 0;
+
+  function pintarEstrelas(){
+    botoesEstrela.forEach(function(b,i){ b.setAttribute('aria-checked', String(i < importancia)); });
+  }
+  grupoEstrelas.addEventListener('click', function(e){
+    var b = e.target.closest('.radio-star');
+    if(!b) return;
+    /* Clicar na estrela já marcada zera — é o único jeito de voltar
+       para "sem prioridade" (IDEIA-CRIA-002) depois de ter marcado. */
+    var valor = Number(b.dataset.value);
+    importancia = (valor === importancia) ? 0 : valor;
+    pintarEstrelas();
+  });
+
+  function abrirModal(){
+    modal.showModal();
+    document.body.classList.add('modal-open');
+    campoTitulo.focus();
+  }
+
+  function abrirModalCriacao(){
+    if(!podeEscrever(papelAtual)) return;
+    editandoId = null;
+    tituloModal.textContent = 'Nova idéia';
+    form.reset();
+    importancia = 0;
+    pintarEstrelas();
+    abrirModal();
+  }
+
+  function abrirModalEdicao(id){
+    var ideia = porId(id);
+    if(!ideia || !podeEscrever(papelAtual)) return;
+    editandoId = id;
+    tituloModal.textContent = 'Editar idéia';
+    campoTitulo.value = ideia.titulo;
+    campoDesc.value   = ideia.descricao || '';
+    importancia = ideia.importancia || 0;
+    pintarEstrelas();
+    abrirModal();
+  }
+
+  function fecharModal(){
+    modal.close();
+    document.body.classList.remove('modal-open');
+  }
+
+  document.getElementById('openModal').addEventListener('click', abrirModalCriacao);
+  document.getElementById('openModalEmpty').addEventListener('click', abrirModalCriacao);
+  document.getElementById('closeModal').addEventListener('click', fecharModal);
+  modal.addEventListener('click', function(e){ if(e.target === modal) fecharModal(); });
+  modal.addEventListener('close', function(){ document.body.classList.remove('modal-open'); });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    /* Leitura por getElementById, não por form.title: "title" colide
+       com a propriedade nativa HTMLElement.title e devolve string
+       vazia, silenciosamente. Não é preciosismo — já foi bug aqui. */
+    var titulo = campoTitulo.value.trim();
+    var desc   = campoDesc.value.trim();
+    if(!titulo || !desc) return;
+
+    if(!window.IdeiasAcoes) return;
+
+    /* IDEIA-MODAL-006: trava o botão enquanto grava, senão um clique
+       duplo cria a mesma idéia duas vezes. */
+    botaoSalvar.disabled = true;
+
+    var tipo = editandoId ? 'editar' : 'criar';
+    var promessa = editandoId
+      ? window.IdeiasAcoes.editar(editandoId, titulo, desc, importancia)
+      : window.IdeiasAcoes.criar(titulo, desc, importancia);
+
+    promessa.then(function(r){
+      /* IDEIA-DUPL-003: o servidor achou uma idéia parecida e NÃO
+         gravou nada. Não é sucesso (a modal não fecha como se tivesse
+         salvo) nem erro (não cai no catch) — é uma decisão pendente,
+         que o alerta flutuante entrega à pessoa. Guarda o que ela
+         digitou para poder reenviar depois, sem pedir de novo. */
+      if(r && r.duplicata){
+        mostrarAlertaDuplicata({
+          tipo: tipo,
+          id: editandoId,
+          titulo: titulo,
+          descricao: desc,
+          importancia: importancia,
+          existente: r.duplicata
+        });
+        fecharModal();
+        return;
+      }
+      limparFiltros();
+      fecharModal();
+    }).catch(function(){
+      /* A mensagem de erro quem mostra é js/ideias.js — aqui só
+         devolvemos o botão para a pessoa poder tentar de novo. */
+    }).then(function(){
+      botaoSalvar.disabled = false;
+    });
+  });
+
+  /* ---------- Alerta de possível duplicidade — IDEIA-DUPL-003 a 006 ----------
+     Flutuante, não bloqueante: a pessoa continua vendo o quadro atrás
+     dele. `duplicataPendente` guarda o que foi digitado (criação) ou
+     editado, esperando a decisão — "Criar"/"Salvar" reenvia com
+     `ignorarDuplicata`; "Cancelar" descarta sem nada tocar no card
+     existente (IDEIA-DUPL-006). */
+  var dupAlerta          = document.getElementById('dupAlerta');
+  var dupAlertaTitulo    = document.getElementById('dupAlertaTitulo');
+  var dupAlertaColuna    = document.getElementById('dupAlertaColuna');
+  var dupAlertaVer       = document.getElementById('dupAlertaVer');
+  var dupAlertaManterNova   = document.getElementById('dupAlertaManterNova');
+  var dupAlertaManterAtual = document.getElementById('dupAlertaManterAtual');
+
+  var duplicataPendente = null;
+
+  function rotuloColuna(status){
+    var col = COLUNAS.filter(function(c){ return c.id === status; })[0];
+    return col ? col.rotulo : status;
+  }
+
+  /* O alerta já chega filtrando o quadro para a idéia parecida — a
+     pessoa não precisa clicar em nada para achar o card, ele já
+     aparece isolado atrás do alerta (IDEIA-DUPL-005). "Ver idéia
+     parecida" continua existindo só para abrir a leitura completa. */
+  function mostrarAlertaDuplicata(pendente){
+    duplicataPendente = pendente;
+    dupAlertaTitulo.textContent = pendente.existente.titulo;
+    dupAlertaColuna.textContent = rotuloColuna(pendente.existente.status);
+    dupAlertaManterNova.textContent = pendente.tipo === 'editar' ? 'Salvar' : 'Criar';
+    busca.value = pendente.existente.titulo;
+    desenhar();
+    dupAlerta.hidden = false;
+    requestAnimationFrame(function(){ dupAlerta.classList.add('is-visible'); });
+  }
+
+  function esconderAlertaDuplicata(){
+    duplicataPendente = null;
+    dupAlerta.classList.remove('is-visible');
+    setTimeout(function(){ dupAlerta.hidden = true; }, 200);
+  }
+
+  /* "Ver idéia parecida": o filtro já está aplicado (o alerta já
+     chega assim) — aqui só abre a modal de edição, para ler o
+     conteúdo inteiro sem precisar caçar o card manualmente pelas
+     colunas. O alerta continua de pé por trás — a decisão pendente
+     não se perde só porque a pessoa foi conferir o card existente. */
+  dupAlertaVer.addEventListener('click', function(){
+    if(!duplicataPendente) return;
+    abrirModalEdicao(duplicataPendente.existente.id);
+  });
+
+  dupAlertaManterAtual.addEventListener('click', function(){
+    /* Descarta a tentativa nova — o card existente não é tocado
+       (IDEIA-DUPL-006). Nenhuma chamada à API: não há o que desfazer. */
+    limparFiltros();
+    esconderAlertaDuplicata();
+  });
+
+  dupAlertaManterNova.addEventListener('click', function(){
+    if(!duplicataPendente || !window.IdeiasAcoes) return;
+    var p = duplicataPendente;
+    dupAlertaManterNova.disabled = true;
+    dupAlertaManterAtual.disabled = true;
+
+    var promessa = p.tipo === 'editar'
+      ? window.IdeiasAcoes.editar(p.id, p.titulo, p.descricao, p.importancia, { ignorarDuplicata: true })
+      : window.IdeiasAcoes.criar(p.titulo, p.descricao, p.importancia, { ignorarDuplicata: true });
+
+    promessa.then(function(){
+      limparFiltros();
+      esconderAlertaDuplicata();
+    }).catch(function(){
+      /* Erro real (rede, 403, 404...): a mensagem já apareceu via
+         js/ideias.js. O alerta fica de pé, com os botões destravados,
+         para a pessoa poder tentar de novo. */
+    }).then(function(){
+      dupAlertaManterNova.disabled = false;
+      dupAlertaManterAtual.disabled = false;
+    });
+  });
+
+  /* ---------- Modal de exclusão ---------- */
+  var modalExcluir = document.getElementById('ideiaDeleteModal');
+  var botaoConfirmaExcluir = document.getElementById('confirmIdeaDeleteBtn');
+  var excluindoId = null;
+
+  function abrirModalExclusao(id){
+    if(!podeExcluir(papelAtual)) return;
+    excluindoId = id;
+    modalExcluir.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fecharModalExclusao(){
+    excluindoId = null;
+    if(modalExcluir.open) modalExcluir.close();
+    document.body.classList.remove('modal-open');
+  }
+
+  botaoConfirmaExcluir.addEventListener('click', function(){
+    if(excluindoId === null || !window.IdeiasAcoes) return;
+    var id = excluindoId;
+    botaoConfirmaExcluir.disabled = true;
+    window.IdeiasAcoes.excluir(id).then(function(){
+      fecharModalExclusao();
+    }).catch(function(){
+      fecharModalExclusao();
+    }).then(function(){
+      botaoConfirmaExcluir.disabled = false;
+    });
+  });
+  document.getElementById('cancelIdeaDeleteBtn').addEventListener('click', fecharModalExclusao);
+  document.getElementById('closeIdeaDeleteBtn').addEventListener('click', fecharModalExclusao);
+  modalExcluir.addEventListener('click', function(e){ if(e.target === modalExcluir) fecharModalExclusao(); });
+  modalExcluir.addEventListener('close', function(){ document.body.classList.remove('modal-open'); });
+
+  /* ------------------------------------------------------------
+     Contrato com js/ideias.js
+     ------------------------------------------------------------ */
+  function aplicarPermissoes(papel){
+    papelAtual = papel;
+    var pode = podeEscrever(papel);
+    /* Os dois botões "Nova idéia" — o do cabeçalho e o do estado
+       vazio — nos DOIS caminhos. Foi exatamente isto que faltou em
+       projetos.html e deixou o estado vazio sem saída (IDEIA-VAZIO-002). */
+    document.querySelectorAll('[id="openModal"], [id="openModalEmpty"]').forEach(function(b){
+      b.hidden = !pode;
+    });
+  }
+
+  /* ---------- Assistente: abrir / fechar ---------- */
+  /* Painel ainda VISUAL: a conversa é texto fixo no HTML e o
+     compositor não envia nada. A IA foi adiada (decisão I3,
+     ideias-quadro.md §4) — isto aqui é a casca, esperando a
+     funcionalidade. */
+  (function(){
+    var inner   = document.getElementById('assistantInner');
+    var gatilho = document.getElementById('assistantToggle');
+    if(!inner || !gatilho) return;
+
+    function definir(aberto){
+      document.body.classList.toggle('is-assistant-closed', !aberto);
+      gatilho.setAttribute('aria-expanded', String(aberto));
+      gatilho.setAttribute('aria-label', aberto ? 'Fechar assistente' : 'Abrir assistente');
+      /* inert só no miolo: o gatilho continua na faixa e segue
+         focável, então o foco nunca fica preso num elemento que
+         saiu da tela. */
+      inner.inert = !aberto;
+    }
+
+    var CHAVE_ASSISTENTE = 'pd:assistente:aberto';
+
+    gatilho.addEventListener('click', function(){
+      var aberto = document.body.classList.contains('is-assistant-closed');
+      definir(aberto);
+      try{ localStorage.setItem(CHAVE_ASSISTENTE, aberto ? '1' : '0'); }catch(e){}
+    });
+
+    /* Estado inicial: o que a pessoa deixou aberto ou fechado na
+       última tela com assistente — a preferência é da pessoa, não
+       da tela. Sem nada salvo ainda (primeira visita), vale o
+       padrão desta tela (aberto). */
+    var assistenteSalvo = null;
+    try{ assistenteSalvo = localStorage.getItem(CHAVE_ASSISTENTE); }catch(e){}
+    definir(assistenteSalvo === null ? true : assistenteSalvo === '1');
+  })();
+
+  /* ------------------------------------------------------------
+     Toast de feedback
+     ------------------------------------------------------------
+     `tipo === 'erro'` troca a cor e o ícone. Sem isso, uma falha
+     apareceria em verde com um ✓ — a cor se lê antes do texto.
+     ------------------------------------------------------------ */
+  (function(){
+    var toast     = document.getElementById('toast');
+    var toastText = document.getElementById('toastText');
+    var timer     = null;
+
+    function ocultar(){
+      toast.classList.remove('is-visible');
+      setTimeout(function(){ toast.hidden = true; }, 200);
+    }
+    function mostrarMensagem(msg, tipo){
+      toastText.textContent = msg;
+      toast.classList.toggle('toast--erro', tipo === 'erro');
+      toast.hidden = false;
+      requestAnimationFrame(function(){ toast.classList.add('is-visible'); });
+      clearTimeout(timer);
+      /* Erro fica mais tempo: quem precisa reagir a uma falha tem
+         mais o que ler do que quem só recebe uma confirmação. */
+      timer = setTimeout(ocultar, tipo === 'erro' ? 6000 : 3000);
+    }
+    document.getElementById('toastClose').addEventListener('click', function(){
+      clearTimeout(timer);
+      ocultar();
+    });
+
+    window.mostrarMensagem = mostrarMensagem;
+  })();
+
+  /* ------------------------------------------------------------
+     IDEIA-MOV-014: quem confirma "Concluir atividade" em
+     atividade.html chega aqui redirecionado, com
+     ?atividade_concluida=1 na URL. O aviso é dado aqui — nesta
+     tela, não na de origem — porque é aqui que a pessoa vê a
+     idéia já na coluna "Finalizado".
+     ------------------------------------------------------------ */
+  (function(){
+    var params = new URLSearchParams(location.search);
+    if (params.get('atividade_concluida') !== '1') return;
+    if (window.mostrarMensagem) window.mostrarMensagem('Atividade concluída com sucesso.');
+    params.delete('atividade_concluida');
+    var resto = params.toString();
+    history.replaceState(null, '', location.pathname + (resto ? '?' + resto : '') + location.hash);
+  })();
+
+  /* Fim da espera do título — CSS em css/esqueleto.css. Um lugar só,
+     porque os dois caminhos que a encerram (o projeto chegou / a carga
+     falhou) limpam exatamente as mesmas duas coisas. */
+  function revelarTitulo(){
+    var h = document.getElementById('tituloProjeto');
+    if(!h) return;
+    h.classList.remove('is-carregando');
+    h.setAttribute('aria-busy','false');
+  }
+
+  window.IdeiasView = {
+    render: function(lista, papel){
+      IDEIAS = lista.slice();
+      aplicarPermissoes(papel);
+      desenhar();
+    },
+    permissoes: aplicarPermissoes,
+    /* Acrescentar/atualizar/remover mexem na lista e redesenham, em
+       vez de recarregar tudo do servidor. */
+    acrescentar: function(ideia){
+      IDEIAS.unshift(ideia);
+      entrandoId = ideia.id;
+      document.body.classList.remove('is-empty');
+      desenhar();
+    },
+    atualizar: function(ideia){
+      for(var i=0;i<IDEIAS.length;i++){
+        if(IDEIAS[i].id === ideia.id){ IDEIAS[i] = ideia; break; }
+      }
+      entrandoId = ideia.id;
+      desenhar();
+    },
+    remover: function(id){
+      IDEIAS = IDEIAS.filter(function(i){ return i.id !== id; });
+      desenhar();
+      return IDEIAS.length;
+    },
+    cabecalho: function(empresa, projeto){
+      document.getElementById('pageTitle').textContent = empresa.nome + ' / ' + projeto.nome;
+      revelarTitulo();
+      document.title = empresa.nome + ' / ' + projeto.nome + ' · Plataforma de Design';
+
+      /* O breadcrumb precisa levar de volta ao projeto certo, não a
+         uma lista genérica — os ids viajam na URL. */
+      var q = '?empresa=' + encodeURIComponent(empresa.id);
+      document.getElementById('crumbVoltar').href = 'projetos.html' + q;
+      document.getElementById('crumbProjetos').href = 'projetos.html' + q;
+    },
+    /* A carga falhou. O esqueleto sai — animação eterna promete uma
+       chegada que não vem — e entra o motivo. Uma grade de colunas
+       vazias seria lida como "este projeto não tem idéias", que é
+       outra coisa (IDEIA-QUADRO-008). O texto do erro em si vai no
+       toast, que tem a mensagem do servidor. */
+    falha: function(){
+      revelarTitulo();
+      if(!board) return;
+      board.innerHTML =
+        '<p class="board-falha">Não foi possível carregar as idéias. Recarregue a página.</p>';
+    },
+
+    /* Nem empresa nem projeto resolveram: não há nome para o título. */
+    tituloIndisponivel: function(){
+      var el = document.getElementById('pageTitle');
+      if(el) el.textContent = 'Projeto não carregado';
+      revelarTitulo();
+    },
+
+    anunciar: function(msg){ live.textContent = msg; }
+  };
+})();
+</script>
+
+
+<!-- ===================== MODAL — PERFIL DO USUÁRIO ===================== -->
+<dialog class="pf-modal" id="perfilModal" aria-labelledby="pfTitulo">
+  <div class="pf-shell">
+
+    <nav class="pf-side" aria-label="Seções do perfil">
+      <button type="button" class="pf-side-item" data-painel="perfil" aria-current="true">Perfil</button>
+      <button type="button" class="pf-side-item" data-painel="conta">Conta</button>
+      <button type="button" class="pf-side-item" data-painel="notificacoes">Notificações</button>
+      <button type="button" class="pf-side-item" data-painel="preferencias">Preferências</button>
+      <button type="button" class="pf-side-item" data-painel="creditos">Créditos de uso</button>
+      <span class="pf-side-spacer"></span>
+      <button type="button" class="pf-side-item pf-side-item--danger" id="pfSair">Sair da conta</button>
+    </nav>
+
+    <div class="pf-divider" role="presentation"></div>
+
+    <div class="pf-main">
+      <div class="pf-head">
+        <h2 class="pf-title">
+          <span class="pf-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+          </span>
+          <span id="pfTitulo">Perfil</span>
+        </h2>
+        <button type="button" class="pf-close" id="pfFechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <div class="pf-body">
+
+        <!-- ---------- Perfil ---------- -->
+        <section class="pf-panel" id="pf-perfil" aria-label="Perfil">
+          <div class="pf-avatar-row">
+            <span class="pf-avatar"><img src="https://i.pravatar.cc/160?img=47" alt="Foto de Ricardo Mateus"></span>
+            <div class="pf-avatar-actions">
+              <button type="button" class="pf-btn">Trocar foto</button>
+              <button type="button" class="pf-btn pf-btn--danger">Remover</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfNome">Nome completo</label>
+            <input class="pf-input" type="text" id="pfNome" value="Ricardo Mateus" autocomplete="name">
+          </div>
+
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfEmail">E-mail</label>
+              <input class="pf-input" type="email" id="pfEmail" value="ricardosmateus@gmail.com" autocomplete="email">
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfCargo">Cargo</label>
+              <input class="pf-input" type="text" id="pfCargo" value="Designer de produto">
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfBio">Sobre você</label>
+            <input class="pf-input" type="text" id="pfBio" placeholder="Uma linha sobre o seu trabalho">
+            <p class="pf-hint">Aparece ao lado das suas idéias e comentários.</p>
+          </div>
+        </section>
+
+        <!-- ---------- Conta ---------- -->
+        <section class="pf-panel" id="pf-conta" aria-label="Conta" hidden>
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfIdioma">Idioma</label>
+              <select class="pf-input" id="pfIdioma">
+                <option selected>Português (Brasil)</option>
+                <option>English (US)</option>
+                <option>Español</option>
+              </select>
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfFuso">Fuso horário</label>
+              <select class="pf-input" id="pfFuso">
+                <option selected>(GMT-03:00) São Paulo</option>
+                <option>(GMT-05:00) Nova York</option>
+                <option>(GMT+01:00) Lisboa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfSenha">Senha</label>
+            <input class="pf-input" type="password" id="pfSenha" value="douglas123" autocomplete="current-password">
+            <p class="pf-hint">Última alteração há 3 meses.</p>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Excluir conta</span>
+              <span class="pf-row-desc">Remove seus dados e projetos em definitivo. Não dá para desfazer.</span>
+            </div>
+            <button type="button" class="pf-btn pf-btn--danger">Excluir</button>
+          </div>
+        </section>
+
+        <!-- ---------- Notificações ---------- -->
+        <section class="pf-panel" id="pf-notificacoes" aria-label="Notificações" hidden>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Novidades por e-mail</span>
+              <span class="pf-row-desc">Avisos quando alguém comentar ou mover uma idéia sua.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Novidades por e-mail">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Resumo semanal</span>
+              <span class="pf-row-desc">Um apanhado do que andou pelos seus projetos na semana.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Resumo semanal">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Menções</span>
+              <span class="pf-row-desc">Quando citarem seu nome numa atividade ou tarefa.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Menções">
+          </div>
+        </section>
+
+        <!-- ---------- Preferências ---------- -->
+        <section class="pf-panel" id="pf-preferencias" aria-label="Preferências" hidden>
+          <div role="radiogroup" aria-label="Tema" style="display:flex;flex-direction:column;gap:12px">
+            <button type="button" class="pf-option" role="radio" aria-checked="true">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Claro</span>
+                <span class="pf-row-desc">O tema que a plataforma usa hoje.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Escuro</span>
+                <span class="pf-row-desc">Para trabalhar com pouca luz.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Seguir o sistema</span>
+                <span class="pf-row-desc">Acompanha a preferência do seu computador.</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Reduzir animações</span>
+              <span class="pf-row-desc">Desliga as transições de abertura e movimento.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Reduzir animações">
+          </div>
+        </section>
+
+        <!-- ---------- Créditos de uso ---------- -->
+        <section class="pf-panel" id="pf-creditos" aria-label="Créditos de uso" hidden>
+          <div class="pf-field">
+            <span class="pf-label">Saldo disponível</span>
+            <!-- O valor vem de GET /creditos/saldo (js/creditos.js).
+                 Antes era "500 créditos" fixo no HTML, com uma barra
+                 de progresso em 40% que também não vinha de lugar
+                 nenhum: três números inventados numa tela sobre
+                 dinheiro. -->
+            <p class="pf-saldo" id="pfSaldo" aria-live="polite">
+              <span class="pf-saldo-valor" id="pfSaldoValor">—</span>
+            </p>
+            <!-- DIN-006: falha ao carregar NUNCA pode parecer saldo
+                 zero. São mensagens diferentes, de propósito. -->
+            <p class="pf-hint pf-saldo-falha" id="pfSaldoFalha" role="status" hidden>
+              Não foi possível carregar o seu saldo agora. Isto não significa
+              que ele esteja zerado — tente novamente em instantes.
+            </p>
+            <p class="pf-hint" id="pfSaldoHint">O saldo diminui conforme a plataforma usa IA por você.</p>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="comprarRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Comprar créditos</span>
+              <span class="pf-row-desc">Adicione créditos para continuar usando as funcionalidades de IA.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn pf-btn--success" id="comprarBtn">Comprar</button>
+            </div>
+
+            <!-- Formulário de compra + Pix (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="comprarConteudo" hidden>
+              <div class="pf-compra-form">
+                <div class="pf-field">
+                  <label class="pf-label" for="pfValorCredito">Valor a adicionar</label>
+                  <div class="pf-valor-wrap">
+                    <span class="pf-valor-prefixo" aria-hidden="true">R$</span>
+                    <input class="pf-input pf-input--valor" type="text" inputmode="decimal"
+                           id="pfValorCredito" placeholder="0,00" aria-describedby="pfValorHint">
+                  </div>
+                  <p class="pf-hint" id="pfValorHint">1 crédito equivale a R$ 1,00. Valor mínimo de R$ 10,00.</p>
+                </div>
+
+                <button type="button" class="pf-btn pf-btn--accent" id="gerarQrBtn" disabled>Gerar QR Code Pix</button>
+                <p class="pf-recarga-erro" id="pfRecargaErro" hidden></p>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr" id="pfPixQrBox">
+                    <img id="pfPixImg" width="176" height="176" alt="QR Code para pagamento via Pix">
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <p class="pf-pix-status is-aguardando" id="pfPixStatus"><span class="pf-pix-ponto" aria-hidden="true"></span><span id="pfPixStatusTexto">Aguardando pagamento…</span></p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint pf-pix-hint-auto">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr">
+                    <canvas id="pfPixCanvas" width="176" height="176" role="img" aria-label="QR Code para pagamento via Pix"></canvas>
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="historicoRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Histórico de uso</span>
+              <span class="pf-row-desc">Acompanhe quando e onde os seus créditos foram usados.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn" id="verHistoricoBtn">Ver histórico</button>
+            </div>
+
+            <!-- Timeline de histórico de créditos (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="historicoTimeline" hidden>
+              <div class="timeline-container" id="timelineContainer">
+                <!-- Timeline será preenchida por JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="pf-rule" role="presentation"></div>
+
+      <div class="pf-foot">
+        <button type="button" class="pf-save" id="pfSalvar">Salvar alterações</button>
+        <button type="button" class="pf-cancel" id="pfCancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var modal = document.getElementById('perfilModal');
+  var gatilho = document.getElementById('avatarBtn');
+  if(!modal || !gatilho) return;
+
+  var itens   = Array.prototype.slice.call(modal.querySelectorAll('.pf-side-item[data-painel]'));
+  var paineis = Array.prototype.slice.call(modal.querySelectorAll('.pf-panel'));
+  var titulo  = document.getElementById('pfTitulo');
+
+  function mostrar(id){
+    itens.forEach(function(i){ i.setAttribute('aria-current', String(i.getAttribute('data-painel') === id)); });
+    paineis.forEach(function(p){ p.hidden = p.id !== 'pf-' + id; });
+    var atual = itens.filter(function(i){ return i.getAttribute('data-painel') === id; })[0];
+    if(atual) titulo.textContent = atual.textContent.trim();
+    modal.querySelector('.pf-body').scrollTop = 0;
+  }
+  itens.forEach(function(i){
+    i.addEventListener('click', function(){ mostrar(i.getAttribute('data-painel')); });
+  });
+
+  // Cartões de tema: um só marcado por vez
+  var temas = Array.prototype.slice.call(modal.querySelectorAll('.pf-option[role="radio"]'));
+  temas.forEach(function(t){
+    t.addEventListener('click', function(){
+      temas.forEach(function(o){ o.setAttribute('aria-checked', String(o === t)); });
+    });
+  });
+
+  function abrir(){
+    mostrar('perfil');
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fechar(){ if(modal.open) modal.close(); }
+
+  gatilho.addEventListener('click', abrir);
+  document.getElementById('pfFechar').addEventListener('click', fechar);
+  document.getElementById('pfCancelar').addEventListener('click', fechar);
+  document.getElementById('pfSalvar').addEventListener('click', fechar);
+  /* ACS-SESSAO-003 / IA-CONV-012: antes só trocava de página — a
+     sessão nunca era revogada no servidor, então "Sair" não saía de
+     verdade (o cookie continuava valendo até expirar sozinho). Sair
+     de verdade é o gatilho que também apaga a conversa do assistente
+     (IA-CONV-012). Falha de rede não pode prender a pessoa na tela do
+     quadro: sai da página de qualquer jeito. */
+  document.getElementById('pfSair').addEventListener('click', function(){
+    (window.API ? window.API.chamar('/auth/logout', { metodo: 'POST' }) : Promise.resolve())
+      .catch(function(){})
+      .then(function(){ window.location.href = 'login.html'; });
+  });
+
+  // Clique no backdrop (fora da casca) fecha
+  modal.addEventListener('click', function(e){
+    var r = modal.getBoundingClientRect();
+    var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!dentro) fechar();
+  });
+
+  // Esc já fecha sozinho no <dialog>; aqui só devolvemos o estado
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    gatilho.focus();
+  });
+})();
+</script>
+
+<script>
+/* ---------- Efeito de âncora, compartilhado entre os cards ----------
+   Rola até o card e faz o destaque piscar uma vez, sem deixar
+   estado permanente — usado por "Histórico de uso" e "Comprar
+   créditos" ao expandir seu conteúdo. */
+window.pfAncorarCard = function(row){
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'nearest'});
+  row.classList.remove('pf-anchor-flash');
+  void row.offsetWidth;                        // reflow: reinicia a animação a cada clique
+  row.classList.add('pf-anchor-flash');
+  setTimeout(function(){
+    row.classList.remove('pf-anchor-flash');
+  }, 1100);
+};
+</script>
+
+<script>
+/* ---------- Histórico de Créditos ----------
+   Expande a timeline dentro da sessão "Histórico de uso"
+   do modal de Perfil, aba "Crédito de uso".
+*/
+(function(){
+  'use strict';
+  var verHistoricoBtn = document.getElementById('verHistoricoBtn');
+  var historicoTimeline = document.getElementById('historicoTimeline');
+  var timelineContainer = document.getElementById('timelineContainer');
+  var historicoRow = document.getElementById('historicoRow');
+
+  if(!verHistoricoBtn || !historicoTimeline || !timelineContainer) return;
+
+  /* Esta seção NÃO tem mais dados próprios. O conteúdo do
+     #timelineContainer é preenchido por js/creditos.js, que busca o
+     extrato real em GET /creditos/extrato. Aqui sobrou só o
+     abre-e-fecha.
+
+     Antes existia aqui uma lista fixa com sete tarefas inventadas.
+     Um histórico falso ao lado de um saldo real é pior do que não
+     ter histórico: convida a conferir uma conta que não existe. */
+
+  function toggle(){
+    var isHidden = historicoTimeline.hidden;
+    if(isHidden){
+      historicoTimeline.hidden = false;
+      verHistoricoBtn.textContent = 'Ocultar histórico';
+      window.pfAncorarCard(historicoRow);
+    } else {
+      historicoTimeline.hidden = true;
+      verHistoricoBtn.textContent = 'Ver histórico';
+    }
+  }
+
+  verHistoricoBtn.addEventListener('click', toggle);
+})();
+</script>
+
+<script>
+/* ---------- Comprar créditos via Pix ----------
+   Expande o formulário de valor + QR Code Pix dentro do card
+   "Comprar créditos". A cobrança é real (Fase 3): o servidor cria
+   a cobrança no PSP, grava o registro e devolve o BR Code — o QR
+   também vem pronto do servidor (data URL), gerado a partir do
+   MESMO texto do "copia e cola", para os dois nunca poderem
+   divergir. A tela só chama a API, mostra o que ela devolve, e
+   consulta o status em intervalos até a confirmação — o crédito em
+   si só acontece quando o webhook confirma o pagamento no servidor
+   (SEG-PAG-002): esta tela nunca decide sozinha que "pagou".
+*/
+(function(){
+  'use strict';
+  var comprarBtn = document.getElementById('comprarBtn');
+  var comprarRow = document.getElementById('comprarRow');
+  var comprarConteudo = document.getElementById('comprarConteudo');
+  var valorInput = document.getElementById('pfValorCredito');
+  var gerarQrBtn = document.getElementById('gerarQrBtn');
+  var erroEl = document.getElementById('pfRecargaErro');
+  var pfPix = document.getElementById('pfPix');
+  var pfPixQrBox = document.getElementById('pfPixQrBox');
+  var pfPixImg = document.getElementById('pfPixImg');
+  var pfPixValor = document.getElementById('pfPixValor');
+  var pfPixCodigo = document.getElementById('pfPixCodigo');
+  var pfPixStatus = document.getElementById('pfPixStatus');
+  var pfPixStatusTexto = document.getElementById('pfPixStatusTexto');
+  var copiarPixBtn = document.getElementById('pfCopiarPix');
+
+  if(!comprarBtn || !comprarConteudo || !valorInput || !gerarQrBtn || !pfPix) return;
+
+  var VALOR_MINIMO = 10;
+  var INTERVALO_POLL_MS = 4000;
+  var TETO_POLL_MS = 20 * 60 * 1000; // 20 min — mesmo que algo dê errado no cálculo de expiração
+  var pollTimer = null;
+
+  /* ---- Máscara de moeda: usuário digita só números, formata como R$ ---- */
+  function valorNumerico(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    return digitos ? parseInt(digitos, 10) / 100 : 0;
+  }
+
+  function formatarValorInput(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    if(!digitos){ valorInput.value = ''; atualizarEstadoBotao(); return; }
+    var valor = parseInt(digitos, 10) / 100;
+    valorInput.value = valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    atualizarEstadoBotao();
+  }
+
+  function atualizarEstadoBotao(){
+    var valor = valorNumerico();
+    gerarQrBtn.disabled = valor < VALOR_MINIMO;
+    // Muda o valor: o QR anterior (se houver) não vale mais para o novo valor
+    esconderErro();
+    if(!pfPix.hidden) esconderPix();
+  }
+
+  function mostrarErro(msg){
+    erroEl.textContent = msg;
+    erroEl.hidden = false;
+  }
+
+  function esconderErro(){
+    erroEl.hidden = true;
+    erroEl.textContent = '';
+  }
+
+  function esconderPix(){
+    pfPix.hidden = true;
+    comprarConteudo.classList.remove('is-confirmado');
+    pararPolling();
+  }
+
+  function pararPolling(){
+    if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function definirStatus(classe, texto){
+    pfPixStatus.className = 'pf-pix-status ' + classe;
+    pfPixStatusTexto.textContent = texto;
+  }
+
+  function marcarPago(){
+    /* O valor sai da legenda, que vai ser escondida junto com o QR —
+       sem ele, a confirmação perderia a informação mais concreta que
+       tinha ("confirmado" sem dizer de quanto). */
+    var valor = pfPixValor ? pfPixValor.textContent : '';
+    definirStatus('is-pago', valor
+      ? 'Pagamento de ' + valor + ' confirmado — créditos adicionados!'
+      : 'Pagamento confirmado — créditos adicionados!');
+    /* Esconde QR, "copia e cola" e instruções: depois de pago, são
+       convite para pagar duas vezes. */
+    comprarConteudo.classList.add('is-confirmado');
+    pfPixQrBox.classList.remove('is-expirado');
+    copiarPixBtn.disabled = true;
+    /* O crédito já aconteceu no servidor, via webhook (SEG-PAG-002)
+       — isto aqui só atualiza o que a pessoa está vendo na tela. */
+    if(window.Creditos){
+      window.Creditos.recarregar();
+      window.Creditos.extrato();
+    }
+  }
+
+  function marcarExpirado(){
+    definirStatus('is-expirado', 'Este código expirou — gere um novo para continuar.');
+    pfPixQrBox.classList.add('is-expirado');
+    copiarPixBtn.disabled = true;
+  }
+
+  /* ---- Consulta o status de verdade no servidor. Nunca decide
+     "pagou" sozinha — só reflete o que a rota devolve, e a rota,
+     por sua vez, nunca inventa: quem manda é o webhook. ---- */
+  function consultarStatus(txid, expiraEm, iniciadoEm){
+    fetch('/creditos/recarga/' + encodeURIComponent(txid), { credentials: 'same-origin' })
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d){
+        if(d.status === 'pago'){
+          pararPolling();
+          marcarPago();
+        } else if(d.status === 'expirado' || d.status === 'cancelado'){
+          pararPolling();
+          marcarExpirado();
+        }
+        // 'aguardando': segue tentando no próximo tick.
+      })
+      .catch(function(e){
+        // Falha de rede é transitória — não desiste, só tenta de novo
+        // no próximo tick. Quem para o polling é o teto de tempo.
+        console.error('[creditos] falha ao consultar status do Pix:', e);
+      });
+  }
+
+  function iniciarPolling(txid, expiraEmIso){
+    pararPolling();
+    var expiraEm = new Date(expiraEmIso).getTime();
+    var teto = Date.now() + TETO_POLL_MS;
+    var iniciadoEm = Date.now();
+
+    pollTimer = setInterval(function(){
+      var agora = Date.now();
+      if((Number.isFinite(expiraEm) && agora > expiraEm) || agora > teto){
+        pararPolling();
+        marcarExpirado();
+        return;
+      }
+      consultarStatus(txid, expiraEm, iniciadoEm);
+    }, INTERVALO_POLL_MS);
+  }
+
+  /* ---- Gera a cobrança de verdade: cria no servidor, mostra o QR
+     e o copia-e-cola que ele devolveu, e passa a consultar o
+     status. ---- */
+  function gerarQr(){
+    var valor = valorNumerico();
+    if(valor < VALOR_MINIMO) return;
+
+    esconderErro();
+    gerarQrBtn.disabled = true;
+    var textoOriginal = gerarQrBtn.textContent;
+    gerarQrBtn.textContent = 'Gerando…';
+
+    fetch('/creditos/recarga', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: valorInput.value }),
+    })
+      .then(function(r){
+        return r.json().catch(function(){ return {}; }).then(function(dados){
+          return { ok: r.ok, dados: dados };
+        });
+      })
+      .then(function(resultado){
+        if(!resultado.ok){
+          mostrarErro(resultado.dados.erro || 'Não foi possível gerar o código Pix agora. Tente de novo.');
+          return;
+        }
+        var dados = resultado.dados;
+
+        pfPixImg.src = dados.qr_data_url;
+        pfPixCodigo.value = dados.brcode;
+        pfPixValor.textContent = dados.valor_formatado;
+        pfPixQrBox.classList.remove('is-expirado');
+        definirStatus('is-aguardando', 'Aguardando pagamento…');
+        copiarPixBtn.disabled = false;
+        /* Cobrança nova: desfaz o estado de "confirmado" de uma
+           anterior, senão o QR novo nasceria escondido. */
+        comprarConteudo.classList.remove('is-confirmado');
+        pfPix.hidden = false;
+        // Mesmo motion de âncora do "Comprar", agora guiando o olhar
+        // até o QR Code recém-gerado.
+        window.pfAncorarCard(pfPix);
+
+        iniciarPolling(dados.txid, dados.expira_em);
+      })
+      .catch(function(e){
+        console.error('[creditos] falha ao gerar cobrança Pix:', e);
+        mostrarErro('Não foi possível falar com o servidor agora. Verifique sua conexão e tente de novo.');
+      })
+      .then(function(){
+        gerarQrBtn.textContent = textoOriginal;
+        gerarQrBtn.disabled = valorNumerico() < VALOR_MINIMO;
+      });
+  }
+
+  function copiarCodigo(){
+    var restaurarTexto = copiarPixBtn.textContent;
+    function marcarCopiado(){
+      copiarPixBtn.textContent = 'Copiado!';
+      copiarPixBtn.classList.add('is-copiado');
+      setTimeout(function(){
+        copiarPixBtn.textContent = restaurarTexto;
+        copiarPixBtn.classList.remove('is-copiado');
+      }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(pfPixCodigo.value).then(marcarCopiado);
+    } else {
+      pfPixCodigo.select();
+      document.execCommand('copy');
+      marcarCopiado();
+    }
+  }
+
+  function toggle(){
+    var isHidden = comprarConteudo.hidden;
+    if(isHidden){
+      comprarConteudo.hidden = false;
+      comprarBtn.textContent = 'Fechar';
+      window.pfAncorarCard(comprarRow);
+    } else {
+      comprarConteudo.hidden = true;
+      comprarBtn.textContent = 'Comprar';
+      esconderErro();
+      esconderPix();
+    }
+  }
+
+  comprarBtn.addEventListener('click', toggle);
+  valorInput.addEventListener('input', formatarValorInput);
+  gerarQrBtn.addEventListener('click', gerarQr);
+  copiarPixBtn.addEventListener('click', copiarCodigo);
+})();
+</script>
+
+<script src="js/api.js"></script>
+<script src="js/ideias.js"></script>
+<script src="js/ia.js"></script>
+
+
+<script>
+(function(){
+  'use strict';
+  /* Extrai empresa e projeto da URL, passa para navegação */
+  var q = new URLSearchParams(window.location.search);
+  var empresa = q.get('empresa');
+  var projeto = q.get('projeto');
+  var ctx = '';
+  
+  if(empresa && projeto){
+    ctx = '?empresa=' + encodeURIComponent(empresa) + 
+          '&projeto=' + encodeURIComponent(projeto);
+  }
+  
+  /* Mapeia páginas e seus destinos */
+  var destinos = {
+    'Empresas':    'empresas.html',
+    'Projetos':    'projetos.html' + (empresa ? '?empresa=' + encodeURIComponent(empresa) : ''),
+    'Idéias':      'visao_do_projeto.html' + ctx,
+    'Sobre a empresa': 'Sobre_a_empresa.html' + ctx
+  };
+  
+  /* Páginas que precisam levar contexto */
+  var comContexto = { 'Idéias':1, 'Sobre a empresa':1 };
+  
+  /* Clica em qualquer nav-item: navega com contexto se aplicável */
+  Array.prototype.forEach.call(document.querySelectorAll('.nav-item[data-label]'), function(btn){
+    var label = btn.getAttribute('data-label');
+    var destino = destinos[label];
+    if(!destino) return;
+    
+    btn.addEventListener('click', function(){
+      window.location.href = destino;
+    });
+  });
+})();
+</script>
+
+<script src="js/creditos.js"></script>
+
+</body>
+</html>

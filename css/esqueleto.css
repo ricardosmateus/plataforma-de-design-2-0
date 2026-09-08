@@ -1,0 +1,63 @@
+/* ============================================================
+   ESQUELETO DE CARREGAMENTO
+   ============================================================
+   Enquanto a API não responde, a tela mostra a FORMA do que vem —
+   nunca um exemplo. Conteúdo inventado que depois é trocado faz a
+   pessoa ler, por um instante, um dado que não é dela; num produto
+   em que cada tela pertence a uma empresa, isso custa uma
+   conferência ("abri a errada?").
+
+   USO
+     <div class="cartao is-carregando">
+       <div class="esqueleto" aria-hidden="true">…barras…</div>
+       …conteúdo real…
+     </div>
+
+   O container recebe `is-carregando` e some com tudo que não for o
+   esqueleto. Quem tira a classe é o JS — e só DEPOIS de preencher
+   todos os campos, para nunca existir um painel meio dado, meio
+   esqueleto.
+
+   O esqueleto é `aria-hidden`: não há nada a anunciar. Quem usa
+   leitor de tela ouve o `aria-busy` do container.
+
+   Vive aqui, e não no <style> de cada página, porque duas cópias
+   desta animação divergem no primeiro ajuste.
+   ============================================================ */
+
+.is-carregando > *:not(.esqueleto){display:none}
+:not(.is-carregando) > .esqueleto{display:none}
+
+.esqueleto{display:flex;flex-direction:column;gap:24px}
+
+/* ---------- Peças ---------- */
+.esq-barra,.esq-pill,.esq-botao{
+  display:block;position:relative;overflow:hidden;
+  background:var(--neutral-200);
+  border-radius:var(--radius);
+}
+.esq-barra{height:12px;width:100%}
+.esq-barra--titulo{height:20px;width:70%}
+.esq-barra--curta{width:55%}
+.esq-pill{height:28px;width:88px;flex-shrink:0;border-radius:999px}
+.esq-botao{height:44px;width:100%}
+.esq-divisoria{display:block;height:1px;background:var(--border)}
+
+/* ---------- Arranjos ---------- */
+.esq-head{display:flex;align-items:center;gap:12px}
+.esq-head .esq-barra--titulo{flex:1}
+.esq-texto{display:flex;flex-direction:column;gap:8px}
+
+/* ---------- Brilho ----------
+   Reforço, nunca o único sinal: a barra parada já comunica
+   "carregando", então quem pediu menos movimento não perde nada. */
+.esq-barra::after,.esq-pill::after,.esq-botao::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,var(--neutral-100),transparent);
+  transform:translateX(-100%);
+  animation:esq-brilho 1.4s var(--ease-in-out) infinite;
+}
+@keyframes esq-brilho{to{transform:translateX(100%)}}
+@media (prefers-reduced-motion:reduce){
+  .esq-barra::after,.esq-pill::after,.esq-botao::after{animation:none}
+}

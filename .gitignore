@@ -1,0 +1,58 @@
+# ============================================================
+# O que NUNCA vai para o repositório
+# ============================================================
+# A raiz deste projeto é servida como site estático por
+# api/src/servidor.ts, que já trata a pasta inteira como perigosa
+# ("debaixo desta raiz vivem api/.env com os segredos"). O mesmo
+# raciocínio vale aqui: o repositório é mais um lugar por onde o
+# conteúdo desta pasta sai.
+#
+# Segredos primeiro, e por caminho ABSOLUTO a partir da raiz —
+# api/.gitignore só protege o que está dentro de api/, e a
+# credencial do banco também existe fora dela.
+# ============================================================
+
+# ---- Credenciais ----
+.env
+.env.*
+*.env
+_dburl*
+*_dburl*
+
+# Exceção deliberada: o exemplo não tem valor nenhum preenchido,
+# e é ele que documenta quais variáveis a API exige para subir.
+!.env.example
+!api/.env.example
+
+# ---- Dependências e build ----
+node_modules/
+dist/
+build/
+.next/
+.cache/
+
+# ---- Prisma ----
+# O client é gerado por `npm run gerar` a partir do schema; commitar
+# o gerado faria o repositório carregar 40MB que o `npm ci` recria.
+api/node_modules/.prisma/
+api/src/generated/
+
+# ---- Logs e temporários ----
+*.log
+servidor.log
+migrate.log
+*.tmp
+*.pid
+
+# ---- Sistema operacional ----
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ---- Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo

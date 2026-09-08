@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.log
+.env*
+
+# logs de desenvolvimento
+servidor.log
+migrate.log
+
+# O exemplo não tem nenhum valor preenchido, e é ele que
+# documenta quais variáveis a API exige para subir. Precisa da
+# exceção aqui, e não no .gitignore da raiz: o ignore mais
+# próximo do arquivo é quem decide.
+!.env.example

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- ?v= força o navegador a buscar a versão nova em vez de servir a
+     do cache. Incremente o número sempre que alterar o CSS. -->
+<link rel="stylesheet" href="css/tokens.css?v=4">
+<link rel="stylesheet" href="css/components.css?v=4">
+<style>
+/* Tokens: css/tokens.css. Abaixo, só o que esta tela
+   deliberadamente diverge do sistema. */
+:root{
+  --text-danger:var(--red-600);
+  --radius-panel:24px;
+}
+
+/* Botões e inputs desta tela ocupam 100% da largura do container */
+.btn,
+.divider{
+  width:100%;
+}
+
+/* Já ocupa o container por padrão */
+.btn--google{width:100%}
+</style>
+</head>
+<body>
+
+<main class="auth">
+
+  <!-- ===================== FORMULÁRIO ===================== -->
+  <div class="auth-form-col">
+    <div class="auth-card">
+
+      <!-- ---------- Logo da marca ---------- -->
+      <a class="brand" href="empresas.html" aria-label="Plataforma de Design — página inicial">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 28.8 22"><use href="img/icones.svg#icon-marca"/></svg>
+        </span>
+        <span class="brand-name">Plataforma<span>de Design</span></span>
+      </a>
+
+      <h1 class="auth-title">Entrar na sua conta</h1>
+      <p class="auth-subtitle">Bem-vindo de volta. Informe seus dados para continuar.</p>
+
+      <div class="alert" id="alertCredencial" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+        <div>
+          <p class="alert-title">E-mail ou senha incorretos</p>
+          <p class="alert-text">Confira os dados e tente novamente.</p>
+        </div>
+      </div>
+
+      <!-- Falha do servidor — NÃO é credencial errada.
+           Dizer "e-mail ou senha incorretos" quando a API devolveu
+           500 manda a pessoa procurar erro onde não há: ela troca a
+           senha, tenta de novo, conclui que perdeu a conta. -->
+      <div class="alert alert--warning" id="alertServidor" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+        <div>
+          <p class="alert-title">Não foi possível concluir agora</p>
+          <p class="alert-text">O servidor respondeu com um erro. Seus dados estão certos — tente de novo em instantes.</p>
+        </div>
+      </div>
+
+      <div class="alert alert--warning" id="alertBloqueio" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-lock"/></svg>
+        <div>
+          <p class="alert-title">Muitas tentativas</p>
+          <p class="alert-text">Por segurança, aguarde <strong id="bloqueioContagem">30s</strong> para tentar de novo.</p>
+        </div>
+      </div>
+
+      <div class="alert alert--success" id="alertRecuperacao" role="status" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-check"/></svg>
+        <div>
+          <p class="alert-title">Link enviado</p>
+          <p class="alert-text">Enviamos as instruções de recuperação para o seu e-mail.</p>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           ESTADOS OBRIGATÓRIOS — regras ACS-LOGIN-009, ACS-SESSAO-002
+           e ACS-SESSAO-004. Ver Regras_de_negocio/modulos/acesso/login.md
+           ======================================================== -->
+
+      <!-- ANDAIME TEMPORÁRIO — remover na conclusão da Fase 3.
+           A cascata de roteamento (§4) já decide corretamente, mas duas
+           rotas ainda não têm tela construída. Em vez de mandar a pessoa
+           para um 404, o protótipo diz para onde ela iria. -->
+      <div class="alert alert--warning" id="alertTelaPendente" role="status" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+        <div>
+          <p class="alert-title">Tela ainda não construída</p>
+          <p class="alert-text">O roteamento levaria você para <strong id="telaPendenteNome"></strong>, que ainda não existe no projeto.</p>
+        </div>
+      </div>
+
+      <!-- Offline: rede ausente. Impede o envio antes de tentar. -->
+      <div class="alert alert--warning" id="alertOffline" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-wifi-off"/></svg>
+        <div>
+          <p class="alert-title">Sem conexão</p>
+          <p class="alert-text">Verifique sua internet. Assim que a conexão voltar, você poderá entrar.</p>
+        </div>
+      </div>
+
+      <!-- Sessão expirada: ACS-SESSAO-002. O destino pretendido fica
+           preservado em ?destino= e é retomado após o login. -->
+      <div class="alert alert--warning" id="alertSessaoExpirada" role="status" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-clock"/></svg>
+        <div>
+          <p class="alert-title">Sua sessão expirou</p>
+          <p class="alert-text">Entre novamente para continuar de onde parou.</p>
+        </div>
+      </div>
+
+      <!-- Sem permissão: ACS-SESSAO-004, vínculo revogado. -->
+      <div class="alert" id="alertSemPermissao" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-slash"/></svg>
+        <div>
+          <p class="alert-title">Acesso encerrado</p>
+          <p class="alert-text">Seu acesso a essa empresa foi encerrado. Entre para ver as empresas que continuam disponíveis para você.</p>
+        </div>
+      </div>
+
+      <!-- Suspensão por violação: saída é falar com o suporte. -->
+      <div class="alert" id="alertSuspensaoViolacao" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-slash"/></svg>
+        <div>
+          <p class="alert-title">Conta suspensa</p>
+          <p class="alert-text">
+            Sua conta foi suspensa por violação dos termos de uso.
+            <a href="mailto:suporte@plataformadedesign.com">Fale com o suporte</a> para contestar.
+          </p>
+        </div>
+      </div>
+
+      <!-- Suspensão por inadimplência: saída é regularizar o pagamento.
+           Âmbar, não vermelho — é uma pendência resolvível, não uma punição. -->
+      <div class="alert alert--warning" id="alertSuspensaoPagamento" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-credit-card"/></svg>
+        <div>
+          <p class="alert-title">Pagamento pendente</p>
+          <p class="alert-text">
+            Há créditos em aberto na sua conta.
+            <a href="#" id="linkRegularizar">Regularize o pagamento</a> para voltar a usar a plataforma.
+          </p>
+        </div>
+      </div>
+
+      <form class="form" id="loginForm" action="empresas.html" method="get" novalidate>
+        <div class="field" id="fieldEmail">
+          <label class="label" for="email">E-mail</label>
+          <div class="input-wrap">
+            <input class="input" type="email" id="email" name="email"
+                   placeholder="voce@empresa.com"
+                   autocomplete="email" required
+                   aria-describedby="emailErro">
+          </div>
+          <p class="field-error" id="emailErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+            Informe um e-mail válido.
+          </p>
+        </div>
+
+        <div class="field" id="fieldSenha">
+          <label class="label" for="senha">Senha</label>
+          <div class="input-wrap">
+            <input class="input input--with-action" type="password" id="senha" name="senha"
+                   placeholder="Digite sua senha"
+                   autocomplete="current-password" required
+                   aria-describedby="senhaErro">
+            <button type="button" class="input-action" id="toggleSenha"
+                    aria-pressed="false" aria-controls="senha" aria-label="Mostrar senha">
+              <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye"/></svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye-off"/></svg>
+            </button>
+          </div>
+          <p class="field-error" id="senhaErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+            A senha é obrigatória.
+          </p>
+        </div>
+
+        <div class="form-options">
+          <label class="checkbox" for="lembrar">
+            <input type="checkbox" id="lembrar" name="lembrar">
+            <span>Lembrar de mim</span>
+          </label>
+          <a class="link" href="#" id="linkRecuperar">Esqueci minha senha</a>
+        </div>
+
+        <button type="submit" class="btn btn--primary" id="btnEntrar">
+          <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-spinner"/></svg>
+          <span class="btn-label">Entrar</span>
+          <span class="btn-loading-label">Entrando...</span>
+        </button>
+      </form>
+
+      <div class="divider" role="presentation">ou</div>
+
+      <!-- Placeholder visual. O login com Google está fora do escopo desta
+           fase por decisão do time (PLANO_BACKEND_LOGIN.md §1, Fase 4 do
+           roadmap). Fica desabilitado para não prometer o que não existe;
+           basta remover o disabled quando a Fase 4 chegar. -->
+      <button type="button" class="btn btn--google" id="btnGoogle"
+              disabled aria-describedby="googleIndisponivel">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="var(--google-blue)"   d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3.01h3.87c2.26-2.09 3.57-5.17 3.57-8.82Z"/>
+          <path fill="var(--google-green)"  d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3.01c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0 0 12 24Z"/>
+          <path fill="var(--google-yellow)" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.28a12 12 0 0 0 0 10.76l3.99-3.11Z"/>
+          <path fill="var(--google-red)"    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.28 6.62l3.99 3.11C6.22 6.88 8.87 4.75 12 4.75Z"/>
+        </svg>
+        Entrar com Google
+      </button>
+      <span class="sr-only" id="googleIndisponivel">Ainda não disponível nesta versão.</span>
+
+      <p class="auth-foot">
+        Não tem uma conta? <a class="link" href="cadastro.html">Criar conta</a>
+      </p>
+
+    </div>
+  </div>
+
+  <aside class="auth-art" aria-hidden="true">
+    <div class="auth-art-content">
+      <p class="auth-art-quote">Tire sua ideia da cabeça, organize os próximos passos e transforme tudo em realidade.</p>
+      <p class="auth-art-caption">Utilize a inteligência artificial da Plataforma de Design para tirar o seu projeto do papel.</p>
+    </div>
+  </aside>
+
+</main>
+
+<dialog class="modal" id="codeModal" aria-labelledby="codeModalTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="codeModalTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><use href="img/icones.svg#icon-mail"/></svg>
+      </span>
+      Verifique seu e-mail
+    </h2>
+    <button type="button" class="modal-close" id="codeClose">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-x"/></svg>
+      Fechar
+    </button>
+  </div>
+
+  <div class="modal-rule" role="presentation"></div>
+
+  <p class="modal-text">
+    Enviamos um código de 6 dígitos para <strong id="codeEmail">seu e-mail</strong>.
+    Informe o código abaixo para continuar.
+  </p>
+
+  <form id="codeForm" novalidate>
+    <div class="otp" id="otp" role="group" aria-labelledby="otpLabel" aria-describedby="codeErro">
+      <span class="sr-only" id="otpLabel">Código de verificação de 6 dígitos</span>
+      <input class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code"
+             maxlength="1" aria-label="Dígito 1 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6 de 6">
+    </div>
+
+    <p class="modal-error" id="codeErro" role="alert" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+      <span id="codeErroTexto">Digite os 6 dígitos do código.</span>
+    </p>
+
+    <p class="modal-resend">
+      Não recebeu?
+      <button type="button" id="codeResend" disabled>Reenviar código em <span id="codeCountdown">30s</span></button>
+    </p>
+
+    <div class="modal-footer">
+      <button type="submit" class="btn btn--primary" id="codeConfirm">
+        <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-spinner"/></svg>
+        <span class="btn-label">Confirmar</span>
+        <span class="btn-loading-label">Validando...</span>
+      </button>
+      <button type="button" class="btn btn--ghost" id="codeBack">Voltar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="js/api.js?v=4"></script>
+<script src="js/login.js?v=4"></script>
+</body>
+</html>

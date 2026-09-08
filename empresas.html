@@ -1,0 +1,2457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Minhas Empresas · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Anton&family=Italianno&family=Limelight&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/esqueleto.css">
+<style>
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   ============================================================
+
+   Estrutura:
+   1. Base palette: --{hue}-{stop}  — cores literais (gray, yellow, blue, etc)
+   2. Theme ramps: --neutral-N      — escala cinza, pronta para dark mode
+   3. Purpose/Semantic: --{property}-{role} — semântica desacoplada de cores
+      - Roles: primary (yellow), accent (blue), success (green),
+               warning (amber), danger (red), pro (purple)
+      - Properties: fill, fill-hover, bg, text, text-on
+      - Uso: background:var(--fill-primary); color:var(--text-on-primary);
+
+   Cada role tem a forma:
+     --fill-{role}        → cor sólida para controls (buttons)
+     --fill-{role}-hover  → hover state
+     --bg-{role}          → fundo suave (badges, status)
+     --text-{role}        → texto com cor de rol (não sobre colored bg)
+     --text-on-{role}     → texto sobre fill/bg colored (sempre legível)
+
+   Exemplo de uso:
+     <button style="background:var(--fill-success);color:var(--text-on-success)">
+       Confirmar
+     </button>
+
+   Tokens do sistema: css/tokens.css
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+  min-width:1024px;
+}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+img{display:block;max-width:100%}
+body.modal-open{overflow:hidden}
+
+/* ============================================================
+   ACESSIBILIDADE — Focus rings (WCAG AA)
+   ============================================================ */
+button:focus-visible,
+a:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:var(--focus-offset);
+}
+
+/* Focus ring alternativo para elementos sobre fundo primário (sidebar amarela) */
+.nav-item:focus-visible{
+  outline:2px solid var(--neutral-900);
+  outline-offset:var(--focus-offset);
+  border-radius:var(--radius);
+}
+
+/* Melhor visibilidade em menu */
+.menu button:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:1px;
+  border-radius:var(--radius);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:flex;min-height:100vh}
+
+/* ---------- Sidebar (rail) ---------- */
+.rail{
+  width:var(--rail-w);
+  flex:0 0 var(--rail-w);
+  background:var(--fill-primary);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 24px;
+  position:sticky;top:0;height:100vh;
+  z-index:10;
+}
+/* Símbolo da marca: mesma caixa de 44px dos itens do menu, para o
+   logo e a "bolacha" do Início ficarem alinhados e do mesmo tamanho.
+   Monograma PD geométrico — contra-formas circulares, em amarelo
+   sobre bolacha preta. */
+.logomark{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+  margin-bottom:24px;
+}
+.logomark svg{width:28px;height:auto;display:block;fill:var(--fill-primary)}
+.rail-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.rail-spacer{flex:1}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.rail-divider{width:40px;height:1px;background:rgba(24,29,39,.14)}
+
+.nav-item{
+  position:relative;
+  width:44px;height:44px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-on-primary);
+  transition:background .15s ease;
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover{background:var(--fill-primary-hover)}
+.nav-item[aria-current="page"]{background:var(--fill-primary-hover)}
+.nav-item:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
+/* tooltip — a rail é colapsada, ícone sozinho não é acessível */
+.nav-item::after{
+  content:attr(data-label);
+  position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:12px;font-weight:500;line-height:18px;
+  padding:6px 10px;border-radius:var(--radius);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .12s ease, transform .12s ease;
+  z-index:60;
+}
+.nav-item:hover::after,.nav-item:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  overflow:hidden;background:var(--fill-primary-hover);
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Painel principal ---------- */
+.panel{
+  flex:1;min-width:0;
+  background:var(--surface-1);
+  border-radius:var(--radius-panel) 0 0 var(--radius-panel);
+  margin-top:12px;
+  min-height:calc(100vh - 12px);
+  padding:0 32px 32px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header{
+  width:100%;
+  padding:0;
+  margin-bottom:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.page-title{
+  font-size:30px;line-height:0px;font-weight:600;letter-spacing:-.02em;color:var(--text-primary);
+  /* 48px = "Respiro no rodapé do painel" na escala de espaçamento do styleguide */
+  padding:48px 0;
+}
+
+.section-head{
+  width:100%;
+}
+/* Sem margem no topo: o respiro antes da linha já é o padding-bottom
+   de 48px do .page-title (token "Respiro no rodapé do painel"). Uma
+   margin-top aqui somaria a esse padding e a linha pareceria flutuar
+   longe do cabeçalho, em vez de marcar onde ele termina. */
+.rule{height:1px;background:var(--border);margin:0 0 24px}
+.section-label{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,color .15s ease;
+  white-space:nowrap;
+}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--primary:active{background:var(--fill-accent-hover)}
+
+.btn--secondary{
+  width:100%;height:40px;
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  font-size:14px;line-height:20px;
+}
+.btn--secondary:hover{background:var(--sky-100);color:var(--text-primary)}
+
+/* Focus já aplicado globalmente acima */
+
+/* ============================================================
+   GRID + CARDS
+   ============================================================ */
+.grid-wrap{width:100%}
+
+/* wrap real: 3 → 2 → 1 coluna conforme a largura disponível */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
+  gap:32px;
+  /* stretch (padrão do grid): cada linha usa o card mais alto dela
+     como referência, e os outros da mesma linha esticam até lá — é
+     por isso que .card já é flex column com .card-body{flex:1}, para
+     absorver a sobra e manter "Acessar" sempre no rodapé do card. */
+}
+
+.card{
+  position:relative;
+  /* Grid items recebem stacking context implícito (z-index:auto tratado como 0),
+     então o z-index do .menu (filho) não escapa para acima dos cards vizinhos
+     sem que o próprio .card tenha um z-index explícito para subir de camada. */
+  z-index:1;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  display:flex;flex-direction:column;gap:24px;
+  transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease;
+}
+.card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-lg);transform:translateY(-2px);z-index:3}
+.card:has(.card-menu[aria-expanded="true"]){border-color:var(--border-strong);box-shadow:var(--shadow-lg);z-index:40}
+
+/* ============================================================
+   ESQUELETO DE CARREGAMENTO
+   ============================================================ */
+/* Mesma medida de projetos.html: uma barra de tamanho fixo dentro do
+   h1, não o h1 esticado (o h1 mantém os 48px 0 de padding do título
+   real — sobrepor width/height nele por cima do padding é o que
+   antes estourava a altura do cabeçalho durante o carregamento). */
+.esq-barra--pagina{width:200px;height:30px}
+.esq-card .esq-thumb{height:164px;border-radius:var(--radius)}
+.esq-card .esq-body{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;width:100%}
+.esq-card .esq-body .esq-barra--titulo{height:20px;width:60%}
+.esq-card .esq-body .esq-barra--curta{width:70%}
+
+/* Falha de carga da lista. Ocupa a grade inteira: não é uma empresa
+   vazia, é o motivo de não haver empresa nenhuma na tela — e "falhou"
+   nunca pode ser lido como "não tem nada" (EMP-LIST-010). */
+.grid-falha{
+  grid-column:1 / -1;
+  display:flex;align-items:center;justify-content:center;
+  padding:48px 32px;text-align:center;
+  background:var(--surface-0);
+  border-radius:var(--radius-lg);
+  color:var(--text-secondary);
+  font-size:14px;line-height:22px;
+}
+
+/* Um botão que não responde precisa PARECER que não responde */
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* Thumb / mockup */
+.card-thumb{
+  position:relative;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  padding:24px;
+  display:grid;place-items:center;
+  min-height:164px;
+  overflow:hidden;
+}
+.card-thumb .mock{width:190px;filter:drop-shadow(0 6px 10px rgba(10,13,18,.12))}
+/* Ilustração de prédios (img/empresas-vazio.svg) é retrato, não
+   paisagem como o mock acima — 190px de largura estouraria a altura
+   do thumb. Mesma arte do estado vazio, sem sombra, como lá. */
+.card-thumb .mock--vazio{width:84px;filter:none}
+
+/* Kebab */
+.card-menu{
+  position:absolute;top:8px;right:8px;
+  width:32px;height:32px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-secondary);
+  transition:background .15s ease,color .15s ease;
+  z-index:2;
+}
+.card-menu:hover,.card-menu[aria-expanded="true"]{background:rgba(255,255,255,.9);color:var(--text-primary)}
+.card-menu svg{width:20px;height:20px;fill:currentColor}
+
+.menu{
+  position:absolute;top:64px;right:32px;
+  min-width:184px;padding:4px;
+  background:var(--surface-1);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-menu);
+  z-index:30;
+  display:none;
+}
+.menu.is-open{display:block}
+.menu button{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+}
+.menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.menu button:hover{background:var(--surface-0)}
+.menu .sep{height:1px;background:var(--border);margin:4px}
+.menu .danger{color:var(--text-danger)}
+.menu .danger:hover{background:var(--bg-danger)}
+
+/* Texto do card */
+.card-body{display:flex;flex-direction:column;gap:8px;text-align:center;flex:1}
+.card-title{font-size:18px;line-height:28px;font-weight:600;color:var(--text-primary)}
+.card-desc{
+  font-size:14px;line-height:20px;color:var(--text-secondary);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty{
+  width:100%;padding:64px 32px 96px;
+  display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  min-height:calc(100vh - 120px);
+  background:var(--neutral-50);
+  border-radius:var(--radius-lg);
+}
+/* Ilustração do empty state: substitui o antigo selo de 56px por
+   uma arte de largura maior, sem moldura nem fundo. */
+.empty-art{
+  width:200px;height:auto;
+  margin-bottom:24px;
+  display:block;
+}
+.empty h2{font-size:18px;line-height:28px;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+.empty p{font-size:14px;line-height:20px;color:var(--text-secondary);max-width:380px;margin-bottom:24px}
+
+/* Estado alternado */
+body.is-empty .grid-wrap{display:none}
+body.is-empty .empty{display:flex}
+body.is-empty .page-header .btn--primary{display:none}
+body.is-empty .section-head .rule{display:none}
+
+/* Estado carregando: esconde tudo menos o esqueleto */
+body.is-carregando-lista .empty{display:none}
+
+/* ============================================================
+   MODAL — dialog nativo (focus trap + Esc de graça)
+   ============================================================ */
+.modal{
+  position:fixed;
+  inset:0;
+  margin:auto;
+  width:520px;max-width:calc(100vw - 48px);
+  /* Sem altura fixa: a modal abraça o conteúdo, como a "Nova idéia".
+     max-height só entra como rede de segurança em telas baixas, quando
+     .modal-body passa a rolar. */
+  max-height:calc(100vh - 48px);
+  padding:24px;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:visible;
+}
+.modal::backdrop{background:var(--overlay)}
+
+.modal[open]{animation:modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:fade-in var(--dur-base) var(--ease-out)}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-shell{display:flex;flex-direction:column;height:100%;gap:0}
+
+/* ---------- Header ---------- */
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  flex-shrink:0;
+}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--fill-primary);
+  color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Corpo scrollável ---------- */
+.modal-body{
+  position:relative;
+  flex:1;min-height:0;
+  overflow-y:auto;
+  scroll-behavior:auto;
+  padding:0;
+  display:flex;flex-direction:column;gap:0;
+}
+.modal-body::-webkit-scrollbar{width:10px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.modal-body::-webkit-scrollbar-track{background:transparent}
+
+/* min-height:100% + justify-content:center eram resquício das três seções
+   roláveis do desenho antigo: com uma seção só, empurravam o conteúdo para
+   o meio da caixa de 724px. Agora a seção apenas abraça o conteúdo. */
+.section{
+  flex-shrink:0;
+  display:flex;flex-direction:column;
+  padding:0;
+}
+.section-title{font-size:18px;line-height:28px;font-weight:600;text-align:center}
+.section-sub{font-size:14px;line-height:22px;color:var(--text-secondary);text-align:center;margin-top:8px}
+
+/* ---------- Seção 1: Sobre a empresa ---------- */
+/* 24px abaixo do header e 16px entre campos — mesmo ritmo de .modal-form
+   na "Nova idéia". */
+.form{width:100%;max-width:100%;margin:24px 0 0;display:flex;flex-direction:column;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.input,.textarea{
+  width:100%;
+  padding:10px 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  /* Sem isto, <textarea> cai no monospace padrão do navegador — só
+     <input> herda a fonte da página por padrão. font:inherit copia
+     tudo (família, peso, tamanho), então as duas linhas abaixo só
+     reafirmam o que o resto do form já espera. */
+  font-family:inherit;
+  font-size:16px;line-height:24px;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.input::placeholder,.textarea::placeholder{color:var(--text-muted)}
+.input:focus,.textarea:focus{
+  outline:none;
+  border-color:var(--fill-accent);
+  box-shadow:0 0 0 4px var(--sky-100);
+}
+.input.is-invalid,.textarea.is-invalid{
+  border-color:var(--text-danger);
+  box-shadow:0 0 0 4px var(--bg-danger);
+}
+.textarea{min-height:96px;resize:vertical}
+
+.segmented{display:inline-flex;padding:2px;gap:2px;border-radius:var(--radius);background:var(--surface-0);border:1px solid var(--border)}
+.segmented button{
+  padding:6px 16px;border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.segmented button:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.segmented button[aria-pressed="true"]{background:var(--surface-1);color:var(--text-primary);font-weight:600;box-shadow:var(--shadow-xs)}
+
+/* ---------- Upload do logotipo ---------- */
+.upload{margin-top:12px}
+.upload[hidden]{display:none}
+/* A área de envio e o preview são estados alternativos da MESMA caixa:
+   mesma largura, mesma altura e mesma posição, então trocar um pelo outro
+   não desloca nada ao redor. 144px acomoda o maior dos dois conteúdos. */
+.dropzone,.upload-preview{
+  width:100%;min-height:144px;
+  padding:20px 16px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+}
+.dropzone{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border:1px dashed var(--border-strong);
+  text-align:center;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+/* Sem isto o display:flex acima vence o display:none do atributo [hidden]
+   (folha do autor > folha do navegador) e a área de envio continuava
+   visível abaixo do preview. */
+.dropzone[hidden]{display:none}
+.dropzone:hover{background:var(--surface-0)}
+.dropzone:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.dropzone.is-over{border-color:var(--fill-accent);background:var(--sky-100)}
+.dropzone-icon{
+  width:36px;height:36px;margin-bottom:4px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  color:var(--text-secondary);
+}
+.dropzone-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dropzone-text{font-size:14px;line-height:20px;color:var(--text-secondary)}
+.dropzone-text b{color:var(--text-accent);font-weight:600}
+.dropzone-hint{font-size:12px;line-height:18px;color:var(--text-muted)}
+
+/* Logotipo centralizado na caixa; o botão de remover sai do fluxo para o
+   canto, senão empurraria o logo para fora do centro. */
+.upload-preview{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--border-strong);
+  text-align:center;
+}
+.upload-preview[hidden]{display:none}
+.upload-thumb{
+  width:48px;height:48px;flex-shrink:0;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--surface-0);
+  object-fit:contain;
+}
+.upload-meta{display:flex;flex-direction:column;gap:2px;max-width:100%;min-width:0}
+.upload-name{
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.upload-size{font-size:12px;line-height:18px;color:var(--text-secondary)}
+.upload-remove{
+  position:absolute;top:8px;right:8px;
+  flex-shrink:0;padding:6px;border-radius:var(--radius);
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.upload-remove:hover{background:var(--bg-danger);color:var(--text-danger)}
+.upload-remove:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.upload-remove svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+.upload-error{
+  margin-top:8px;
+  font-size:12px;line-height:18px;color:var(--text-danger);
+}
+.upload-error[hidden]{display:none}
+
+/* ---------- Footer ---------- */
+.modal-divider{height:1px;background:var(--border);flex-shrink:0;margin:24px 0}
+.modal-footer{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.modal .btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  width:auto;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.modal .btn:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.modal .btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modal .btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.modal .btn--primary:hover{background:var(--fill-accent-hover)}
+.modal .btn--secondary{background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.modal .btn--secondary:hover{background:var(--surface-0)}
+.modal .btn--danger{background:var(--fill-danger);color:var(--text-on-danger);box-shadow:var(--shadow-xs)}
+.modal .btn--danger:hover{filter:brightness(.92)}
+
+/* ---------- Modal de confirmação (empilhado à esquerda) ---------- */
+.modal--stacked{width:440px}
+.modal-confirm{display:flex;flex-direction:column;align-items:flex-start;gap:24px}
+.modal-confirm-text{font-size:15px;line-height:24px;color:var(--text-primary);margin:0;margin-top:24px;max-width:360px}
+.modal-confirm-actions{display:flex;align-items:center;gap:12px;width:100%}
+
+/* ---------- Toast de feedback ---------- */
+.toast{
+  position:fixed;
+  left:50%;bottom:32px;
+  transform:translateX(-50%) translateY(12px);
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  border-radius:var(--radius);
+  background:var(--fill-success);
+  color:var(--text-on-success);
+  box-shadow:var(--shadow-lg);
+  font-size:14px;line-height:20px;font-weight:500;
+  z-index:100;
+  opacity:0;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.toast.is-visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-check{width:20px;height:20px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.toast-close{
+  display:grid;place-items:center;
+  width:24px;height:24px;flex-shrink:0;
+  margin-left:12px;
+  border-radius:6px;
+  color:inherit;
+  background:transparent;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.toast-close:hover{background:rgba(255,255,255,.2)}
+.toast-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Motion reduzido ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+/* ---------- Conteúdo expandível dentro de um card (.pf-row) ----------
+   Usado pelo "Histórico de uso" e por "Comprar créditos": vive dentro
+   do próprio card, por isso não tem borda/fundo próprios — só um
+   respiro e uma linha fina separando do cabeçalho do card. */
+.pf-row-expand{
+  width:100%;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+
+@keyframes expandDown{
+  from{opacity:0;transform:translateY(-8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.pf-row-expand[hidden]{
+  display:none;
+}
+
+.timeline-container{
+  display:flex;flex-direction:column;gap:0;
+}
+
+.timeline-item{
+  display:flex;gap:16px;padding:12px 0;
+  position:relative;
+  padding-left:20px;
+}
+
+.timeline-item:not(:last-child)::before{
+  content:"";
+  position:absolute;
+  left:7px;top:0;
+  width:2px;height:100%;
+  background:var(--border-strong);
+}
+
+.timeline-dot{
+  position:absolute;left:0;top:12px;
+  width:16px;height:16px;flex-shrink:0;
+  border-radius:50%;
+  background:var(--fill-accent);
+  border:3px solid var(--surface-0);
+  box-shadow:0 0 0 1px var(--border-strong);
+}
+
+.timeline-content{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:0}
+
+.timeline-date{
+  font-size:11px;line-height:16px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+.timeline-task{
+  font-size:13px;line-height:20px;font-weight:500;color:var(--text-primary);
+}
+
+.timeline-cost{
+  font-size:12px;line-height:18px;font-weight:500;color:var(--text-secondary);
+}
+
+.timeline-cost strong{color:var(--text-primary);font-weight:700}
+
+.timeline-item:first-child .timeline-dot{
+  background:var(--fill-success);
+  box-shadow:0 0 0 3px var(--green-100),0 0 0 4px var(--border-strong);
+}
+
+/* ---------- Compra de créditos via Pix ---------- */
+.pf-compra-form{display:flex;flex-direction:column;gap:16px}
+
+.pf-valor-wrap{
+  display:flex;align-items:center;gap:8px;
+  height:44px;padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-valor-wrap:focus-within{border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-valor-prefixo{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);flex-shrink:0}
+.pf-input--valor{
+  border:none;padding:0;height:auto;box-shadow:none;
+  font-size:16px;font-weight:600;
+}
+.pf-input--valor:focus{box-shadow:none}
+
+.pf-btn--success{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+.pf-btn--success:hover{filter:brightness(.96)}
+.pf-btn--accent{background:var(--fill-accent);color:var(--text-on-accent);border-color:transparent}
+.pf-btn--accent:hover{background:var(--fill-accent-hover)}
+.pf-btn--accent:disabled{opacity:.5;cursor:not-allowed}
+.pf-btn--accent:disabled:hover{background:var(--fill-accent)}
+
+.pf-pix{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  margin-top:4px;padding:20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+.pf-pix[hidden]{display:none}
+
+.pf-pix-qr{
+  padding:12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+  line-height:0;
+}
+.pf-pix-qr img{display:block;width:176px;height:176px}
+.pf-pix-qr.is-expirado img{opacity:.35;filter:grayscale(1)}
+
+.pf-pix-legenda{font-size:13px;line-height:20px;font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
+
+.pf-pix-status{font-size:13px;line-height:20px;font-weight:600;text-align:center;margin:0;display:flex;align-items:center;gap:6px}
+.pf-pix-status[hidden]{display:none}
+.pf-pix-status .pf-pix-ponto{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pf-pix-status.is-aguardando{color:var(--text-secondary)}
+.pf-pix-status.is-aguardando .pf-pix-ponto{background:var(--fill-accent);animation:pfPulso 1.4s ease-in-out infinite}
+.pf-pix-status.is-pago{color:var(--text-success)}
+.pf-pix-status.is-pago .pf-pix-ponto{background:var(--fill-success)}
+.pf-pix-status.is-expirado{color:var(--text-danger)}
+.pf-pix-status.is-expirado .pf-pix-ponto{background:var(--fill-danger)}
+@keyframes pfPulso{0%,100%{opacity:1}50%{opacity:.3}}
+@media (prefers-reduced-motion: reduce){.pf-pix-status.is-aguardando .pf-pix-ponto{animation:none}}
+
+.pf-pix-copia{display:flex;align-items:center;gap:8px;width:100%}
+.pf-pix-codigo{
+  flex:1;min-width:0;height:40px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--surface-1);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;color:var(--text-secondary);
+  text-overflow:ellipsis;
+}
+.pf-pix-copia .pf-btn{flex-shrink:0;height:40px}
+.pf-pix-copia .pf-btn.is-copiado{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+
+.pf-recarga-erro{font-size:13px;line-height:18px;font-weight:500;color:var(--text-danger);margin:0}
+.pf-recarga-erro[hidden]{display:none}
+
+
+/* ============================================================
+   MODAL — perfil do usuário
+   Mesma casca da modal "Novo projeto": 825x674, lateral de 192 e
+   conteúdo de 632. <dialog> nativo, então foco preso e Esc já vêm
+   de graça. Componente autocontido (.pf-*) para poder viver em
+   qualquer página que tenha o menu lateral.
+   ============================================================ */
+body.modal-open{overflow:hidden}
+
+.pf-modal{
+  position:fixed;inset:0;margin:auto;
+  width:825px;max-width:calc(100vw - 48px);
+  height:674px;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.pf-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.pf-modal[open]{animation:pf-in var(--dur-base) var(--ease-out)}
+.pf-modal[open]::backdrop{animation:pf-fade var(--dur-base) var(--ease-out)}
+@keyframes pf-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes pf-fade{from{opacity:0}to{opacity:1}}
+
+/* 192 + 1 do divisor + 632 = 825 */
+.pf-shell{display:flex;height:100%}
+
+/* ---------- Lateral: seções ---------- */
+.pf-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.pf-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-side-item:hover{background:var(--surface-0)}
+.pf-side-item[aria-current="true"]{background:var(--sky-200)}
+.pf-side-spacer{flex:1;min-height:12px}
+.pf-side-item--danger{color:var(--text-danger)}
+.pf-side-item--danger:hover{background:var(--bg-danger)}
+
+.pf-divider{flex:0 0 1px;background:var(--border)}
+
+/* ---------- Conteúdo ---------- */
+.pf-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:32px;
+  padding:24px 32px;
+}
+.pf-head{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  height:48px;
+}
+.pf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.pf-title-icon{
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+  box-shadow:0 0 0 6px var(--bg-primary);
+}
+.pf-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pf-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.pf-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Área rolável, com a barra afastada do conteúdo */
+.pf-body{flex:1;min-height:0;overflow-y:auto;padding-right:16px}
+.pf-body::-webkit-scrollbar{width:10px}
+.pf-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.pf-body::-webkit-scrollbar-track{background:transparent}
+
+.pf-panel{display:flex;flex-direction:column;gap:24px}
+/* A regra acima venceria o display:none do atributo [hidden] na
+   ordem do cascata — daí esta guarda explícita. */
+.pf-panel[hidden]{display:none}
+
+/* ---------- Foto ---------- */
+.pf-avatar-row{display:flex;align-items:center;gap:20px}
+.pf-avatar{
+  width:80px;height:80px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;background:var(--surface-0);
+}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-avatar-actions{display:flex;align-items:center;gap:8px}
+
+.pf-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 14px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.pf-btn:hover{background:var(--surface-0)}
+.pf-btn--danger{color:var(--text-danger);border-color:var(--border-strong)}
+.pf-btn--danger:hover{background:var(--bg-danger);border-color:var(--fill-danger)}
+
+/* ---------- Campos ---------- */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pf-label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.pf-input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font:inherit;font-size:14px;line-height:20px;
+  color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-input::placeholder{color:var(--text-muted)}
+.pf-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-hint{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+/* Barra de evolução do crédito: o trecho disponível encolhe conforme
+   o uso aumenta (a faixa restante da barra representa o usado). */
+.pf-saldo{margin:4px 0 0;display:flex;align-items:baseline;gap:8px}
+.pf-saldo-valor{
+  font-size:28px;line-height:34px;font-weight:600;
+  color:var(--text-primary);font-variant-numeric:tabular-nums;
+}
+/* Falha de carregamento tem cor própria: ela não pode ser lida como
+   um saldo baixo. */
+.pf-saldo-falha{color:var(--text-warning)}
+.pf-extrato{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.pf-extrato-item{
+  display:flex;align-items:baseline;gap:12px;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px;line-height:18px;
+}
+.pf-extrato-item:last-child{border-bottom:0}
+.pf-extrato-desc{flex:1;color:var(--text-primary)}
+/* Linha de detalhe da recarga: explica por que o crédito é menor que
+   o valor pago (taxa do PSP). Só aparece quando houve taxa. */
+.pf-extrato-detalhe{
+  display:block;margin-top:2px;
+  color:var(--text-muted);font-size:12px;line-height:16px;
+  font-variant-numeric:tabular-nums;
+}
+.pf-extrato-data{color:var(--text-muted);font-size:12px}
+.pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.pf-extrato-valor.is-entrada{color:var(--text-success)}
+.pf-extrato-valor.is-saida{color:var(--text-secondary)}
+.pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
+
+/* Pagamento confirmado: some TUDO que servia para pagar — o campo de
+   valor, o botão de gerar, o QR, o "copia e cola" e as instruções.
+   Depois de pago, cada um desses é convite para pagar de novo. Fica
+   só a confirmação; a seção volta ao estado inicial quando a pessoa
+   fecha e abre de novo, ou pede uma nova recarga. */
+.is-confirmado .pf-compra-form > .pf-field,
+.is-confirmado #gerarQrBtn,
+.is-confirmado .pf-pix-qr,
+.is-confirmado .pf-pix-legenda,
+.is-confirmado .pf-pix-copia,
+.is-confirmado .pf-pix-hint-auto{display:none}
+/* Sozinha na caixa, a confirmação deixa de ser uma legenda de rodapé
+   e vira a mensagem principal. */
+.is-confirmado .pf-pix-status{
+  margin:0;padding:4px 0;
+  font-size:15px;line-height:22px;font-weight:600;
+}
+.pf-credito-barra{
+  width:100%;height:12px;
+  border-radius:999px;
+  background:var(--border-strong);
+  overflow:hidden;
+}
+.pf-credito-uso{
+  height:100%;
+  border-radius:999px;
+  background:var(--fill-accent);
+  transition:width var(--dur-base) var(--ease-out);
+}
+.pf-credito-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:12px;line-height:18px;font-weight:600;color:var(--text-secondary);
+}
+
+/* ---------- Linha com interruptor ---------- */
+.pf-row{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+/* Efeito de âncora: pisca uma vez para guiar o olhar até a sessão
+   que acabou de aparecer/expandir, sem deixar destaque permanente.
+   Em box-shadow para funcionar sobre qualquer card (.pf-row, .pf-pix
+   etc.) sem brigar com o background/borda próprios do elemento. */
+@keyframes pf-anchor-flash{
+  0%{box-shadow:0 0 0 4px var(--sky-100), 0 0 0 1px var(--fill-accent) inset}
+  100%{box-shadow:0 0 0 0 transparent, 0 0 0 0 transparent}
+}
+.pf-anchor-flash{
+  animation:pf-anchor-flash 1.1s var(--ease-out);
+}
+.pf-row--stack{flex-direction:column}
+.pf-row--stack .pf-row-actions{width:100%}
+.pf-row-actions{display:flex;align-items:flex-start}
+.pf-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pf-row-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.pf-row-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+
+.pf-switch{
+  appearance:none;-webkit-appearance:none;
+  position:relative;flex-shrink:0;
+  width:44px;height:24px;margin-top:2px;
+  border-radius:999px;
+  background:var(--neutral-300);
+  cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.pf-switch:checked{background:var(--fill-accent)}
+.pf-switch:checked::after{transform:translateX(20px)}
+.pf-switch:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Cartões de escolha (tema) ---------- */
+.pf-option{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.pf-option:hover{border-color:var(--border-strong)}
+.pf-option[aria-checked="true"]{background:var(--neutral-100);border-color:var(--neutral-300)}
+.pf-option-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pf-option-mark{
+  width:16px;height:16px;flex-shrink:0;margin-top:2px;
+  display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);color:transparent;
+}
+.pf-option-mark svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;display:block}
+.pf-option[aria-checked="true"] .pf-option-mark{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--text-on-accent)}
+
+/* ---------- Rodapé ---------- */
+.pf-rule{flex-shrink:0;height:1px;background:var(--border)}
+.pf-foot{flex-shrink:0;display:flex;align-items:center;gap:12px;height:48px}
+.pf-save{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:48px;padding:0 24px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-save:hover{background:var(--fill-accent-hover)}
+.pf-cancel{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:48px;padding:0 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-cancel:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* Avatar do menu vira o gatilho da modal */
+.avatar{padding:0;cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-out)}
+.avatar:hover{box-shadow:0 0 0 2px var(--text-primary)}
+.avatar:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+</style>
+</head>
+<body class="is-carregando-lista">
+
+<div class="app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="rail">
+    <div class="logomark" role="img" aria-label="Plataforma de Design">
+      <svg viewBox="5.6 9 28.8 22" aria-hidden="true"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegação principal">
+      <button class="nav-item" data-label="Início">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button class="nav-item" aria-current="page" data-label="Empresas">
+        <svg viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/></svg>
+      </button>
+      <button class="nav-item" data-label="Projetos" disabled>
+        <svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      </button>
+      <button class="nav-item" data-label="Idéias" disabled>
+        <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+      </button>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-foot">
+      <button class="nav-item" data-label="Configurações">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="rail-divider"></div>
+      <button type="button" class="avatar" id="avatarBtn"
+              aria-haspopup="dialog" aria-label="Abrir perfil de Ricardo Mateus">
+        <img src="https://i.pravatar.cc/80?img=47" alt="">
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="panel">
+
+    <header class="page-header">
+      <h1 class="page-title is-carregando" aria-busy="true">
+        <span class="esqueleto" aria-hidden="true">
+          <span class="esq-barra esq-barra--pagina"></span>
+        </span>
+        <span>Empresas</span>
+      </h1>
+      <button class="btn btn--primary" id="openCreateModal">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nova empresa
+      </button>
+    </header>
+
+    <div class="section-head">
+      <div class="rule"></div>
+    </div>
+
+    <!-- ---------- Grid de empresas ---------- -->
+    <section class="grid-wrap" aria-label="Empresas">
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- ---------- Empty state ---------- -->
+    <section class="empty" aria-label="Nenhuma empresa">
+      <img class="empty-art" src="img/empresas-vazio.svg" alt="" aria-hidden="true" width="458" height="571">
+      <h2>Nenhuma empresa por aqui ainda</h2>
+      <p>Crie sua primeira empresa para começar a organizar projetos e suas idéias em um só lugar.</p>
+      <button class="btn btn--primary" id="openCreateModalEmpty">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nova empresa
+      </button>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL CRIAR EMPRESA ===================== -->
+<dialog class="modal" id="modal" aria-labelledby="modalTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="modalTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>
+        </span>
+        <span id="modalTitleText">Nova empresa</span>
+      </h2>
+      <button class="modal-close" id="closeBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        Fechar
+      </button>
+    </header>
+
+    <div class="modal-body" id="modalBody">
+
+      <section class="section" id="sec-sobre">
+        <div class="form">
+          <div class="field">
+            <label class="label" for="nome">Nome da empresa</label>
+            <input class="input" id="nome" type="text" placeholder="" required>
+          </div>
+          <div class="field">
+            <label class="label" for="descricao">Descrição da empresa</label>
+            <textarea class="textarea" id="descricao" placeholder=""></textarea>
+          </div>
+          <div class="field">
+            <span class="label" id="logo-label">A nova empresa já possui logotipo? Se sim, anexe abaixo.</span>
+            <div class="upload" id="logoUpload">
+              <input type="file" id="logoInput" accept="image/png,image/jpeg,image/svg+xml" hidden>
+
+              <button type="button" class="dropzone" id="dropzone">
+                <span class="dropzone-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                </span>
+                <span class="dropzone-text"><b>Clique para enviar</b> ou arraste o arquivo</span>
+                <span class="dropzone-hint">SVG, PNG ou JPG · até 2 MB</span>
+              </button>
+
+              <div class="upload-preview" id="logoPreview" hidden>
+                <img class="upload-thumb" id="logoThumb" alt="Pré-visualização do logotipo">
+                <span class="upload-meta">
+                  <span class="upload-name" id="logoName"></span>
+                  <span class="upload-size" id="logoSize"></span>
+                </span>
+                <button type="button" class="upload-remove" id="logoRemove" aria-label="Remover logotipo">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <p class="upload-error" id="logoError" role="alert" hidden></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <footer class="modal-footer">
+      <button class="btn btn--primary" type="button" id="saveBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>
+        Salvar
+      </button>
+    </footer>
+
+  </div>
+</dialog>
+
+<!-- ===================== MODAL EXCLUIR EMPRESA ===================== -->
+<dialog class="modal modal--stacked" id="deleteModal" aria-labelledby="deleteModalTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="deleteModalTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+        </span>
+        Excluir empresa
+      </h2>
+      <button class="modal-close" id="closeDeleteBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        Fechar
+      </button>
+    </header>
+
+    <div class="modal-confirm">
+      <p class="modal-confirm-text">Tem certeza que deseja excluir essa empresa? Esta ação não pode ser desfeita.</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn btn--danger" id="confirmDeleteBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+          Excluir
+        </button>
+        <button type="button" class="btn btn--secondary" id="cancelDeleteBtn">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- Mensagem de feedback (toast) -->
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <svg class="toast-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastText"></span>
+  <button type="button" class="toast-close" id="toastClose" aria-label="Fechar mensagem">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+</div>
+
+<script>
+/* ============================================================
+   ESQUELETO DE CARREGAMENTO
+   ============================================================ */
+const ESQUELETO_CARD = `
+  <article class="card esq-card" aria-hidden="true">
+    <span class="esq-barra esq-thumb"></span>
+    <span class="esq-body">
+      <span class="esq-barra esq-barra--titulo"></span>
+      <span class="esq-barra"></span>
+      <span class="esq-barra esq-barra--curta"></span>
+    </span>
+    <span class="esq-botao"></span>
+  </article>`;
+const ESQUELETO_GRID = ESQUELETO_CARD.repeat(3);
+
+const grid = document.getElementById('grid');
+if(grid) grid.innerHTML = ESQUELETO_GRID;
+
+/* Fim da espera do título. Um lugar só, porque os dois caminhos que
+   a encerram — a listagem chegou / a carga falhou — limpam exatamente
+   as mesmas duas coisas. */
+function revelarTitulo(){
+  const h = document.querySelector('.page-title');
+  if(!h) return;
+  h.classList.remove('is-carregando');
+  h.removeAttribute('aria-busy');
+}
+
+/* Dados de exemplo — uma empresa (Nike), como no Figma
+   ------------------------------------------------------------ */
+const EMPRESAS = [{
+  id: 1,
+  nome: 'Nike',
+  descricao:'Descrição da empresa em no máximo 3 linhas Descrição da empresa em no máximo 3 linhas Descrição da empresa em no máximo 3 linhas'
+}];
+
+const ICON_DOTS = `<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>`;
+
+const MENU = `
+<div class="menu" role="menu">
+  <button role="menuitem"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>Editar empresa</button>
+  <div class="sep"></div>
+  <button role="menuitem" class="danger"><svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir</button>
+</div>`;
+
+let empresaParaExcluir = null;
+
+/* Esta página DESENHA; js/empresas.js DECIDE o que desenhar.
+   Antes, a linha abaixo rodava na carga e jogava a Nike na tela de
+   todo mundo — inclusive de uma conta criada há um minuto. */
+/* Um card. Mesma marcação de antes, só que reutilizável: a grade
+   inteira e uma inserção avulsa passam pelo mesmo molde, então não
+   há como as duas divergirem. */
+/* Sem logotipo (EMP-CRIA-003 é opcional), a mesma ilustração do
+   estado vazio entra como placeholder — não o logo de outra
+   empresa. Com logotipo, é a imagem que a própria conta enviou. */
+function thumbDeEmpresa(e){
+  return e.logotipo_url
+    ? `<img class="mock" src="${escapar(e.logotipo_url)}" alt="">`
+    : `<img class="mock mock--vazio" src="img/empresas-vazio.svg" alt="">`;
+}
+
+function cardDeEmpresa(e){
+  return `
+  <article class="card" data-id="${escapar(e.id)}">
+    <div class="card-thumb">
+      ${thumbDeEmpresa(e)}
+      <button class="card-menu" aria-haspopup="true" aria-expanded="false" aria-label="Opções de ${escapar(e.nome)}">${ICON_DOTS}</button>
+    </div>
+    ${MENU}
+    <div class="card-body">
+      <h3 class="card-title">${escapar(e.nome)}</h3>
+      <p class="card-desc">${escapar(e.descricao || '')}</p>
+    </div>
+    <a class="btn btn--secondary" href="projetos.html?empresa=${escapar(e.id)}">Acessar</a>
+  </article>
+`;
+}
+
+/* O nome da empresa vem de um campo de texto e vai para innerHTML.
+   Sem escapar, uma empresa chamada <img onerror=...> executaria
+   script na tela de todo mundo que a visse na lista. */
+function escapar(t){
+  return String(t).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderEmpresas(lista){
+  document.body.classList.remove('is-carregando-lista');
+  revelarTitulo();
+  grid.innerHTML = lista.map(cardDeEmpresa).join('');
+}
+
+/* Acrescentar não redesenha a grade: os menus abertos e o foco de
+   quem estava navegando por teclado sobreviveriam a um innerHTML,
+   mas os listeners de card já montados, não. */
+function acrescentarEmpresa(e){
+  document.body.classList.remove('is-empty');
+  document.body.classList.remove('is-carregando-lista');
+  revelarTitulo();
+  grid.insertAdjacentHTML('afterbegin', cardDeEmpresa(e));
+}
+
+/* Editar não redesenha a grade nem substitui o card inteiro — mesmo
+   cuidado de acrescentarEmpresa: um innerHTML novo perderia o menu
+   aberto ou o foco de outros cards que não têm nada a ver com esta
+   edição. Só os três pedaços que podem ter mudado são atualizados. */
+function atualizarEmpresa(e){
+  if(!grid) return;
+  const card = grid.querySelector('.card[data-id="' + CSS.escape(String(e.id)) + '"]');
+  if(!card) return;
+
+  const tituloEl = card.querySelector('.card-title');
+  const descEl   = card.querySelector('.card-desc');
+  const img      = card.querySelector('.card-thumb img');
+
+  if(tituloEl) tituloEl.textContent = e.nome;
+  if(descEl)   descEl.textContent   = e.descricao || '';
+  if(img){
+    if(e.logotipo_url){
+      img.src = e.logotipo_url;
+      img.className = 'mock';
+    } else {
+      img.src = 'img/empresas-vazio.svg';
+      img.className = 'mock mock--vazio';
+    }
+  }
+
+  const menuBtn = card.querySelector('.card-menu');
+  if(menuBtn) menuBtn.setAttribute('aria-label', 'Opções de ' + e.nome);
+}
+
+window.EmpresasView = {
+  render: renderEmpresas,
+  acrescentar: acrescentarEmpresa,
+  atualizar: atualizarEmpresa,
+  EXEMPLO: EMPRESAS,
+  /* Falha de carga da listagem. Ocupa a grade inteira: não é uma empresa
+     vazia, é o motivo de não haver empresa nenhuma na tela — e "falhou"
+     nunca pode ser lido como "não tem nada" (EMP-LIST-010). */
+  falha: function(){
+    revelarTitulo();
+    if(grid) grid.innerHTML =
+      '<p class="grid-falha">Não foi possível carregar as empresas. Recarregue a página.</p>';
+  },
+  /* A tela está carregando — mostra esqueleto. */
+  esqueleto: function(){ if(grid) grid.innerHTML = ESQUELETO_GRID; },
+};
+
+/* ------------------------------------------------------------
+   Dropdown do kebab
+   ------------------------------------------------------------ */
+function closeAllMenus(){
+  document.querySelectorAll('.menu.is-open').forEach(m=>m.classList.remove('is-open'));
+  document.querySelectorAll('.card-menu[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
+}
+
+document.addEventListener('click', ev => {
+  const editar = ev.target.closest('.menu [role="menuitem"]');
+  if(editar && editar.textContent.trim() === 'Editar empresa'){
+    closeAllMenus();
+    /* O carregamento de verdade — nome, descrição e logotipo atuais —
+       mora na IIFE do modal (abaixo), que é quem conhece o formulário.
+       window.abrirEdicaoEmpresa é a ponte entre os dois escopos,
+       mesmo padrão de window.EmpresasView usado no resto do arquivo. */
+    const card = editar.closest('.card');
+    if(window.abrirEdicaoEmpresa && card) window.abrirEdicaoEmpresa(card, editar);
+    return;
+  }
+  if(editar && editar.textContent.trim() === 'Excluir'){
+    closeAllMenus();
+    empresaParaExcluir = editar.closest('.card');
+    document.getElementById('deleteModal').showModal();
+    document.body.classList.add('modal-open');
+    return;
+  }
+  const trigger = ev.target.closest('.card-menu');
+
+  if(trigger){
+    const card = trigger.closest('.card');
+    const menu = card.querySelector('.menu');
+    const wasOpen = menu.classList.contains('is-open');
+    closeAllMenus();
+    if(!wasOpen){
+      menu.classList.add('is-open');
+      trigger.setAttribute('aria-expanded','true');
+    }
+    ev.stopPropagation();
+    return;
+  }
+
+  if(!ev.target.closest('.menu')) closeAllMenus();
+});
+
+document.addEventListener('keydown', ev => { if(ev.key === 'Escape') closeAllMenus(); });
+
+/* Os botões flutuantes de preview e o painel "Design tokens" saíram
+   em 22/08/2026. Eram andaimes de inspeção que apareceriam em
+   produção; quem inspeciona estados agora usa ?estado= na URL. */
+
+/* ------------------------------------------------------------
+   Modal Criar Empresa
+   ------------------------------------------------------------ */
+(function(){
+  'use strict';
+
+  var modal      = document.getElementById('modal');
+  var openBtns   = [document.getElementById('openCreateModal'), document.getElementById('openCreateModalEmpty')];
+  var closeBtn   = document.getElementById('closeBtn');
+  var body       = document.getElementById('modalBody');
+
+  /* ---------- Logotipo: toggle + upload ---------- */
+  var logoUpload  = document.getElementById('logoUpload');
+  var logoInput   = document.getElementById('logoInput');
+  var dropzone    = document.getElementById('dropzone');
+  var preview     = document.getElementById('logoPreview');
+  var thumb       = document.getElementById('logoThumb');
+  var nameEl      = document.getElementById('logoName');
+  var sizeEl      = document.getElementById('logoSize');
+  var removeBtn   = document.getElementById('logoRemove');
+  var errorEl     = document.getElementById('logoError');
+
+  var MAX_BYTES = 2 * 1024 * 1024;
+  var ACCEPTED  = ['image/png','image/jpeg','image/svg+xml'];
+  var objectUrl = null;
+
+  /* O <input type="file"> só reflete o que passou por ele mesmo —
+     um arquivo solto por drag-and-drop nunca entra em
+     logoInput.files. Por isso o arquivo aceito é guardado aqui, não
+     lido de volta do input na hora de salvar (EMP-CRIA-003). */
+  var arquivoSelecionado = null;
+
+  /* ---------- Estado de edição (empresas-edicao.md) ----------
+     null = modal está criando uma empresa nova.
+     string = id da empresa sendo editada — é o que o Salvar usa
+     para decidir POST /empresas (criar) ou PUT /empresas/:id
+     (editar), em vez de adivinhar pelo texto do título. */
+  var editandoId = null;
+
+  /* A URL do logotipo que JÁ estava salvo quando a edição abriu —
+     null se a empresa não tinha logotipo. Existe separado de
+     arquivoSelecionado porque um é um File local (ainda não
+     existe no servidor) e o outro é o que já está lá; o Salvar
+     precisa saber qual dos dois casos está na tela. */
+  var logotipoExistenteUrl = null;
+
+  /* true quando a pessoa clicou em remover um logotipo que já
+     existia (não um que ela mesma acabou de escolher agora). Sem
+     isto, EMP-EDIT-004 não teria como saber se "nenhum arquivo no
+     envio" significa "não mexi" ou "tire o que tinha". */
+  var logotipoRemovido = false;
+
+  function showError(msg){
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+  }
+  function clearError(){
+    errorEl.textContent = '';
+    errorEl.hidden = true;
+  }
+  function formatSize(bytes){
+    return bytes < 1024 * 1024
+      ? Math.round(bytes / 1024) + ' KB'
+      : (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+  }
+
+  function clearFile(){
+    if(objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
+    arquivoSelecionado = null;
+    logoInput.value = '';
+    thumb.removeAttribute('src');
+    preview.hidden = true;
+    dropzone.hidden = false;
+    clearError();
+
+    /* EMP-EDIT-004: só marca remoção se havia mesmo um logotipo
+       salvo para remover — clicar em "x" durante a criação (nenhum
+       logotipo existe ainda) não tem nada a sinalizar ao servidor. */
+    if(editandoId !== null && logotipoExistenteUrl) logotipoRemovido = true;
+  }
+
+  /* Mostra o logotipo que JÁ está salvo, ao abrir a edição — mesma
+     UI de "arquivo escolhido" (acceptFile), mas sem File nem
+     tamanho: é uma URL que já existe no servidor, não um upload
+     pendente. */
+  function mostrarLogoExistente(url){
+    thumb.src = url;
+    nameEl.textContent = 'Logotipo atual';
+    sizeEl.textContent = '';
+    dropzone.hidden = true;
+    preview.hidden = false;
+  }
+
+  function acceptFile(file){
+    if(!file) return;
+    if(ACCEPTED.indexOf(file.type) === -1){
+      showError('Formato não suportado. Envie um SVG, PNG ou JPG.');
+      return;
+    }
+    if(file.size > MAX_BYTES){
+      showError('Arquivo muito grande. O limite é 2 MB.');
+      return;
+    }
+    clearError();
+    arquivoSelecionado = file;
+    /* Escolher um arquivo novo substitui a intenção de remover que
+       porventura estivesse marcada — as duas não fazem sentido
+       juntas, e o arquivo novo é o sinal mais recente. */
+    logotipoRemovido = false;
+    if(objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    thumb.src = objectUrl;
+    nameEl.textContent = file.name;
+    sizeEl.textContent = formatSize(file.size);
+    dropzone.hidden = true;
+    preview.hidden = false;
+    removeBtn.focus();
+  }
+
+  dropzone.addEventListener('click', function(){ logoInput.click(); });
+  logoInput.addEventListener('change', function(){ acceptFile(logoInput.files[0]); });
+  removeBtn.addEventListener('click', function(){ clearFile(); dropzone.focus(); });
+
+  ['dragenter','dragover'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){
+      e.preventDefault();
+      dropzone.classList.add('is-over');
+    });
+  });
+  ['dragleave','drop'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){
+      e.preventDefault();
+      dropzone.classList.remove('is-over');
+    });
+  });
+  dropzone.addEventListener('drop', function(e){
+    if(e.dataTransfer && e.dataTransfer.files.length) acceptFile(e.dataTransfer.files[0]);
+  });
+
+  /* ---------- Abertura e fechamento ---------- */
+  var lastTrigger = null;
+
+  var logoLabel = document.getElementById('logo-label');
+  var TEXTO_LOGO_CRIAR  = 'A nova empresa já possui logotipo? Se sim, anexe abaixo.';
+  var TEXTO_LOGO_EDITAR = 'Logotipo da empresa';
+
+  function open(trigger){
+    lastTrigger = trigger;
+    document.getElementById('modalTitleText').textContent = 'Nova empresa';
+    if(logoLabel) logoLabel.textContent = TEXTO_LOGO_CRIAR;
+
+    /* Modal reaberta para criar outra empresa não pode herdar nome,
+       descrição ou logotipo da última vez — sem isto, cancelar e
+       abrir de novo mostraria o formulário ainda preenchido. */
+    editandoId = null;
+    logotipoExistenteUrl = null;
+    logotipoRemovido = false;
+
+    var nomeInput = document.getElementById('nome');
+    var descInput = document.getElementById('descricao');
+    nomeInput.value = '';
+    nomeInput.classList.remove('is-invalid');
+    if(descInput) descInput.value = '';
+    clearFile();
+
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+
+  /* Mesmo modal de "Nova empresa", preenchido com o que já está
+     gravado — é o que EMP-LIST-010 já ensina para a listagem: a
+     tela nunca tem o direito de mostrar um formulário em branco
+     como se fosse o que a pessoa realmente cadastrou. */
+  function openParaEditar(card, trigger){
+    if(!card) return;
+    lastTrigger = trigger || null;
+    document.getElementById('modalTitleText').textContent = 'Editar empresa';
+    if(logoLabel) logoLabel.textContent = TEXTO_LOGO_EDITAR;
+
+    editandoId = card.dataset.id;
+    logotipoExistenteUrl = null;
+    logotipoRemovido = false;
+
+    var nomeInput = document.getElementById('nome');
+    var descInput = document.getElementById('descricao');
+    var tituloEl  = card.querySelector('.card-title');
+    var descEl    = card.querySelector('.card-desc');
+
+    nomeInput.value = tituloEl ? tituloEl.textContent : '';
+    nomeInput.classList.remove('is-invalid');
+    if(descInput) descInput.value = descEl ? descEl.textContent : '';
+
+    /* Roda ANTES de ler o logotipo do card: com editandoId e
+       logotipoExistenteUrl como estão agora (o segundo ainda null),
+       clearFile() não marca remoção à toa por causa de um estado
+       que sobrou da edição anterior. */
+    clearFile();
+
+    var img = card.querySelector('.card-thumb img');
+    var temLogo = img && !img.classList.contains('mock--vazio');
+    if(temLogo){
+      logotipoExistenteUrl = img.getAttribute('src');
+      mostrarLogoExistente(logotipoExistenteUrl);
+    }
+
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  /* Ponte para o listener do menu do card, que vive fora desta
+     IIFE — mesmo padrão de window.EmpresasView usado no resto do
+     arquivo. */
+  window.abrirEdicaoEmpresa = openParaEditar;
+
+  function close(){
+    modal.close();
+  }
+
+  openBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.body.classList.remove('is-carregando-lista');
+      revelarTitulo();
+      open(btn);
+    });
+  });
+  closeBtn.addEventListener('click', close);
+
+  var saveBtn = document.getElementById('saveBtn');
+  if(saveBtn){
+    saveBtn.addEventListener('click', function(){
+      var nomeInput = document.getElementById('nome');
+      var nome = nomeInput.value.trim();
+      if(!nome){
+        nomeInput.focus();
+        nomeInput.classList.add('is-invalid');
+        return;
+      }
+      /* editandoId, não o texto do título, é quem manda — o título é
+         só o que a pessoa lê; o estado de verdade é o id guardado
+         quando o modal abriu (open/openParaEditar). */
+      var editando = editandoId !== null;
+
+      /* Criar e editar gravam de verdade, os dois. Sempre FormData,
+         mesmo sem logotipo novo: as duas rotas só aceitam
+         multipart/form-data (empresas-criacao.md §2, empresas-edicao.md
+         §2), então um envio só de nome/descrição também precisa ir
+         por aqui. O botão fica travado enquanto a API responde,
+         senão dois cliques criam/editam duas vezes. */
+      var desc = document.getElementById('descricao');
+      var formData = new FormData();
+      formData.append('nome', nome);
+      if(desc && desc.value.trim()) formData.append('descricao', desc.value.trim());
+
+      if(arquivoSelecionado){
+        formData.append('logotipo', arquivoSelecionado, arquivoSelecionado.name);
+      } else if(editando && logotipoRemovido){
+        /* EMP-EDIT-004: sem este campo o servidor não teria como
+           distinguir "não mexi no logotipo" de "quero tirar o que
+           já tinha" — os dois chegam sem nenhum arquivo. */
+        formData.append('remover_logotipo', 'true');
+      }
+
+      var chamada = editando
+        ? API.chamar('/empresas/' + encodeURIComponent(editandoId), { metodo: 'PUT', corpo: formData })
+        : API.chamar('/empresas', { corpo: formData });
+
+      saveBtn.disabled = true;
+      chamada
+        .then(function(r){
+          close();
+          if(editando) window.EmpresasView.atualizar(r.empresa);
+          else window.EmpresasView.acrescentar(r.empresa);
+          mostrarMensagem(editando ? 'Empresa editada com sucesso.' : 'Empresa criada com sucesso.');
+        })
+        .catch(function(e){
+          if(e.campo === 'nome'){
+            nomeInput.classList.add('is-invalid');
+            nomeInput.focus();
+          } else if(e.campo === 'logotipo'){
+            showError(e.message || 'Não foi possível enviar o logotipo.');
+          }
+          mostrarMensagem(e.message || (editando
+            ? 'Não foi possível editar a empresa.'
+            : 'Não foi possível criar a empresa.'));
+        })
+        .then(function(){ saveBtn.disabled = false; });
+    });
+    document.getElementById('nome').addEventListener('input', function(){
+      if(this.value.trim()) this.classList.remove('is-invalid');
+    });
+  }
+
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    if(lastTrigger) lastTrigger.focus();
+  });
+
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) close();
+  });
+
+  /* ---------- Modal excluir empresa ---------- */
+  var deleteModal = document.getElementById('deleteModal');
+  var toast     = document.getElementById('toast');
+  var toastText = document.getElementById('toastText');
+  var toastTimer = null;
+  function ocultarMensagem(){
+    toast.classList.remove('is-visible');
+    setTimeout(function(){ toast.hidden = true; }, 200);
+  }
+  function mostrarMensagem(msg){
+    toastText.textContent = msg;
+    toast.hidden = false;
+    requestAnimationFrame(function(){ toast.classList.add('is-visible'); });
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(ocultarMensagem, 3000);
+  }
+  document.getElementById('toastClose').addEventListener('click', function(){
+    clearTimeout(toastTimer);
+    ocultarMensagem();
+  });
+
+  /* Reaproveita o toast que já existe (criar/editar/excluir) para
+     avisar de falha ao carregar, em vez de a tela ganhar elemento
+     novo. `permanente` desliga o auto-ocultar: mensagem de erro que
+     some em 3s é mensagem perdida. */
+  window.EmpresasView.aviso = function(msg, permanente){
+    mostrarMensagem(msg);
+    if (permanente) clearTimeout(toastTimer);
+  };
+  function closeDelete(){
+    deleteModal.close();
+  }
+  document.getElementById('closeDeleteBtn').addEventListener('click', closeDelete);
+  document.getElementById('cancelDeleteBtn').addEventListener('click', closeDelete);
+
+  var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+  confirmDeleteBtn.addEventListener('click', function(){
+    if(!empresaParaExcluir) { closeDelete(); return; }
+
+    /* Exclui de verdade (arquiva no banco — EMP-EXCL-001), não só
+       tira o card da tela. Sem isso a empresa "excluída" reaparecia
+       ao recarregar a página. */
+    var card = empresaParaExcluir;
+    var id = card.dataset.id;
+    confirmDeleteBtn.disabled = true;
+
+    API.chamar('/empresas/' + encodeURIComponent(id), { metodo: 'DELETE' })
+      .then(function(){
+        card.remove();
+        closeDelete();
+        mostrarMensagem('Empresa excluída com sucesso.');
+        if(grid.children.length === 0) {
+          document.body.classList.remove('is-carregando-lista');
+          document.body.classList.add('is-empty');
+        }
+      })
+      .catch(function(e){
+        closeDelete();
+        mostrarMensagem(e.message || 'Não foi possível excluir a empresa.');
+      })
+      .then(function(){ confirmDeleteBtn.disabled = false; });
+  });
+  deleteModal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+  });
+  deleteModal.addEventListener('click', function(e){
+    if(e.target === deleteModal) closeDelete();
+  });
+})();
+</script>
+
+<!-- ===================== MODAL — PERFIL DO USUÁRIO ===================== -->
+<dialog class="pf-modal" id="perfilModal" aria-labelledby="pfTitulo">
+  <div class="pf-shell">
+
+    <nav class="pf-side" aria-label="Seções do perfil">
+      <button type="button" class="pf-side-item" data-painel="perfil" aria-current="true">Perfil</button>
+      <button type="button" class="pf-side-item" data-painel="conta">Conta</button>
+      <button type="button" class="pf-side-item" data-painel="notificacoes">Notificações</button>
+      <button type="button" class="pf-side-item" data-painel="preferencias">Preferências</button>
+      <button type="button" class="pf-side-item" data-painel="creditos">Créditos de uso</button>
+      <span class="pf-side-spacer"></span>
+      <button type="button" class="pf-side-item pf-side-item--danger" id="pfSair">Sair da conta</button>
+    </nav>
+
+    <div class="pf-divider" role="presentation"></div>
+
+    <div class="pf-main">
+      <div class="pf-head">
+        <h2 class="pf-title">
+          <span class="pf-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+          </span>
+          <span id="pfTitulo">Perfil</span>
+        </h2>
+        <button type="button" class="pf-close" id="pfFechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <div class="pf-body">
+
+        <!-- ---------- Perfil ---------- -->
+        <section class="pf-panel" id="pf-perfil" aria-label="Perfil">
+          <div class="pf-avatar-row">
+            <span class="pf-avatar"><img src="https://i.pravatar.cc/160?img=47" alt="Foto de Ricardo Mateus"></span>
+            <div class="pf-avatar-actions">
+              <button type="button" class="pf-btn">Trocar foto</button>
+              <button type="button" class="pf-btn pf-btn--danger">Remover</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfNome">Nome completo</label>
+            <input class="pf-input" type="text" id="pfNome" value="Ricardo Mateus" autocomplete="name">
+          </div>
+
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfEmail">E-mail</label>
+              <input class="pf-input" type="email" id="pfEmail" value="ricardosmateus@gmail.com" autocomplete="email">
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfCargo">Cargo</label>
+              <input class="pf-input" type="text" id="pfCargo" value="Designer de produto">
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfBio">Sobre você</label>
+            <input class="pf-input" type="text" id="pfBio" placeholder="Uma linha sobre o seu trabalho">
+            <p class="pf-hint">Aparece ao lado das suas idéias e comentários.</p>
+          </div>
+        </section>
+
+        <!-- ---------- Conta ---------- -->
+        <section class="pf-panel" id="pf-conta" aria-label="Conta" hidden>
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfIdioma">Idioma</label>
+              <select class="pf-input" id="pfIdioma">
+                <option selected>Português (Brasil)</option>
+                <option>English (US)</option>
+                <option>Español</option>
+              </select>
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfFuso">Fuso horário</label>
+              <select class="pf-input" id="pfFuso">
+                <option selected>(GMT-03:00) São Paulo</option>
+                <option>(GMT-05:00) Nova York</option>
+                <option>(GMT+01:00) Lisboa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfSenha">Senha</label>
+            <input class="pf-input" type="password" id="pfSenha" value="douglas123" autocomplete="current-password">
+            <p class="pf-hint">Última alteração há 3 meses.</p>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Excluir conta</span>
+              <span class="pf-row-desc">Remove seus dados e projetos em definitivo. Não dá para desfazer.</span>
+            </div>
+            <button type="button" class="pf-btn pf-btn--danger">Excluir</button>
+          </div>
+        </section>
+
+        <!-- ---------- Notificações ---------- -->
+        <section class="pf-panel" id="pf-notificacoes" aria-label="Notificações" hidden>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Novidades por e-mail</span>
+              <span class="pf-row-desc">Avisos quando alguém comentar ou mover uma idéia sua.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Novidades por e-mail">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Resumo semanal</span>
+              <span class="pf-row-desc">Um apanhado do que andou pelos seus projetos na semana.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Resumo semanal">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Menções</span>
+              <span class="pf-row-desc">Quando citarem seu nome numa atividade ou tarefa.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Menções">
+          </div>
+        </section>
+
+        <!-- ---------- Preferências ---------- -->
+        <section class="pf-panel" id="pf-preferencias" aria-label="Preferências" hidden>
+          <div role="radiogroup" aria-label="Tema" style="display:flex;flex-direction:column;gap:12px">
+            <button type="button" class="pf-option" role="radio" aria-checked="true">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Claro</span>
+                <span class="pf-row-desc">O tema que a plataforma usa hoje.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Escuro</span>
+                <span class="pf-row-desc">Para trabalhar com pouca luz.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Seguir o sistema</span>
+                <span class="pf-row-desc">Acompanha a preferência do seu computador.</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Reduzir animações</span>
+              <span class="pf-row-desc">Desliga as transições de abertura e movimento.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Reduzir animações">
+          </div>
+        </section>
+
+        <!-- ---------- Créditos de uso ---------- -->
+        <section class="pf-panel" id="pf-creditos" aria-label="Créditos de uso" hidden>
+          <div class="pf-field">
+            <span class="pf-label">Saldo disponível</span>
+            <!-- O valor vem de GET /creditos/saldo (js/creditos.js).
+                 Antes era "500 créditos" fixo no HTML: um número que
+                 não vinha de lugar nenhum, numa tela sobre dinheiro. -->
+            <p class="pf-saldo" id="pfSaldo" aria-live="polite">
+              <span class="pf-saldo-valor" id="pfSaldoValor">—</span>
+            </p>
+            <!-- DIN-006: falha ao carregar NUNCA pode parecer saldo
+                 zero. São mensagens diferentes, de propósito. -->
+            <p class="pf-hint pf-saldo-falha" id="pfSaldoFalha" role="status" hidden>
+              Não foi possível carregar o seu saldo agora. Isto não significa
+              que ele esteja zerado — tente novamente em instantes.
+            </p>
+            <p class="pf-hint" id="pfSaldoHint">O saldo diminui conforme a plataforma usa IA por você.</p>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="comprarRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Comprar créditos</span>
+              <span class="pf-row-desc">Adicione créditos para continuar usando as funcionalidades de IA.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn pf-btn--success" id="comprarBtn">Comprar</button>
+            </div>
+
+            <!-- Formulário de compra + Pix (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="comprarConteudo" hidden>
+              <div class="pf-compra-form">
+                <div class="pf-field">
+                  <label class="pf-label" for="pfValorCredito">Valor a adicionar</label>
+                  <div class="pf-valor-wrap">
+                    <span class="pf-valor-prefixo" aria-hidden="true">R$</span>
+                    <input class="pf-input pf-input--valor" type="text" inputmode="decimal"
+                           id="pfValorCredito" placeholder="0,00" aria-describedby="pfValorHint">
+                  </div>
+                  <p class="pf-hint" id="pfValorHint">1 crédito equivale a R$ 1,00. Valor mínimo de R$ 10,00.</p>
+                </div>
+
+                <button type="button" class="pf-btn pf-btn--accent" id="gerarQrBtn" disabled>Gerar QR Code Pix</button>
+                <p class="pf-recarga-erro" id="pfRecargaErro" hidden></p>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr" id="pfPixQrBox">
+                    <img id="pfPixImg" width="176" height="176" alt="QR Code para pagamento via Pix">
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <p class="pf-pix-status is-aguardando" id="pfPixStatus"><span class="pf-pix-ponto" aria-hidden="true"></span><span id="pfPixStatusTexto">Aguardando pagamento…</span></p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint pf-pix-hint-auto">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="historicoRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Histórico de uso</span>
+              <span class="pf-row-desc">Acompanhe quando e onde os seus créditos foram usados.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn" id="verHistoricoBtn">Ver histórico</button>
+            </div>
+
+            <!-- Timeline de histórico de créditos (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="historicoTimeline" hidden>
+              <div class="timeline-container" id="timelineContainer">
+                <!-- Timeline será preenchida por JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="pf-rule" role="presentation"></div>
+
+      <div class="pf-foot">
+        <button type="button" class="pf-save" id="pfSalvar">Salvar alterações</button>
+        <button type="button" class="pf-cancel" id="pfCancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var modal = document.getElementById('perfilModal');
+  var gatilho = document.getElementById('avatarBtn');
+  if(!modal || !gatilho) return;
+
+  var itens   = Array.prototype.slice.call(modal.querySelectorAll('.pf-side-item[data-painel]'));
+  var paineis = Array.prototype.slice.call(modal.querySelectorAll('.pf-panel'));
+  var titulo  = document.getElementById('pfTitulo');
+
+  function mostrar(id){
+    itens.forEach(function(i){ i.setAttribute('aria-current', String(i.getAttribute('data-painel') === id)); });
+    paineis.forEach(function(p){ p.hidden = p.id !== 'pf-' + id; });
+    var atual = itens.filter(function(i){ return i.getAttribute('data-painel') === id; })[0];
+    if(atual) titulo.textContent = atual.textContent.trim();
+    modal.querySelector('.pf-body').scrollTop = 0;
+  }
+  itens.forEach(function(i){
+    i.addEventListener('click', function(){ mostrar(i.getAttribute('data-painel')); });
+  });
+
+  // Cartões de tema: um só marcado por vez
+  var temas = Array.prototype.slice.call(modal.querySelectorAll('.pf-option[role="radio"]'));
+  temas.forEach(function(t){
+    t.addEventListener('click', function(){
+      temas.forEach(function(o){ o.setAttribute('aria-checked', String(o === t)); });
+    });
+  });
+
+  function abrir(){
+    mostrar('perfil');
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fechar(){ if(modal.open) modal.close(); }
+
+  gatilho.addEventListener('click', abrir);
+  document.getElementById('pfFechar').addEventListener('click', fechar);
+  document.getElementById('pfCancelar').addEventListener('click', fechar);
+  document.getElementById('pfSalvar').addEventListener('click', fechar);
+  /* ACS-SESSAO-003 / IA-CONV-012: antes só trocava de página — a
+     sessão nunca era revogada no servidor, então "Sair" não saía de
+     verdade (o cookie continuava valendo até expirar sozinho). Sair
+     de verdade é o gatilho que também apaga a conversa do assistente
+     (IA-CONV-012). Falha de rede não pode prender a pessoa na tela de
+     empresas: sai da página de qualquer jeito. */
+  document.getElementById('pfSair').addEventListener('click', function(){
+    (window.API ? window.API.chamar('/auth/logout', { metodo: 'POST' }) : Promise.resolve())
+      .catch(function(){})
+      .then(function(){ window.location.href = 'login.html'; });
+  });
+
+  // Clique no backdrop (fora da casca) fecha
+  modal.addEventListener('click', function(e){
+    var r = modal.getBoundingClientRect();
+    var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!dentro) fechar();
+  });
+
+  // Esc já fecha sozinho no <dialog>; aqui só devolvemos o estado
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    gatilho.focus();
+  });
+})();
+</script>
+
+<script>
+/* ---------- Efeito de âncora, compartilhado entre os cards ----------
+   Rola até o card e faz o destaque piscar uma vez, sem deixar
+   estado permanente — usado por "Histórico de uso" e "Comprar
+   créditos" ao expandir seu conteúdo. */
+window.pfAncorarCard = function(row){
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'nearest'});
+  row.classList.remove('pf-anchor-flash');
+  void row.offsetWidth;                        // reflow: reinicia a animação a cada clique
+  row.classList.add('pf-anchor-flash');
+  setTimeout(function(){
+    row.classList.remove('pf-anchor-flash');
+  }, 1100);
+};
+</script>
+
+<script>
+/* ---------- Histórico de Créditos ----------
+   Expande a timeline dentro da sessão "Histórico de uso"
+   do modal de Perfil, aba "Crédito de uso".
+*/
+(function(){
+  'use strict';
+  var verHistoricoBtn = document.getElementById('verHistoricoBtn');
+  var historicoTimeline = document.getElementById('historicoTimeline');
+  var timelineContainer = document.getElementById('timelineContainer');
+  var historicoRow = document.getElementById('historicoRow');
+
+  if(!verHistoricoBtn || !historicoTimeline || !timelineContainer) return;
+
+  /* Esta seção NÃO tem mais dados próprios. O conteúdo do
+     #timelineContainer é preenchido por js/creditos.js, que busca o
+     extrato real em GET /creditos/extrato. Aqui sobrou só o
+     abre-e-fecha.
+
+     Antes existia aqui um `historicoData` fixo, com sete tarefas
+     inventadas, que era escrito por cima do extrato real toda vez
+     que alguém abria a seção — dois scripts disputando o mesmo
+     elemento, e o falso ganhando por chegar depois. Um saldo real
+     com um histórico inventado é pior do que não ter histórico:
+     convida a conferir uma conta que não existe. */
+
+  function toggle(){
+    var isHidden = historicoTimeline.hidden;
+    if(isHidden){
+      historicoTimeline.hidden = false;
+      verHistoricoBtn.textContent = 'Ocultar histórico';
+      window.pfAncorarCard(historicoRow);
+    } else {
+      historicoTimeline.hidden = true;
+      verHistoricoBtn.textContent = 'Ver histórico';
+    }
+  }
+
+  verHistoricoBtn.addEventListener('click', toggle);
+})();
+</script>
+
+<script>
+/* ---------- Comprar créditos via Pix ----------
+   Expande o formulário de valor + QR Code Pix dentro do card
+   "Comprar créditos". A cobrança é real (Fase 3): o servidor cria
+   a cobrança no PSP, grava o registro e devolve o BR Code — o QR
+   também vem pronto do servidor (data URL), gerado a partir do
+   MESMO texto do "copia e cola", para os dois nunca poderem
+   divergir. A tela só chama a API, mostra o que ela devolve, e
+   consulta o status em intervalos até a confirmação — o crédito em
+   si só acontece quando o webhook confirma o pagamento no servidor
+   (SEG-PAG-002): esta tela nunca decide sozinha que "pagou".
+*/
+(function(){
+  'use strict';
+  var comprarBtn = document.getElementById('comprarBtn');
+  var comprarRow = document.getElementById('comprarRow');
+  var comprarConteudo = document.getElementById('comprarConteudo');
+  var valorInput = document.getElementById('pfValorCredito');
+  var gerarQrBtn = document.getElementById('gerarQrBtn');
+  var erroEl = document.getElementById('pfRecargaErro');
+  var pfPix = document.getElementById('pfPix');
+  var pfPixQrBox = document.getElementById('pfPixQrBox');
+  var pfPixImg = document.getElementById('pfPixImg');
+  var pfPixValor = document.getElementById('pfPixValor');
+  var pfPixCodigo = document.getElementById('pfPixCodigo');
+  var pfPixStatus = document.getElementById('pfPixStatus');
+  var pfPixStatusTexto = document.getElementById('pfPixStatusTexto');
+  var copiarPixBtn = document.getElementById('pfCopiarPix');
+
+  if(!comprarBtn || !comprarConteudo || !valorInput || !gerarQrBtn || !pfPix) return;
+
+  var VALOR_MINIMO = 10;
+  var INTERVALO_POLL_MS = 4000;
+  var TETO_POLL_MS = 20 * 60 * 1000; // 20 min — mesmo que algo dê errado no cálculo de expiração
+  var pollTimer = null;
+
+  /* ---- Máscara de moeda: usuário digita só números, formata como R$ ---- */
+  function valorNumerico(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    return digitos ? parseInt(digitos, 10) / 100 : 0;
+  }
+
+  function formatarValorInput(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    if(!digitos){ valorInput.value = ''; atualizarEstadoBotao(); return; }
+    var valor = parseInt(digitos, 10) / 100;
+    valorInput.value = valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    atualizarEstadoBotao();
+  }
+
+  function atualizarEstadoBotao(){
+    var valor = valorNumerico();
+    gerarQrBtn.disabled = valor < VALOR_MINIMO;
+    // Muda o valor: o QR anterior (se houver) não vale mais para o novo valor
+    esconderErro();
+    if(!pfPix.hidden) esconderPix();
+  }
+
+  function mostrarErro(msg){
+    erroEl.textContent = msg;
+    erroEl.hidden = false;
+  }
+
+  function esconderErro(){
+    erroEl.hidden = true;
+    erroEl.textContent = '';
+  }
+
+  function esconderPix(){
+    pfPix.hidden = true;
+    comprarConteudo.classList.remove('is-confirmado');
+    pararPolling();
+  }
+
+  function pararPolling(){
+    if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function definirStatus(classe, texto){
+    pfPixStatus.className = 'pf-pix-status ' + classe;
+    pfPixStatusTexto.textContent = texto;
+  }
+
+  function marcarPago(){
+    /* O valor sai da legenda, que vai ser escondida junto com o QR —
+       sem ele, a confirmação perderia a informação mais concreta que
+       tinha ("confirmado" sem dizer de quanto). */
+    var valor = pfPixValor ? pfPixValor.textContent : '';
+    definirStatus('is-pago', valor
+      ? 'Pagamento de ' + valor + ' confirmado — créditos adicionados!'
+      : 'Pagamento confirmado — créditos adicionados!');
+    /* Esconde QR, "copia e cola" e instruções: depois de pago, são
+       convite para pagar duas vezes. */
+    comprarConteudo.classList.add('is-confirmado');
+    pfPixQrBox.classList.remove('is-expirado');
+    copiarPixBtn.disabled = true;
+    /* O crédito já aconteceu no servidor, via webhook (SEG-PAG-002)
+       — isto aqui só atualiza o que a pessoa está vendo na tela. */
+    if(window.Creditos){
+      window.Creditos.recarregar();
+      window.Creditos.extrato();
+    }
+  }
+
+  function marcarExpirado(){
+    definirStatus('is-expirado', 'Este código expirou — gere um novo para continuar.');
+    pfPixQrBox.classList.add('is-expirado');
+    copiarPixBtn.disabled = true;
+  }
+
+  /* ---- Consulta o status de verdade no servidor. Nunca decide
+     "pagou" sozinha — só reflete o que a rota devolve, e a rota,
+     por sua vez, nunca inventa: quem manda é o webhook. ---- */
+  function consultarStatus(txid, expiraEm, iniciadoEm){
+    fetch('/creditos/recarga/' + encodeURIComponent(txid), { credentials: 'same-origin' })
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d){
+        if(d.status === 'pago'){
+          pararPolling();
+          marcarPago();
+        } else if(d.status === 'expirado' || d.status === 'cancelado'){
+          pararPolling();
+          marcarExpirado();
+        }
+        // 'aguardando': segue tentando no próximo tick.
+      })
+      .catch(function(e){
+        // Falha de rede é transitória — não desiste, só tenta de novo
+        // no próximo tick. Quem para o polling é o teto de tempo.
+        console.error('[creditos] falha ao consultar status do Pix:', e);
+      });
+  }
+
+  function iniciarPolling(txid, expiraEmIso){
+    pararPolling();
+    var expiraEm = new Date(expiraEmIso).getTime();
+    var teto = Date.now() + TETO_POLL_MS;
+    var iniciadoEm = Date.now();
+
+    pollTimer = setInterval(function(){
+      var agora = Date.now();
+      if((Number.isFinite(expiraEm) && agora > expiraEm) || agora > teto){
+        pararPolling();
+        marcarExpirado();
+        return;
+      }
+      consultarStatus(txid, expiraEm, iniciadoEm);
+    }, INTERVALO_POLL_MS);
+  }
+
+  /* ---- Gera a cobrança de verdade: cria no servidor, mostra o QR
+     e o copia-e-cola que ele devolveu, e passa a consultar o
+     status. ---- */
+  function gerarQr(){
+    var valor = valorNumerico();
+    if(valor < VALOR_MINIMO) return;
+
+    esconderErro();
+    gerarQrBtn.disabled = true;
+    var textoOriginal = gerarQrBtn.textContent;
+    gerarQrBtn.textContent = 'Gerando…';
+
+    fetch('/creditos/recarga', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: valorInput.value }),
+    })
+      .then(function(r){
+        return r.json().catch(function(){ return {}; }).then(function(dados){
+          return { ok: r.ok, dados: dados };
+        });
+      })
+      .then(function(resultado){
+        if(!resultado.ok){
+          mostrarErro(resultado.dados.erro || 'Não foi possível gerar o código Pix agora. Tente de novo.');
+          return;
+        }
+        var dados = resultado.dados;
+
+        pfPixImg.src = dados.qr_data_url;
+        pfPixCodigo.value = dados.brcode;
+        pfPixValor.textContent = dados.valor_formatado;
+        pfPixQrBox.classList.remove('is-expirado');
+        definirStatus('is-aguardando', 'Aguardando pagamento…');
+        copiarPixBtn.disabled = false;
+        /* Cobrança nova: desfaz o estado de "confirmado" de uma
+           anterior, senão o QR novo nasceria escondido. */
+        comprarConteudo.classList.remove('is-confirmado');
+        pfPix.hidden = false;
+        // Mesmo motion de âncora do "Comprar", agora guiando o olhar
+        // até o QR Code recém-gerado.
+        window.pfAncorarCard(pfPix);
+
+        iniciarPolling(dados.txid, dados.expira_em);
+      })
+      .catch(function(e){
+        console.error('[creditos] falha ao gerar cobrança Pix:', e);
+        mostrarErro('Não foi possível falar com o servidor agora. Verifique sua conexão e tente de novo.');
+      })
+      .then(function(){
+        gerarQrBtn.textContent = textoOriginal;
+        gerarQrBtn.disabled = valorNumerico() < VALOR_MINIMO;
+      });
+  }
+
+  function copiarCodigo(){
+    var restaurarTexto = copiarPixBtn.textContent;
+    function marcarCopiado(){
+      copiarPixBtn.textContent = 'Copiado!';
+      copiarPixBtn.classList.add('is-copiado');
+      setTimeout(function(){
+        copiarPixBtn.textContent = restaurarTexto;
+        copiarPixBtn.classList.remove('is-copiado');
+      }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(pfPixCodigo.value).then(marcarCopiado);
+    } else {
+      pfPixCodigo.select();
+      document.execCommand('copy');
+      marcarCopiado();
+    }
+  }
+
+  function toggle(){
+    var isHidden = comprarConteudo.hidden;
+    if(isHidden){
+      comprarConteudo.hidden = false;
+      comprarBtn.textContent = 'Fechar';
+      window.pfAncorarCard(comprarRow);
+    } else {
+      comprarConteudo.hidden = true;
+      comprarBtn.textContent = 'Comprar';
+      esconderErro();
+      esconderPix();
+    }
+  }
+
+  comprarBtn.addEventListener('click', toggle);
+  valorInput.addEventListener('input', formatarValorInput);
+  gerarQrBtn.addEventListener('click', gerarQr);
+  copiarPixBtn.addEventListener('click', copiarCodigo);
+})();
+</script>
+
+<script src="js/api.js"></script>
+<script src="js/creditos.js"></script>
+<script src="js/empresas.js"></script>
+
+</body>
+</html>

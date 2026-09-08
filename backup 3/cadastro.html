@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criar conta · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+/* Tokens: css/tokens.css. Abaixo, só o que esta tela
+   deliberadamente diverge do sistema. */
+:root{
+  --text-danger:var(--red-600);
+  --radius-panel:24px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--neutral-100);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit}
+input{font:inherit;color:inherit}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;
+  padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+a:focus-visible,
+button:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ============================================================
+   SHELL — duas colunas: formulário à esquerda, arte à direita
+   Figma: frame 1440×1009 com o painel de 688×977 encostado à
+   direita, 16px de folga em volta.
+   ============================================================ */
+.auth{
+  min-height:100vh;
+  display:flex;align-items:stretch;
+  background:var(--surface-1);
+  padding:16px;
+  gap:16px;
+}
+
+.auth-form-col{
+  flex:1 1 auto;min-width:0;
+  display:flex;align-items:center;justify-content:center;
+  padding:32px 24px;
+}
+
+.auth-art{
+  flex:0 0 688px;
+  position:relative;
+  border-radius:var(--radius-panel);
+  overflow:hidden;
+}
+
+/* Abaixo de 1100px a arte sai e o formulário ocupa a tela toda */
+@media (max-width:1100px){
+  .auth{padding:0;gap:0}
+  .auth-art{display:none}
+  .auth-form-col{padding:32px 20px}
+}
+
+/* ============================================================
+   ARTE LATERAL — gradiente recriado com a nossa paleta
+   Um único radial-gradient com o centro ACIMA do painel: as
+   isolinhas de cor cruzam o box pela metade de baixo da elipse, ou
+   seja, em arcos que descem no meio — as faixas em "V" da
+   referência do Figma. Sem imagem, só CSS.
+   A rampa troca o azul→magenta→laranja do original pela nossa:
+   branco → sky → accent → pro → warning → primary.
+   ============================================================ */
+.auth-art::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(110% 100% at 50% -25%,
+    var(--gray-0)      0%,
+    var(--sky-300)    34%,
+    var(--blue-500)   56%,
+    var(--purple-500) 78%,
+    var(--amber-500)  98%,
+    var(--yellow-300) 118%);
+  filter:blur(3px);
+  transform:scale(1.05);
+}
+
+/* Brilho suave no topo, para o texto branco respirar */
+.auth-art::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg, rgba(10,13,18,.14) 0%, transparent 34%, transparent 62%, rgba(10,13,18,.20) 100%);
+}
+
+.auth-art-content{
+  position:relative;z-index:1;
+  height:100%;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:56px;
+  color:var(--neutral-0);
+}
+.auth-art-quote{
+  font-size:30px;line-height:40px;font-weight:600;
+  letter-spacing:-.02em;
+  max-width:22ch;
+  text-shadow:0 1px 12px rgba(10,13,18,.22);
+}
+.auth-art-caption{
+  margin-top:16px;
+  font-size:16px;line-height:24px;font-weight:500;
+  opacity:.92;
+  text-shadow:0 1px 10px rgba(10,13,18,.22);
+}
+
+/* ============================================================
+   FORMULÁRIO
+   ============================================================ */
+.auth-card{width:100%;max-width:400px}
+
+/* ---------- Logo da marca ---------- */
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:40px}
+/* Mesmo monograma PD do menu lateral, um passo maior por estar
+   isolado no topo da tela de entrada. */
+.brand-mark{
+  width:48px;height:48px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+}
+.brand-mark svg{width:30px;height:auto;display:block;fill:var(--fill-primary)}
+.brand-name{
+  font-size:16px;line-height:22px;font-weight:600;
+  letter-spacing:-.01em;color:var(--text-primary);
+}
+.brand-name span{display:block;font-weight:500;color:var(--text-secondary)}
+
+.auth-title{
+  font-size:30px;line-height:38px;font-weight:600;
+  letter-spacing:-.02em;color:var(--text-primary);
+}
+.auth-subtitle{
+  margin-top:8px;
+  font-size:16px;line-height:24px;color:var(--text-secondary);
+}
+
+/* ---------- Alertas (erro de credencial, bloqueio, sucesso) ----------
+   Ficam ocultos na marcação; basta remover o atributo `hidden` para
+   exibir o cenário correspondente. */
+.alert{
+  display:flex;align-items:flex-start;gap:12px;
+  margin-top:24px;padding:12px 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-danger);
+  background:var(--bg-danger);
+  font-size:14px;line-height:20px;
+  color:var(--text-danger);
+}
+/* A regra .alert{display:flex} venceria o display:none do atributo
+   [hidden] na ordem do cascata — daí esta guarda explícita. */
+.alert[hidden]{display:none}
+.alert svg{width:18px;height:18px;flex-shrink:0;margin-top:1px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.alert-title{font-weight:600}
+.alert-text{margin-top:2px;font-weight:400}
+.alert--warning{border-color:var(--amber-400);background:var(--bg-warning);color:var(--text-warning)}
+.alert--success{border-color:var(--fill-success);background:var(--bg-success);color:var(--text-success)}
+
+/* ---------- Campos ---------- */
+.form{margin-top:32px;display:flex;flex-direction:column;gap:20px}
+.field{display:flex;flex-direction:column;gap:6px}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+
+.input-wrap{position:relative;display:flex;align-items:center}
+.input{
+  width:100%;height:var(--field-h);
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font-size:16px;line-height:24px;color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.input::placeholder{color:var(--text-muted)}
+.input:hover{border-color:var(--neutral-300)}
+.input:focus{outline:none;border-color:var(--fill-accent);box-shadow:var(--shadow-focus)}
+.input:disabled{background:var(--surface-0);color:var(--text-disabled);cursor:not-allowed}
+/* Espaço para o botão de olho */
+.input--with-action{padding-right:48px}
+
+/* Botão mostrar/ocultar senha */
+.input-action{
+  position:absolute;right:4px;
+  width:40px;height:40px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  color:var(--text-muted);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.input-action:hover{background:var(--surface-0);color:var(--text-secondary)}
+.input-action svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* Alterna os dois ícones conforme aria-pressed do próprio botão */
+.input-action .icon-hide{display:none}
+.input-action[aria-pressed="true"] .icon-show{display:none}
+.input-action[aria-pressed="true"] .icon-hide{display:block}
+
+/* Mensagem de validação por campo */
+.field-error{
+  display:flex;align-items:center;gap:6px;
+  font-size:14px;line-height:20px;color:var(--text-danger);
+}
+.field-error[hidden]{display:none}
+.field-error svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Estado de erro do campo: aplicar .field--error no .field */
+.field--error .input{border-color:var(--fill-danger)}
+.field--error .input:focus{box-shadow:var(--shadow-focus-danger)}
+
+/* ---------- Linha de opções ---------- */
+.form-options{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  margin-top:-4px;
+}
+.checkbox{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkbox input{
+  width:16px;height:16px;flex-shrink:0;
+  accent-color:var(--fill-accent);
+  cursor:pointer;
+}
+.checkbox span{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.link{
+  font-size:14px;line-height:20px;font-weight:600;
+  color:var(--text-accent);text-decoration:none;
+  border-radius:4px;
+}
+.link:hover{text-decoration:underline}
+
+/* ---------- Botões ---------- */
+.btn{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;height:var(--field-h);
+  padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.btn svg{width:20px;height:20px;flex-shrink:0}
+.btn:disabled{cursor:not-allowed;opacity:.6}
+
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover:not(:disabled){background:var(--fill-accent-hover)}
+
+.btn--google{
+  background:var(--surface-1);
+  color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+}
+.btn--google:hover:not(:disabled){background:var(--surface-0)}
+
+/* Estado carregando: aplicar .is-loading no botão.
+   O rótulo dá lugar ao spinner + texto alternativo. */
+.btn .btn-spinner{display:none;width:20px;height:20px}
+.btn.is-loading{cursor:progress}
+.btn.is-loading .btn-label{display:none}
+.btn.is-loading .btn-loading-label{display:inline}
+.btn.is-loading .btn-spinner{display:block;animation:spin 800ms linear infinite}
+.btn-loading-label{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Divisor "ou" ---------- */
+.divider{
+  display:flex;align-items:center;gap:16px;
+  margin:24px 0;
+  font-size:14px;line-height:20px;color:var(--text-muted);
+}
+.divider::before,
+.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+
+/* ---------- Rodapé ---------- */
+.auth-foot{
+  margin-top:32px;
+  font-size:14px;line-height:20px;color:var(--text-secondary);
+  text-align:center;
+}
+
+/* ---------- Bloqueio por tentativas ----------
+   Aplicar .is-locked no <form>: os controles ficam esmaecidos e
+   inertes enquanto a contagem regressiva do alerta corre. */
+.form.is-locked{opacity:.55;pointer-events:none;user-select:none}
+
+/* ============================================================
+   MODAL — verificação em duas etapas
+   Mesmo padrão das demais modais da plataforma: <dialog> nativo
+   (foco preso e Esc já vêm de graça), overlay --overlay, raio lg.
+   ============================================================ */
+.modal{
+  position:fixed;inset:0;margin:auto;
+  width:480px;max-width:calc(100vw - 48px);
+  max-height:calc(100vh - 48px);
+  padding:24px;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+}
+.modal::backdrop{background:var(--overlay)}
+.modal[open]{animation:modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:fade-in var(--dur-base) var(--ease-out)}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-header{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.modal-rule{height:1px;background:var(--border);margin:24px 0}
+.modal-text{font-size:14px;line-height:22px;color:var(--text-secondary)}
+.modal-text strong{color:var(--text-primary);font-weight:600}
+
+/* ---------- Campo de código (6 dígitos) ---------- */
+.otp{display:flex;gap:8px;margin-top:20px}
+.otp-input{
+  flex:1;min-width:0;
+  height:56px;
+  text-align:center;
+  font-size:24px;line-height:32px;font-weight:600;
+  font-variant-numeric:tabular-nums;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+  -moz-appearance:textfield;
+}
+.otp-input::-webkit-outer-spin-button,
+.otp-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.otp-input:hover{border-color:var(--neutral-300)}
+.otp-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:var(--shadow-focus)}
+.otp-input:disabled{background:var(--surface-0);color:var(--text-disabled);cursor:not-allowed}
+/* Estado de erro: aplicar .is-error no .otp */
+.otp.is-error .otp-input{border-color:var(--fill-danger)}
+.otp.is-error .otp-input:focus{box-shadow:var(--shadow-focus-danger)}
+
+.modal-error{
+  display:flex;align-items:center;gap:6px;
+  margin-top:10px;
+  font-size:14px;line-height:20px;color:var(--text-danger);
+}
+.modal-error[hidden]{display:none}
+.modal-error svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Reenvio ---------- */
+.modal-resend{
+  margin-top:16px;
+  font-size:14px;line-height:20px;color:var(--text-secondary);
+}
+.modal-resend button{
+  font-weight:600;color:var(--text-accent);
+  border-radius:4px;padding:0;
+}
+.modal-resend button:hover:not(:disabled){text-decoration:underline}
+.modal-resend button:disabled{color:var(--text-muted);cursor:not-allowed;text-decoration:none}
+
+/* ---------- Rodapé ---------- */
+.modal-footer{display:flex;align-items:center;gap:12px;margin-top:24px}
+.modal-footer .btn{width:auto}
+.btn--ghost{
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);box-shadow:var(--shadow-xs);
+}
+.btn--ghost:hover:not(:disabled){background:var(--surface-0);color:var(--text-primary)}
+
+/* Enquanto valida, o corpo da modal fica inerte */
+.modal.is-verifying .otp-input,
+.modal.is-verifying .modal-resend{opacity:.55;pointer-events:none}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  .btn.is-loading .btn-spinner{animation:none}
+}
+
+/* ============================================================
+   CADASTRO — acréscimos sobre a casca do login
+   Só o que a tela de criação de conta pede a mais: grade de dois
+   campos, medidor de força da senha e a lista de requisitos.
+   ============================================================ */
+
+/* Formulário mais longo: os campos respiram um pouco menos que no
+   login para a coluna caber sem rolagem em telas de 900px. */
+.form--signup{margin-top:28px;gap:18px}
+
+/* Nome e CPF dividem a linha; abaixo de 520px viram uma coluna só. */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:520px){
+  .field-grid{grid-template-columns:1fr}
+}
+
+/* CPF: dígitos alinhados como tabela, para a máscara não "dançar" */
+.input--numeric{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+/* ---------- Medidor de força da senha ----------
+   Quatro segmentos que acendem conforme a pontuação. A cor sai dos
+   tokens semânticos (danger → warning → success), então o medidor
+   acompanha o tema sem nenhum valor fixo. */
+.strength{margin-top:8px}
+.strength-track{display:flex;gap:4px}
+.strength-seg{
+  flex:1;height:4px;
+  border-radius:999px;
+  background:var(--border-strong);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.strength[data-nivel="1"] .strength-seg:nth-child(-n+1){background:var(--fill-danger)}
+.strength[data-nivel="2"] .strength-seg:nth-child(-n+2){background:var(--fill-warning)}
+.strength[data-nivel="3"] .strength-seg:nth-child(-n+3){background:var(--amber-400)}
+.strength[data-nivel="4"] .strength-seg{background:var(--fill-success)}
+
+.strength-label{
+  margin-top:6px;
+  font-size:12px;line-height:18px;font-weight:600;
+  color:var(--text-secondary);
+}
+.strength[data-nivel="1"] .strength-label{color:var(--text-danger)}
+.strength[data-nivel="2"] .strength-label,
+.strength[data-nivel="3"] .strength-label{color:var(--text-warning)}
+.strength[data-nivel="4"] .strength-label{color:var(--text-success)}
+
+/* ---------- Requisitos da senha ----------
+   Checklist que vai marcando conforme o usuário digita, em vez de
+   só acusar erro depois do envio. */
+.requisitos{
+  margin-top:10px;
+  display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;
+  list-style:none;
+}
+@media (max-width:520px){
+  .requisitos{grid-template-columns:1fr}
+}
+.requisito{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;line-height:18px;
+  color:var(--text-muted);
+  transition:color var(--dur-fast) var(--ease-out);
+}
+.requisito svg{
+  width:14px;height:14px;flex-shrink:0;
+  stroke:currentColor;fill:none;stroke-width:2.4;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.requisito .icone-ok{display:none}
+.requisito.is-ok{color:var(--text-success)}
+.requisito.is-ok .icone-pendente{display:none}
+.requisito.is-ok .icone-ok{display:block}
+
+/* ---------- Aceite dos termos ---------- */
+.form-aceite{margin-top:2px}
+.checkbox--aceite{align-items:flex-start}
+.checkbox--aceite input{margin-top:2px}
+.checkbox--aceite span{color:var(--text-secondary)}
+.field--error .checkbox span{color:var(--text-danger)}
+</style>
+</head>
+<body>
+
+<main class="auth">
+
+  <!-- ===================== FORMULÁRIO ===================== -->
+  <div class="auth-form-col">
+    <div class="auth-card">
+
+      <!-- ---------- Logo da marca ---------- -->
+      <a class="brand" href="login.html" aria-label="Plataforma de Design — página inicial">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="5.6 9 28.8 22"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+        </span>
+        <span class="brand-name">Plataforma<span>de Design</span></span>
+      </a>
+
+      <h1 class="auth-title">Criar sua conta</h1>
+      <p class="auth-subtitle">Leva menos de um minuto. Depois é só cadastrar a sua empresa.</p>
+
+      <!-- Cenário: e-mail ou CPF já cadastrado -->
+      <div class="alert" id="alertDuplicado" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+        <div>
+          <p class="alert-title">Dados já cadastrados</p>
+          <p class="alert-text">Já existe uma conta com esse e-mail ou CPF.</p>
+        </div>
+      </div>
+
+      <form class="form form--signup" id="cadastroForm" novalidate>
+
+        <!-- ---------- Nome completo ---------- -->
+        <div class="field" id="fieldNome">
+          <label class="label" for="nome">Nome completo</label>
+          <div class="input-wrap">
+            <input class="input" type="text" id="nome" name="nome"
+                   placeholder="Como consta no seu documento"
+                   autocomplete="name" required
+                   aria-describedby="nomeErro">
+          </div>
+          <p class="field-error" id="nomeErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+            <span>Informe seu nome e sobrenome.</span>
+          </p>
+        </div>
+
+        <!-- ---------- CPF ---------- -->
+        <div class="field" id="fieldCpf">
+          <label class="label" for="cpf">CPF</label>
+          <div class="input-wrap">
+            <input class="input input--numeric" type="text" id="cpf" name="cpf"
+                   placeholder="000.000.000-00"
+                   inputmode="numeric" maxlength="14" required
+                   aria-describedby="cpfErro">
+          </div>
+          <p class="field-error" id="cpfErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+            <span>Informe um CPF válido.</span>
+          </p>
+        </div>
+
+        <!-- ---------- E-mail ---------- -->
+        <div class="field" id="fieldEmail">
+          <label class="label" for="email">E-mail</label>
+          <div class="input-wrap">
+            <input class="input" type="email" id="email" name="email"
+                   placeholder="voce@empresa.com"
+                   autocomplete="email" required
+                   aria-describedby="emailErro">
+          </div>
+          <p class="field-error" id="emailErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+            <span>Informe um e-mail válido.</span>
+          </p>
+        </div>
+
+        <!-- ---------- Senha ---------- -->
+        <div class="field" id="fieldSenha">
+          <label class="label" for="senha">Senha</label>
+          <div class="input-wrap">
+            <input class="input input--with-action" type="password" id="senha" name="senha"
+                   placeholder="Crie uma senha"
+                   autocomplete="new-password" required
+                   aria-describedby="senhaErro senhaRequisitos">
+            <button type="button" class="input-action" id="toggleSenha"
+                    aria-pressed="false" aria-controls="senha" aria-label="Mostrar senha">
+              <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.4 9.4 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.2 3.9"/><path d="M6.3 8.1A17 17 0 0 0 2.5 12S6 18 12 18a9.3 9.3 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
+
+          <!-- Força da senha -->
+          <div class="strength" id="senhaForca" data-nivel="0">
+            <div class="strength-track" role="img" aria-hidden="true">
+              <span class="strength-seg"></span>
+              <span class="strength-seg"></span>
+              <span class="strength-seg"></span>
+              <span class="strength-seg"></span>
+            </div>
+            <p class="strength-label" id="senhaForcaLabel" role="status">Força da senha</p>
+          </div>
+
+          <!-- Requisitos -->
+          <ul class="requisitos" id="senhaRequisitos">
+            <li class="requisito" data-regra="tamanho">
+              <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
+              <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+              Mínimo de 8 caracteres
+            </li>
+            <li class="requisito" data-regra="maiuscula">
+              <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
+              <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+              Uma letra maiúscula
+            </li>
+            <li class="requisito" data-regra="numero">
+              <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
+              <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+              Um número
+            </li>
+            <li class="requisito" data-regra="simbolo">
+              <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>
+              <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+              Um símbolo
+            </li>
+          </ul>
+
+          <p class="field-error" id="senhaErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+            <span>A senha não atende aos requisitos.</span>
+          </p>
+        </div>
+
+        <!-- ---------- Confirmar senha ---------- -->
+        <div class="field" id="fieldConfirmar">
+          <label class="label" for="confirmarSenha">Confirmar senha</label>
+          <div class="input-wrap">
+            <input class="input input--with-action" type="password" id="confirmarSenha" name="confirmarSenha"
+                   placeholder="Repita a senha"
+                   autocomplete="new-password" required
+                   aria-describedby="confirmarErro">
+            <button type="button" class="input-action" id="toggleConfirmar"
+                    aria-pressed="false" aria-controls="confirmarSenha" aria-label="Mostrar senha">
+              <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.4 9.4 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.2 3.9"/><path d="M6.3 8.1A17 17 0 0 0 2.5 12S6 18 12 18a9.3 9.3 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
+          <p class="field-error" id="confirmarErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+            <span>As senhas não conferem.</span>
+          </p>
+        </div>
+
+        <!-- ---------- Aceite ---------- -->
+        <div class="field form-aceite" id="fieldAceite">
+          <label class="checkbox checkbox--aceite" for="aceite">
+            <input type="checkbox" id="aceite" name="aceite" aria-describedby="aceiteErro">
+            <span>Li e concordo com os <a class="link" href="#">Termos de uso</a> e a <a class="link" href="#">Política de privacidade</a>.</span>
+          </label>
+          <p class="field-error" id="aceiteErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+            <span>É preciso aceitar os termos para continuar.</span>
+          </p>
+        </div>
+
+        <button type="submit" class="btn btn--primary" id="btnCriar">
+          <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <span class="btn-label">Criar conta</span>
+          <span class="btn-loading-label">Criando conta...</span>
+        </button>
+      </form>
+
+      <div class="divider" role="presentation">ou</div>
+
+      <button type="button" class="btn btn--google" id="btnGoogle">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="var(--google-blue)"   d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3.01h3.87c2.26-2.09 3.57-5.17 3.57-8.82Z"/>
+          <path fill="var(--google-green)"  d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3.01c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0 0 12 24Z"/>
+          <path fill="var(--google-yellow)" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.28a12 12 0 0 0 0 10.76l3.99-3.11Z"/>
+          <path fill="var(--google-red)"    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.28 6.62l3.99 3.11C6.22 6.88 8.87 4.75 12 4.75Z"/>
+        </svg>
+        Criar conta com Google
+      </button>
+
+      <p class="auth-foot">
+        Já tem uma conta? <a class="link" href="login.html">Entrar</a>
+      </p>
+
+    </div>
+  </div>
+
+  <!-- ===================== ARTE LATERAL ===================== -->
+  <aside class="auth-art" aria-hidden="true">
+    <div class="auth-art-content">
+      <p class="auth-art-quote">Do primeiro rascunho ao projeto entregue.</p>
+      <p class="auth-art-caption">Idéias, tarefas e conhecimento da empresa em um só lugar.</p>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ===================== MODAL: VERIFICAÇÃO DE E-MAIL (NOVO CADASTRO) =====================
+     Mesma modal do login, aqui no contexto de confirmação da conta
+     recém-criada: o texto fala do cadastro e o botão conclui em vez
+     de "entrar". -->
+<dialog class="modal" id="codeModal" aria-labelledby="codeModalTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="codeModalTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>
+      </span>
+      Verifique seu e-mail
+    </h2>
+    <button type="button" class="modal-close" id="codeClose">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      Fechar
+    </button>
+  </div>
+
+  <div class="modal-rule" role="presentation"></div>
+
+  <p class="modal-text">
+    Sua conta foi criada. Enviamos um código de 6 dígitos para
+    <strong id="codeEmail">seu e-mail</strong>. Informe o código abaixo
+    para confirmar o cadastro.
+  </p>
+
+  <form id="codeForm" novalidate>
+    <div class="otp" id="otp" role="group" aria-labelledby="otpLabel" aria-describedby="codeErro">
+      <span class="sr-only" id="otpLabel">Código de verificação de 6 dígitos</span>
+      <input class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code"
+             maxlength="1" aria-label="Dígito 1 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6 de 6">
+    </div>
+
+    <p class="modal-error" id="codeErro" role="alert" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+      <span id="codeErroTexto">Digite os 6 dígitos do código.</span>
+    </p>
+
+    <p class="modal-resend">
+      Não recebeu?
+      <button type="button" id="codeResend" disabled>Reenviar código em <span id="codeCountdown">30s</span></button>
+    </p>
+
+    <div class="modal-footer">
+      <button type="submit" class="btn btn--primary" id="codeConfirm">
+        <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+          <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <span class="btn-label">Confirmar cadastro</span>
+        <span class="btn-loading-label">Validando...</span>
+      </button>
+      <button type="button" class="btn btn--ghost" id="codeBack">Voltar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ------------------------------------------------------------
+   Cadastro de conta.
+   Protótipo: nada é enviado a um servidor — a validação roda no
+   cliente só para exercitar os estados da tela (erro por campo,
+   força da senha, carregando e sucesso).
+   ------------------------------------------------------------ */
+(function(){
+  'use strict';
+
+  var form = document.getElementById('cadastroForm');
+  if(!form) return;
+
+  var nome        = document.getElementById('nome');
+  var cpf         = document.getElementById('cpf');
+  var email       = document.getElementById('email');
+  var senha       = document.getElementById('senha');
+  var confirmar   = document.getElementById('confirmarSenha');
+  var aceite      = document.getElementById('aceite');
+  var btnCriar    = document.getElementById('btnCriar');
+  var alertDuplicado = document.getElementById('alertDuplicado');
+
+  /* ---------- Erro por campo ---------- */
+  function marcarErro(idCampo, idErro, mensagem){
+    var campo = document.getElementById(idCampo);
+    var erro  = document.getElementById(idErro);
+    campo.classList.add('field--error');
+    if(mensagem){
+      var texto = erro.querySelector('span');
+      if(texto) texto.textContent = mensagem;
+    }
+    erro.hidden = false;
+    var input = campo.querySelector('input');
+    if(input) input.setAttribute('aria-invalid', 'true');
+  }
+
+  function limparErro(idCampo, idErro){
+    var campo = document.getElementById(idCampo);
+    var erro  = document.getElementById(idErro);
+    campo.classList.remove('field--error');
+    erro.hidden = true;
+    var input = campo.querySelector('input');
+    if(input) input.removeAttribute('aria-invalid');
+  }
+
+  /* ---------- Máscara e validação de CPF ---------- */
+  function mascararCpf(valor){
+    var d = valor.replace(/\D/g, '').slice(0, 11);
+    if(d.length > 9)      return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6,9) + '-' + d.slice(9);
+    if(d.length > 6)      return d.slice(0,3) + '.' + d.slice(3,6) + '.' + d.slice(6);
+    if(d.length > 3)      return d.slice(0,3) + '.' + d.slice(3);
+    return d;
+  }
+
+  /* Dígitos verificadores: evita que um CPF inventado passe adiante
+     só por ter 11 números. */
+  function cpfValido(valor){
+    var d = valor.replace(/\D/g, '');
+    if(d.length !== 11) return false;
+    if(/^(\d)\1{10}$/.test(d)) return false;      // 111.111.111-11 e afins
+
+    function digito(ate){
+      var soma = 0;
+      var peso = ate + 1;
+      for(var i = 0; i < ate; i++){
+        soma += parseInt(d.charAt(i), 10) * (peso - i);
+      }
+      var resto = (soma * 10) % 11;
+      return resto === 10 ? 0 : resto;
+    }
+
+    return digito(9) === parseInt(d.charAt(9), 10) &&
+           digito(10) === parseInt(d.charAt(10), 10);
+  }
+
+  cpf.addEventListener('input', function(){
+    var posicaoFinal = cpf.selectionStart === cpf.value.length;
+    cpf.value = mascararCpf(cpf.value);
+    if(posicaoFinal) cpf.setSelectionRange(cpf.value.length, cpf.value.length);
+    limparErro('fieldCpf', 'cpfErro');
+  });
+
+  /* ---------- Força da senha ---------- */
+  var REGRAS = {
+    tamanho:   function(v){ return v.length >= 8; },
+    maiuscula: function(v){ return /[A-ZÀ-Þ]/.test(v); },
+    numero:    function(v){ return /\d/.test(v); },
+    simbolo:   function(v){ return /[^\w\sÀ-ÿ]/.test(v); }
+  };
+
+  var ROTULOS = ['Força da senha', 'Senha fraca', 'Senha razoável', 'Senha boa', 'Senha forte'];
+
+  var forca      = document.getElementById('senhaForca');
+  var forcaLabel = document.getElementById('senhaForcaLabel');
+  var requisitos = Array.prototype.slice.call(document.querySelectorAll('.requisito'));
+
+  function avaliarSenha(){
+    var valor = senha.value;
+    var pontos = 0;
+
+    requisitos.forEach(function(item){
+      var regra = REGRAS[item.getAttribute('data-regra')];
+      var ok = valor !== '' && regra(valor);
+      item.classList.toggle('is-ok', ok);
+      if(ok) pontos++;
+    });
+
+    forca.setAttribute('data-nivel', String(valor === '' ? 0 : pontos));
+    forcaLabel.textContent = ROTULOS[valor === '' ? 0 : pontos];
+    return pontos;
+  }
+
+  senha.addEventListener('input', function(){
+    avaliarSenha();
+    limparErro('fieldSenha', 'senhaErro');
+    // Confirmar senha volta a valer assim que a senha muda
+    if(confirmar.value) limparErro('fieldConfirmar', 'confirmarErro');
+  });
+
+  confirmar.addEventListener('input', function(){
+    limparErro('fieldConfirmar', 'confirmarErro');
+  });
+
+  nome.addEventListener('input',  function(){ limparErro('fieldNome', 'nomeErro'); });
+  email.addEventListener('input', function(){ limparErro('fieldEmail', 'emailErro'); });
+  aceite.addEventListener('change', function(){ limparErro('fieldAceite', 'aceiteErro'); });
+
+  /* ---------- Mostrar / ocultar senha ---------- */
+  function ligarToggle(idBotao, idInput){
+    var botao = document.getElementById(idBotao);
+    var input = document.getElementById(idInput);
+    botao.addEventListener('click', function(){
+      var revelado = botao.getAttribute('aria-pressed') === 'true';
+      botao.setAttribute('aria-pressed', String(!revelado));
+      botao.setAttribute('aria-label', revelado ? 'Mostrar senha' : 'Ocultar senha');
+      input.type = revelado ? 'password' : 'text';
+      input.focus();
+    });
+  }
+  ligarToggle('toggleSenha', 'senha');
+  ligarToggle('toggleConfirmar', 'confirmarSenha');
+
+  /* ---------- Envio ---------- */
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    alertDuplicado.hidden = true;
+    ['fieldNome','fieldCpf','fieldEmail','fieldSenha','fieldConfirmar','fieldAceite']
+      .forEach(function(id, i){
+        limparErro(id, ['nomeErro','cpfErro','emailErro','senhaErro','confirmarErro','aceiteErro'][i]);
+      });
+
+    var primeiroInvalido = null;
+    function reprovar(idCampo, idErro, mensagem){
+      marcarErro(idCampo, idErro, mensagem);
+      if(!primeiroInvalido) primeiroInvalido = document.getElementById(idCampo).querySelector('input');
+    }
+
+    // Nome: exige ao menos duas palavras, para pegar "nome completo"
+    var nomeLimpo = nome.value.trim().replace(/\s+/g, ' ');
+    if(!nomeLimpo){
+      reprovar('fieldNome', 'nomeErro', 'Informe seu nome completo.');
+    } else if(nomeLimpo.split(' ').length < 2){
+      reprovar('fieldNome', 'nomeErro', 'Informe seu nome e sobrenome.');
+    }
+
+    if(!cpf.value.trim()){
+      reprovar('fieldCpf', 'cpfErro', 'Informe seu CPF.');
+    } else if(!cpfValido(cpf.value)){
+      reprovar('fieldCpf', 'cpfErro', 'CPF inválido. Confira os números.');
+    }
+
+    if(!email.value.trim()){
+      reprovar('fieldEmail', 'emailErro', 'Informe seu e-mail.');
+    } else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim())){
+      reprovar('fieldEmail', 'emailErro', 'Informe um e-mail válido.');
+    }
+
+    var pontos = avaliarSenha();
+    if(!senha.value){
+      reprovar('fieldSenha', 'senhaErro', 'Crie uma senha.');
+    } else if(pontos < 4){
+      reprovar('fieldSenha', 'senhaErro', 'A senha não atende a todos os requisitos.');
+    }
+
+    if(!confirmar.value){
+      reprovar('fieldConfirmar', 'confirmarErro', 'Repita a senha.');
+    } else if(confirmar.value !== senha.value){
+      reprovar('fieldConfirmar', 'confirmarErro', 'As senhas não conferem.');
+    }
+
+    if(!aceite.checked){
+      reprovar('fieldAceite', 'aceiteErro', 'É preciso aceitar os termos para continuar.');
+    }
+
+    if(primeiroInvalido){
+      primeiroInvalido.focus();
+      return;
+    }
+
+    // Tudo certo: simula o envio e abre a verificação por e-mail
+    btnCriar.classList.add('is-loading');
+    btnCriar.disabled = true;
+
+    setTimeout(function(){
+      btnCriar.classList.remove('is-loading');
+      btnCriar.disabled = false;
+      // O formulário preenchido continua ao fundo, atrás da modal
+      abrirModal();
+    }, 1200);
+  });
+
+  /* ============================================================
+     MODAL — verificação do e-mail do novo cadastro
+     Mesmo componente do login: código de 6 dígitos, avanço
+     automático entre os campos, colar o código inteiro e reenvio
+     com contagem regressiva. Aqui ele confirma a conta criada.
+     ============================================================ */
+  var DESTINO   = 'empresas.html';
+  var REENVIO_S = 30;
+
+  var modal     = document.getElementById('codeModal');
+  var codeForm  = document.getElementById('codeForm');
+  var otp       = document.getElementById('otp');
+  var digitos   = Array.prototype.slice.call(otp.querySelectorAll('.otp-input'));
+  var erroCode  = document.getElementById('codeErro');
+  var erroTexto = document.getElementById('codeErroTexto');
+  var confirmarCodigo = document.getElementById('codeConfirm');
+  var resend    = document.getElementById('codeResend');
+  var contagem  = document.getElementById('codeCountdown');
+  var timerId   = null;
+
+  function carregando(botao, ligado){
+    botao.classList.toggle('is-loading', ligado);
+    botao.disabled = ligado;
+  }
+
+  function abrirModal(){
+    document.getElementById('codeEmail').textContent = email.value.trim();
+    limparCodigo();
+    modal.showModal();
+    digitos[0].focus();
+    iniciarContagem();
+  }
+
+  function fecharModal(){
+    if(modal.open) modal.close();
+  }
+
+  /* ---------- Campo de 6 dígitos ---------- */
+  function limparCodigo(){
+    digitos.forEach(function(d){ d.value = ''; d.disabled = false; });
+    otp.classList.remove('is-error');
+    erroCode.hidden = true;
+    modal.classList.remove('is-verifying');
+    carregando(confirmarCodigo, false);
+  }
+
+  function codigoAtual(){
+    return digitos.map(function(d){ return d.value; }).join('');
+  }
+
+  digitos.forEach(function(input, i){
+    input.addEventListener('input', function(){
+      // Mantém só dígitos e avança sozinho para o próximo campo
+      input.value = input.value.replace(/\D/g, '').slice(0, 1);
+      otp.classList.remove('is-error');
+      erroCode.hidden = true;
+      if(input.value && i < digitos.length - 1) digitos[i + 1].focus();
+    });
+
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Backspace' && !input.value && i > 0){
+        digitos[i - 1].focus();
+        digitos[i - 1].value = '';
+        e.preventDefault();
+      }
+      if(e.key === 'ArrowLeft'  && i > 0)                   { digitos[i - 1].focus(); e.preventDefault(); }
+      if(e.key === 'ArrowRight' && i < digitos.length - 1)  { digitos[i + 1].focus(); e.preventDefault(); }
+    });
+
+    // Colar o código inteiro em qualquer um dos campos distribui os dígitos
+    input.addEventListener('paste', function(e){
+      var texto = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      if(!texto) return;
+      e.preventDefault();
+      texto.slice(0, digitos.length - i).split('').forEach(function(ch, k){
+        digitos[i + k].value = ch;
+      });
+      var proximo = Math.min(i + texto.length, digitos.length - 1);
+      digitos[proximo].focus();
+    });
+  });
+
+  /* ---------- Confirmar → conclui o cadastro ---------- */
+  codeForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var codigo = codigoAtual();
+
+    if(codigo.length < digitos.length){
+      otp.classList.add('is-error');
+      erroTexto.textContent = 'Digite os 6 dígitos do código.';
+      erroCode.hidden = false;
+      (digitos.filter(function(d){ return !d.value; })[0] || digitos[0]).focus();
+      return;
+    }
+
+    modal.classList.add('is-verifying');
+    carregando(confirmarCodigo, true);
+    // Protótipo: qualquer código de 6 dígitos é aceito.
+    setTimeout(function(){ window.location.href = DESTINO; }, 900);
+  });
+
+  /* ---------- Reenvio com contagem regressiva ---------- */
+  function iniciarContagem(){
+    var restante = REENVIO_S;
+    resend.disabled = true;
+    contagem.hidden = false;
+    contagem.textContent = restante + 's';
+    resend.firstChild.textContent = 'Reenviar código em ';
+
+    clearInterval(timerId);
+    timerId = setInterval(function(){
+      restante -= 1;
+      if(restante <= 0){
+        clearInterval(timerId);
+        resend.disabled = false;
+        resend.firstChild.textContent = 'Reenviar código';
+        contagem.textContent = '';
+        return;
+      }
+      contagem.textContent = restante + 's';
+    }, 1000);
+  }
+
+  resend.addEventListener('click', function(){
+    limparCodigo();
+    digitos[0].focus();
+    iniciarContagem();
+  });
+
+  /* ---------- Fechar ---------- */
+  document.getElementById('codeClose').addEventListener('click', fecharModal);
+  document.getElementById('codeBack').addEventListener('click', fecharModal);
+
+  // Clique no backdrop (fora do conteúdo) fecha
+  modal.addEventListener('click', function(e){
+    var r = modal.getBoundingClientRect();
+    var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!dentro) fecharModal();
+  });
+
+  // Esc já fecha sozinho no <dialog>; aqui só limpamos o estado
+  modal.addEventListener('close', function(){
+    clearInterval(timerId);
+    limparCodigo();
+    btnCriar.focus();
+  });
+})();
+</script>
+
+</body>
+</html>

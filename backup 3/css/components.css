@@ -1,0 +1,510 @@
+<title>Auditoria do login.html</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Auditoria renderizada com a própria paleta de css/tokens.css —
+   os mesmos valores que estão sendo auditados. */
+:root{
+  --gray-0:#FFFFFF; --gray-50:#FAFAFA; --gray-100:#F5F5F5; --gray-200:#E9EAEB;
+  --gray-300:#D5D7DA; --gray-400:#A4A7AE; --gray-500:#717680; --gray-600:#535862;
+  --gray-700:#414651; --gray-900:#181D27;
+  --yellow-300:#FAC515; --blue-500:#0BA5EC; --blue-700:#026AA2;
+  --red-500:#D92D20; --amber-500:#F59E0B; --green-500:#10B981; --purple-500:#A855F7;
+
+  --ground:var(--gray-50);
+  --panel:var(--gray-0);
+  --ink:var(--gray-900);
+  --ink-2:var(--gray-600);
+  --ink-3:var(--gray-500);
+  --rule:rgba(24,29,39,.10);
+  --rule-strong:rgba(24,29,39,.18);
+  --accent:var(--blue-500);
+  --accent-ink:var(--blue-700);
+  --brand:var(--yellow-300);
+  --crit:var(--red-500);
+  --warn:var(--amber-500);
+  --ok:var(--green-500);
+  --code-bg:rgba(24,29,39,.05);
+
+  --radius:8px;
+  --radius-lg:12px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1218;
+    --panel:#181D27;
+    --ink:#F5F5F5;
+    --ink-2:#A4A7AE;
+    --ink-3:#717680;
+    --rule:rgba(255,255,255,.10);
+    --rule-strong:rgba(255,255,255,.20);
+    --accent:#38BDF8;
+    --accent-ink:#7CD4FD;
+    --crit:#F87171;
+    --warn:#FBBF24;
+    --ok:#34D399;
+    --code-bg:rgba(255,255,255,.07);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1218;
+  --panel:#181D27;
+  --ink:#F5F5F5;
+  --ink-2:#A4A7AE;
+  --ink-3:#717680;
+  --rule:rgba(255,255,255,.10);
+  --rule-strong:rgba(255,255,255,.20);
+  --accent:#38BDF8;
+  --accent-ink:#7CD4FD;
+  --crit:#F87171;
+  --warn:#FBBF24;
+  --ok:#34D399;
+  --code-bg:rgba(255,255,255,.07);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:24px;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+
+.wrap{max-width:900px;margin:0 auto;padding:0 24px 96px}
+
+/* ---- Cabeçalho ---- */
+.top{border-top:3px solid var(--brand);padding-top:40px;margin-top:0}
+.eyebrow{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;line-height:16px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);
+}
+h1{
+  margin:12px 0 0;
+  font-size:30px;line-height:38px;font-weight:600;letter-spacing:-.02em;
+  text-wrap:balance;
+}
+h1 .file{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:500;font-size:27px}
+.lede{margin:12px 0 0;max-width:62ch;color:var(--ink-2);font-size:16px;line-height:26px}
+
+/* ---- Placar ---- */
+.scoreboard{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;margin-top:36px;
+  background:var(--rule);
+  border:1px solid var(--rule);border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+.score{background:var(--panel);padding:18px 20px}
+.score-n{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:28px;line-height:34px;font-weight:700;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.score-n.is-ok{color:var(--ok)}
+.score-n.is-warn{color:var(--warn)}
+.score-n.is-crit{color:var(--crit)}
+.score-l{margin-top:4px;font-size:13px;line-height:19px;color:var(--ink-2)}
+
+/* ---- Seções ---- */
+section{margin-top:56px}
+h2{
+  margin:0;
+  font-size:20px;line-height:28px;font-weight:600;letter-spacing:-.01em;
+  padding-bottom:10px;border-bottom:1px solid var(--rule-strong);
+}
+h2 .num{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:13px;font-weight:500;color:var(--ink-3);margin-right:12px;
+  font-variant-numeric:tabular-nums;
+}
+.sec-desc{margin:16px 0 0;max-width:66ch;color:var(--ink-2)}
+p{margin:16px 0 0}
+p:first-child{margin-top:0}
+
+code{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:.86em;
+  background:var(--code-bg);
+  padding:1px 5px;border-radius:4px;
+  white-space:nowrap;
+}
+
+/* ---- Achados ---- */
+.findings{display:flex;flex-direction:column;gap:1px;margin-top:24px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:var(--radius-lg);overflow:hidden}
+.finding{background:var(--panel);padding:20px 22px}
+.f-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.chip{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:10px;line-height:16px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px;border:1px solid;
+  flex-shrink:0;
+}
+.chip--crit{color:var(--crit);border-color:var(--crit)}
+.chip--warn{color:var(--warn);border-color:var(--warn)}
+.chip--info{color:var(--accent-ink);border-color:var(--accent)}
+.chip--ok{color:var(--ok);border-color:var(--ok)}
+.f-title{font-size:16px;line-height:24px;font-weight:600;margin:0}
+.f-body{margin-top:10px;color:var(--ink-2);font-size:14px;line-height:23px;max-width:70ch}
+.f-body strong{color:var(--ink);font-weight:600}
+.f-fix{
+  margin-top:12px;padding-top:12px;border-top:1px dashed var(--rule-strong);
+  font-size:13px;line-height:21px;color:var(--ink-2);
+}
+.f-fix b{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;margin-right:8px;
+}
+
+/* ---- Tabelas ---- */
+.tablewrap{overflow-x:auto;margin-top:24px;border:1px solid var(--rule);border-radius:var(--radius-lg);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:600px}
+th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:none}
+th{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:10px;line-height:16px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);background:var(--code-bg);white-space:nowrap;
+}
+td{font-size:13.5px;line-height:21px;color:var(--ink-2)}
+td.sel{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;color:var(--ink);white-space:nowrap}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot--ok{background:var(--ok)}
+.dot--warn{background:var(--warn)}
+.dot--crit{background:var(--crit)}
+.dot--info{background:var(--accent)}
+
+/* ---- Listas ---- */
+ul{margin:14px 0 0;padding-left:20px;color:var(--ink-2)}
+li{margin-top:6px;font-size:14px;line-height:23px}
+li::marker{color:var(--ink-3)}
+li strong{color:var(--ink);font-weight:600}
+
+/* ---- Bloco de recomendação ---- */
+.rec{
+  margin-top:24px;padding:22px 24px;
+  background:var(--panel);border:1px solid var(--rule);border-radius:var(--radius-lg);
+  border-left:3px solid var(--brand);
+}
+.rec ol{margin:14px 0 0;padding-left:22px;color:var(--ink-2)}
+.rec li{margin-top:10px}
+
+footer{
+  margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+  font-size:12.5px;line-height:20px;color:var(--ink-3);
+}
+
+@media (max-width:640px){
+  .wrap{padding:0 18px 72px}
+  h1{font-size:25px;line-height:32px}
+  h1 .file{font-size:22px}
+}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Plataforma de Design 2.0 · Auditoria de conformidade · 21 ago 2026</p>
+  <h1>Auditoria do <span class="file">login.html</span></h1>
+  <p class="lede">
+    A tela usa as classes certas e não tem uma única cor hardcoded. O que ela não faz é
+    <em>puxar</em> os componentes: as ~390 linhas de <code>&lt;style&gt;</code> do arquivo são uma
+    cópia literal das regras do style guide. Hoje as duas versões estão em sincronia — mas só
+    porque ninguém mexeu nelas ainda.
+  </p>
+</header>
+
+<div class="scoreboard">
+  <div class="score">
+    <div class="score-n is-ok">50<span style="color:var(--ink-3);font-size:18px">/52</span></div>
+    <div class="score-l">classes do <code>&lt;body&gt;</code> catalogadas no guia</div>
+  </div>
+  <div class="score">
+    <div class="score-n is-ok">0</div>
+    <div class="score-l">cores hardcoded (hex)</div>
+  </div>
+  <div class="score">
+    <div class="score-n is-crit">0</div>
+    <div class="score-l">CSS de componente importado</div>
+  </div>
+  <div class="score">
+    <div class="score-n is-warn">8</div>
+    <div class="score-l">ícones do catálogo ignorados</div>
+  </div>
+  <div class="score">
+    <div class="score-n is-warn">20</div>
+    <div class="score-l"><code>font-size</code> sem token</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">01</span>O achado principal</h2>
+  <div class="findings">
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--crit">Crítico</span>
+        <p class="f-title">Nenhum componente é importado — todos são copiados</p>
+      </div>
+      <p class="f-body">
+        <code>login.html</code> carrega um único arquivo externo: <code>css/tokens.css</code>.
+        Não existe <code>css/components.css</code> no projeto. As definições de <code>.btn</code>,
+        <code>.input</code>, <code>.field</code>, <code>.alert</code>, <code>.modal</code>,
+        <code>.otp</code> e todo o resto vivem duas vezes — uma no <code>&lt;style&gt;</code> do
+        login, outra no <code>&lt;style&gt;</code> do styleguide. <strong>A resposta à sua pergunta
+        é: os elementos reproduzem os componentes do style guide, mas não os consomem.</strong>
+        É exatamente o problema que <code>tokens.css</code> resolveu para as cores — dez blocos
+        <code>:root</code> viraram um — repetido uma camada acima.
+      </p>
+      <p class="f-fix"><b>Correção</b>
+        Extrair o bloco compartilhado para <code>css/components.css</code> e fazer login,
+        cadastro e styleguide apontarem para ele. O styleguide deixa de ser uma segunda
+        implementação e passa a ser a vitrine da primeira — e passa a quebrar visivelmente
+        quando o componente mudar, que é o comportamento desejado.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--ok">Verificado</span>
+        <p class="f-title">Enquanto isso, as duas cópias ainda batem</p>
+      </div>
+      <p class="f-body">
+        Comparei declaração por declaração as 50 classes de produção presentes nos dois arquivos.
+        As únicas diferenças reais são as de dimensionamento de palco (o guia fixa larguras para
+        as peças caberem na demonstração) e duas lacunas listadas na seção 03. Nenhuma
+        divergência de cor, raio, sombra, transição ou peso tipográfico.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">02</span>Inventário elemento a elemento</h2>
+  <p class="sec-desc">
+    Cada elemento da tela, a peça correspondente no guia e o que a comparação encontrou.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Elemento da tela</th><th>Classe</th><th>Peça no guia</th><th>Situação</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Logotipo da marca</td><td class="sel">.brand</td><td>Componentes → Logotipo</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Título e subtítulo</td><td class="sel">.auth-title</td><td>Template → Login</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Alertas (erro / bloqueio / sucesso)</td><td class="sel">.alert</td><td>Componentes → Alerta</td><td><span class="dot dot--ok"></span>Só a margem difere</td></tr>
+        <tr><td>Campo de e-mail e senha</td><td class="sel">.field .input</td><td>Componentes → Campo</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Botão mostrar/ocultar senha</td><td class="sel">.input-action</td><td>Componentes → Inputs</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Lembrar de mim</td><td class="sel">.checkbox</td><td>Componentes → Checkbox e link</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Esqueci minha senha</td><td class="sel">.link</td><td>Componentes → Checkbox e link</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Botão Entrar</td><td class="sel">.btn--primary</td><td>Componentes → Botões</td><td><span class="dot dot--warn"></span>Largura divergente</td></tr>
+        <tr><td>Divisor "ou"</td><td class="sel">.divider</td><td>Componentes → Divisor</td><td><span class="dot dot--ok"></span>Só a largura de palco</td></tr>
+        <tr><td>Entrar com Google</td><td class="sel">.btn--google</td><td>Componentes → Botões</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Modal de verificação</td><td class="sel">.modal</td><td>Organismos → Modal OTP</td><td><span class="dot dot--ok"></span>Idêntico</td></tr>
+        <tr><td>Campo de 6 dígitos</td><td class="sel">.otp-input</td><td>Componentes → Inputs</td><td><span class="dot dot--warn"></span>Falta o estado <code>:disabled</code></td></tr>
+        <tr><td>Arte lateral</td><td class="sel">.auth-art</td><td>Organismos → Arte lateral</td><td><span class="dot dot--crit"></span>Não catalogada como classe</td></tr>
+        <tr><td>Casca de duas colunas</td><td class="sel">.auth .auth-card</td><td>—</td><td><span class="dot dot--crit"></span>Sem peça no guia</td></tr>
+        <tr><td>Ícones (8 usos)</td><td class="sel">&lt;svg&gt; inline</td><td>Fundamentos → Ícones</td><td><span class="dot dot--warn"></span>Geometria diferente</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">03</span>Divergências reais</h2>
+  <p class="sec-desc">
+    Depois de descontar o dimensionamento de palco, sobram estas — cada uma é uma decisão
+    pendente, não um erro de digitação.
+  </p>
+  <div class="findings">
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--crit">Lacuna</span>
+        <p class="f-title">A casca da tela não existe no guia</p>
+      </div>
+      <p class="f-body">
+        <code>.auth</code>, <code>.auth-form-col</code>, <code>.auth-card</code> e a caixa
+        <code>.auth-art</code> (<code>flex:0 0 688px</code>, <code>border-radius:var(--radius-panel)</code>,
+        <code>overflow:hidden</code>) são só do login. O guia compartilha apenas os pseudo-elementos
+        <code>::before</code> e <code>::after</code> do gradiente, e monta a demonstração numa caixa
+        própria, <code>.sg-arte-caixa</code> de 320×420. <strong>O organismo "arte lateral" catalogado
+        não é o que roda em produção</strong> — o painel real tem 688px, padding de 56px e a citação
+        em 30/40; a versão do guia usa 32px e 22/30.
+      </p>
+      <p class="f-fix"><b>Correção</b>
+        Promover <code>.auth-art</code> a classe de produção no guia e deixar
+        <code>.sg-arte-caixa</code> apenas reduzir a escala do palco, como
+        <code>.sg-modal-preview</code> já faz com o modal.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--warn">Divergência</span>
+        <p class="f-title">O guia dimensiona os átomos para o palco — e os snippets herdam isso</p>
+      </div>
+      <p class="f-body">
+        Cinco peças têm largura fixa no guia e fluida no login:
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Seletor</th><th>Style guide</th><th>login.html</th></tr></thead>
+          <tbody>
+            <tr><td class="sel">.btn</td><td class="num">(sem width)</td><td class="num">width:100%</td></tr>
+            <tr><td class="sel">.input</td><td class="num">width:220px</td><td class="num">width:100%</td></tr>
+            <tr><td class="sel">.otp-input</td><td class="num">width:44px</td><td class="num">flex:1; min-width:0</td></tr>
+            <tr><td class="sel">.alert</td><td class="num">width:320px</td><td class="num">margin-top:24px</td></tr>
+            <tr><td class="sel">.divider</td><td class="num">width:280px</td><td class="num">(sem width)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="f-body">
+        O sintoma aparece no próprio guia: os templates precisam corrigir com
+        <code>style="width:100%"</code> inline em cada input. E o bloco de código publicado ao lado
+        da peça — que é o que alguém vai copiar — produz um botão que encolhe até o texto, não o
+        botão de largura total da tela.
+      </p>
+      <p class="f-fix"><b>Correção</b>
+        Tirar <code>width</code> dos átomos e passar o dimensionamento para o palco
+        (<code>.sg-comp-stage .input{width:220px}</code>), no mesmo padrão de
+        <code>.sg-modal-preview</code>.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--warn">Divergência</span>
+        <p class="f-title">Os ícones do login não são os do catálogo</p>
+      </div>
+      <p class="f-body">
+        O guia publica 8 <code>&lt;symbol&gt;</code> conferidos contra o Feather Icons v4
+        (<code>#icon-alert-circle</code>, <code>#icon-eye</code>, <code>#icon-lock</code>…).
+        O login não usa nenhum deles: inlina SVGs de <strong>geometria diferente</strong>.
+        Exemplos: <code>alert-circle</code> tem <code>r="10"</code> no catálogo e <code>r="9"</code>
+        no login; <code>lock</code> é <code>rect 3,11,18×11</code> contra <code>rect 4,10.5,16×10</code>;
+        <code>check</code> é <code>polyline</code> contra <code>path</code>; <code>eye</code> parte de
+        <code>M1 12</code> contra <code>M2.5 12</code>. O mesmo alert-circle está repetido 4× no arquivo.
+      </p>
+      <p class="f-fix"><b>Correção</b>
+        Mover o sprite de <code>&lt;symbol&gt;</code> para um parcial compartilhado e trocar os 8 SVGs
+        por <code>&lt;svg&gt;&lt;use href="#icon-…"&gt;&lt;/svg&gt;</code>. Decidir antes qual das duas
+        geometrias vence — a do Feather ou a que já está no ar.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--warn">Lacuna</span>
+        <p class="f-title">O guia não documenta <code>.otp-input:disabled</code></p>
+      </div>
+      <p class="f-body">
+        O login define o estado desabilitado do campo de código
+        (<code>background:var(--surface-0)</code>, <code>color:var(--text-disabled)</code>) e o usa —
+        <code>limparCodigo()</code> mexe em <code>d.disabled</code>. O catálogo não mostra esse estado.
+      </p>
+    </div>
+
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--info">Já registrado</span>
+        <p class="f-title">Os dois overrides locais são conhecidos</p>
+      </div>
+      <p class="f-body">
+        <code>--text-danger:var(--red-600)</code> e <code>--radius-panel:24px</code> continuam
+        sobrescritos no <code>:root</code> do login. Ambos já constam da nota "três divergências
+        herdadas" do guia, aguardando sua decisão. Não são achados novos — só continuam abertos.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">04</span>Conformidade de tokens</h2>
+  <p class="sec-desc">
+    Aqui a tela vai bem. As pendências são de cobertura do sistema, não de disciplina da página.
+  </p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Regra</th><th>Resultado</th><th>Observação</th></tr></thead>
+      <tbody>
+        <tr><td>Nenhuma cor hardcoded</td><td><span class="dot dot--ok"></span>Passa</td><td>Zero hexadecimais no arquivo</td></tr>
+        <tr><td>Sombras via token</td><td><span class="dot dot--ok"></span>Passa</td><td>Sempre <code>--shadow-xs</code> / <code>--shadow-modal</code> / <code>--shadow-focus</code></td></tr>
+        <tr><td>Durações e curvas via token</td><td><span class="dot dot--ok"></span>Passa</td><td>Sempre <code>var(--dur-fast) var(--ease-out)</code></td></tr>
+        <tr><td>Texto sobre fundo colorido</td><td><span class="dot dot--ok"></span>Passa</td><td><code>--text-on-accent</code>, <code>--text-on-primary</code></td></tr>
+        <tr><td>Foco visível</td><td><span class="dot dot--ok"></span>Passa</td><td><code>--focus-ring</code> global + <code>--shadow-focus</code> nos campos</td></tr>
+        <tr><td>Estado sem depender só de cor</td><td><span class="dot dot--ok"></span>Passa</td><td>Todo alerta e erro tem ícone e texto</td></tr>
+        <tr><td><code>prefers-reduced-motion</code></td><td><span class="dot dot--ok"></span>Passa</td><td>Bloco no fim do <code>&lt;style&gt;</code></td></tr>
+        <tr><td>Tipografia via token</td><td><span class="dot dot--warn"></span>Pendente</td><td>20 <code>font-size</code> à mão, 0 usando <code>--type-*</code></td></tr>
+        <tr><td>Raios via token</td><td><span class="dot dot--warn"></span>Parcial</td><td><code>border-radius:4px</code> em <code>.link</code> e no botão de reenvio</td></tr>
+        <tr><td>Componente não consome camada 1 ou 2</td><td><span class="dot dot--warn"></span>Falha</td><td>10 ocorrências — ver abaixo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="findings">
+    <div class="finding">
+      <div class="f-head">
+        <span class="chip chip--warn">Cobertura</span>
+        <p class="f-title">Onde falta um token de propósito</p>
+      </div>
+      <p class="f-body">
+        <code>tokens.css</code> diz: "componente nunca consome camada 1 ou 2 — se precisa de
+        <code>var(--blue-500)</code>, falta um token de propósito". Estes são os furos, e
+        <strong>o styleguide tem os mesmos</strong> — são lacunas do sistema, não da página:
+      </p>
+      <ul>
+        <li><strong>Hover de borda</strong> — <code>--neutral-300</code> em <code>.input:hover</code> e <code>.otp-input:hover</code>. Falta <code>--border-hover</code>.</li>
+        <li><strong>Borda do alerta de aviso</strong> — <code>--amber-400</code> em <code>.alert--warning</code>, enquanto o de erro usa <code>--border-danger</code>. Falta <code>--border-warning</code>.</li>
+        <li><strong>Texto sobre a arte</strong> — <code>--neutral-0</code> em <code>.auth-art-content</code>. Falta um <code>--text-on-media</code>.</li>
+        <li><strong>Fundo do <code>&lt;body&gt;</code></strong> — <code>--neutral-100</code>, que não tem nenhum apelido de propósito (<code>--surface-0</code> é <code>--neutral-50</code>).</li>
+        <li><strong>Rampa do gradiente</strong> — seis cores de camada 1 direto no <code>radial-gradient</code>. Cabe um <code>--gradient-art</code>.</li>
+        <li><strong>Véu e sombra de texto da arte</strong> — <code>rgba(10,13,18,…)</code> literal em três pontos. Cabem <code>--scrim</code> e <code>--shadow-text</code>.</li>
+        <li><strong>Raio pequeno</strong> — <code>4px</code> literal no <code>.link</code> e no botão de reenvio. Cabe <code>--radius-sm</code>.</li>
+      </ul>
+      <p class="f-body">
+        As cores <code>--google-*</code> no botão do Google são uso autorizado — o próprio
+        <code>tokens.css</code> abre a exceção para elas.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="num">05</span>Por onde começar</h2>
+  <div class="rec">
+    <p><strong>Na ordem em que cada passo destrava o seguinte:</strong></p>
+    <ol>
+      <li><strong>Extrair <code>css/components.css</code>.</strong> É o passo que muda a natureza do problema: enquanto o CSS estiver duplicado, toda auditoria futura vira este mesmo diff manual. Login, cadastro e styleguide passam a ler o mesmo arquivo.</li>
+      <li><strong>Tirar <code>width</code> dos átomos</strong> e mover o dimensionamento para o palco do guia — sem isso, o passo 1 força uma escolha entre a versão de demonstração e a de produção.</li>
+      <li><strong>Catalogar a casca</strong> (<code>.auth</code>, <code>.auth-card</code>, <code>.auth-form-col</code>) e promover <code>.auth-art</code> a peça de produção.</li>
+      <li><strong>Unificar os ícones</strong> via sprite <code>&lt;use&gt;</code>, decidindo antes qual geometria é a oficial.</li>
+      <li><strong>Fechar os tokens que faltam</strong> (<code>--border-hover</code>, <code>--border-warning</code>, <code>--radius-sm</code>, <code>--scrim</code>) — são sete linhas em <code>tokens.css</code> que eliminam todos os furos de hierarquia de uma vez.</li>
+      <li><strong>Adotar <code>--type-*</code>.</strong> O maior volume de edições e o menor risco: os tokens já existem e foram medidos nos próprios arquivos. Vale fazer por último, e nas dez telas de uma vez.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  Comparação automatizada de <code>login.html</code> (393 linhas de CSS embutido, 52 classes no
+  <code>&lt;body&gt;</code>) contra <code>styleguide.html</code> e <code>css/tokens.css</code>,
+  normalizando comentários, <code>@media</code> e <code>@keyframes</code> antes do diff
+  declaração a declaração.
+</footer>
+
+</div>

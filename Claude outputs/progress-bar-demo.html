@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress Bar Demo - Board Carregamento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Design Tokens */
+    :root {
+      --fill-primary: #FCD34D;
+      --fill-accent: #0BA5EC;
+      --text-primary: #0A0D12;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --border-strong: #D1D5DB;
+      --neutral-100: #F9FAFB;
+      --gray-300: #D1D5DB;
+      --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+      --dur-base: 300ms;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--neutral-100);
+      color: var(--text-primary);
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    .demo-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 36px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--dur-base) var(--ease-out);
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--fill-accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0284C7;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+    }
+
+    .btn-secondary:hover {
+      background: #F3F4F6;
+    }
+
+    /* Canvas Viewport Demo */
+    .canvas-viewport-demo {
+      position: relative;
+      width: 100%;
+      height: 400px;
+      background-color: var(--neutral-100);
+      background-image: radial-gradient(circle, var(--gray-300) 1px, transparent 1px);
+      background-size: 24px 24px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Barra de progresso durante carregamento */
+    .canvas-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60px;
+      background: rgba(10, 13, 18, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 20;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .canvas-progress[hidden] {
+      display: none;
+    }
+
+    .canvas-progress-bar {
+      width: 90%;
+      max-width: 400px;
+      height: 3px;
+      background: var(--border-strong);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .canvas-progress-bar::after {
+      content: "";
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--fill-accent), var(--fill-primary));
+      width: 0%;
+      border-radius: 999px;
+      box-shadow: 0 0 8px var(--fill-accent);
+      animation: carregandoBarra 3s var(--ease-out) forwards;
+    }
+
+    @keyframes carregandoBarra {
+      0% {
+        width: 0%;
+      }
+      50% {
+        width: 65%;
+      }
+      100% {
+        width: 95%;
+      }
+    }
+
+    .canvas-progress-label {
+      font-size: 12px;
+      line-height: 16px;
+      color: var(--text-muted);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* Remover animação em modo de movimento reduzido */
+    @media (prefers-reduced-motion: reduce) {
+      .canvas-progress-bar::after {
+        animation: none;
+        width: 95%;
+      }
+    }
+
+    .info-box {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 24px;
+      font-size: 13px;
+      line-height: 20px;
+      color: var(--text-primary);
+    }
+
+    .info-box strong {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    code {
+      background: var(--neutral-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>Demonstração: Barra de Progresso do Board</h1>
+    <p class="subtitle">Clique nos botões abaixo para ver a barra de progresso em ação</p>
+
+    <div class="controls">
+      <button class="btn-primary" onclick="mostrarProgresso()">Mostrar Progresso</button>
+      <button class="btn-secondary" onclick="esconderProgresso()">Carregar (Completar)</button>
+      <button class="btn-secondary" onclick="resetarProgresso()">Reset</button>
+    </div>
+
+    <div class="canvas-viewport-demo">
+      <div class="canvas-progress" id="canvasProgress" hidden>
+        <div class="canvas-progress-bar" id="canvasProgressBar"></div>
+        <div class="canvas-progress-label">Carregando painéis do quadro...</div>
+      </div>
+      <span>Área do canvas do board</span>
+    </div>
+
+    <div class="info-box">
+      <strong>ℹ️ Sobre a implementação:</strong>
+      <p>
+        ✅ <strong>Locais de ativação:</strong> A barra aparece após a tarefa carregar (progressoControl.mostrar()) e desaparece quando os painéis terminam de carregar (progressoControl.esconder()).
+      </p>
+      <p style="margin-top: 8px;">
+        ✅ <strong>Animação:</strong> Usa keyframes CSS que animam de 0% → 95% em 3 segundos, criando a sensação de progresso contínuo sem parecer travada.
+      </p>
+      <p style="margin-top: 8px;">
+        ✅ <strong>Conclusão:</strong> Quando os dados acabam de carregar, a barra salta para 100%, fica visível por 300ms e desaparece.
+      </p>
+      <p style="margin-top: 8px;">
+        ✅ <strong>Acessibilidade:</strong> Respeita <code>prefers-reduced-motion</code> e usa apenas cores do design system.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    var progressoControl = {
+      bar: null,
+      container: null,
+      timer: null,
+      mostrar: function() {
+        if (!this.container) {
+          this.container = document.getElementById('canvasProgress');
+          this.bar = document.getElementById('canvasProgressBar');
+        }
+        if (this.container) {
+          this.container.hidden = false;
+          /* Reinicia a animação resetando a class */
+          if (this.bar) {
+            this.bar.style.animation = 'none';
+            void this.bar.offsetWidth; /* reflow para reiniciar */
+            this.bar.style.animation = 'carregandoBarra 3s var(--ease-out) forwards';
+          }
+        }
+      },
+      esconder: function() {
+        if (this.timer) clearTimeout(this.timer);
+        if (this.container) {
+          /* Completa a barra visualmente antes de esconder */
+          if (this.bar) {
+            this.bar.style.animation = 'none';
+            this.bar.style.width = '100%';
+          }
+          /* Aguarda um pouco para mostrar a conclusão antes de sumir */
+          this.timer = setTimeout(function() {
+            if (this.container) this.container.hidden = true;
+            if (this.bar) this.bar.style.width = '0%';
+          }.bind(this), 300);
+        }
+      },
+    };
+
+    function mostrarProgresso() {
+      progressoControl.mostrar();
+      console.log('✓ Progresso iniciado');
+    }
+
+    function esconderProgresso() {
+      progressoControl.esconder();
+      console.log('✓ Progresso completado e escondido');
+    }
+
+    function resetarProgresso() {
+      if (progressoControl.timer) clearTimeout(progressoControl.timer);
+      if (progressoControl.container) {
+        progressoControl.container.hidden = true;
+      }
+      if (progressoControl.bar) {
+        progressoControl.bar.style.animation = 'none';
+        progressoControl.bar.style.width = '0%';
+      }
+      console.log('✓ Resetado');
+    }
+  </script>
+</body>
+</html>

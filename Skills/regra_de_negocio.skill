@@ -1,0 +1,477 @@
+# Skill — Guardião de Regras de Negócio por Página
+
+## Identificação
+
+- **Nome:** Guardião de Regras de Negócio por Página
+- **Nome técnico:** `page-business-rules-guardian`
+- **Arquivo:** `guardiao-regras-negocio-pagina.md`
+- **Versão:** 1.0.0
+- **Execução:** Automática
+- **Prioridade:** Alta
+- **Escopo:** Plataforma de Design 2.0
+
+---
+
+# Objetivo
+
+Esta Skill é responsável por garantir que nenhuma página da Plataforma de Design seja criada ou modificada sem que suas regras de negócio sejam consultadas, analisadas e preservadas.
+
+Ela deve ser executada automaticamente antes de qualquer implementação.
+
+Seu papel é atuar como uma camada de governança entre a solicitação do usuário e a implementação realizada pela Inteligência Artificial.
+
+---
+
+# Quando executar
+
+A Skill deve ser acionada automaticamente sempre que ocorrer qualquer uma das situações abaixo:
+
+- criação de uma nova página;
+- edição de uma página existente;
+- criação de uma nova funcionalidade;
+- alteração de funcionalidades existentes;
+- alteração de componentes;
+- alteração de fluxos;
+- alteração de estados da interface;
+- alteração de regras de negócio;
+- alteração de permissões;
+- alteração de APIs;
+- alteração do modelo de dados;
+- alteração do Figma;
+- alteração da documentação.
+
+A ativação nunca depende de solicitação manual.
+
+---
+
+# Missão
+
+Antes de qualquer planejamento ou implementação a Inteligência Artificial deve compreender completamente como a página funciona.
+
+Nenhuma implementação poderá ser iniciada sem que todas as regras da página tenham sido analisadas.
+
+---
+
+# Fonte oficial
+
+Toda página deve possuir um documento de regras de negócio.
+
+Exemplo:
+
+```text
+/regras_de_negocio/modulos/empresas/empresas-listagem.md
+```
+
+Esse documento sempre será considerado a fonte oficial da página.
+
+Caso exista divergência entre código e documentação, a documentação deve ser considerada a referência até que o conflito seja resolvido.
+
+---
+
+# Fluxo obrigatório
+
+Sempre seguir esta sequência.
+
+```
+Solicitação
+
+↓
+
+Identificar página
+
+↓
+
+Localizar documentação
+
+↓
+
+Ler regras existentes
+
+↓
+
+Entender solicitação
+
+↓
+
+Analisar impacto
+
+↓
+
+Existe conflito?
+
+↓
+
+Não
+
+↓
+
+Criar planejamento
+
+↓
+
+Implementar
+
+↓
+
+Atualizar documentação
+```
+
+Caso exista conflito:
+
+```
+Solicitação
+
+↓
+
+Identificar conflito
+
+↓
+
+Explicar impacto
+
+↓
+
+Solicitar autorização
+
+↓
+
+Aguardar resposta
+
+↓
+
+Atualizar planejamento
+
+↓
+
+Implementar
+
+↓
+
+Atualizar documentação
+```
+
+---
+
+# Antes de implementar
+
+Sempre consultar:
+
+- documentação da página;
+- documentação do módulo;
+- regras globais da plataforma;
+- componentes utilizados;
+- modelo de dados;
+- permissões;
+- integrações;
+- fluxos relacionados;
+- referência do Figma;
+- implementação atual.
+
+---
+
+# Identificação da página
+
+Sempre identificar:
+
+- nome;
+- módulo;
+- rota;
+- arquivo da interface;
+- arquivo de regras;
+- entidades utilizadas;
+- componentes utilizados;
+- páginas relacionadas.
+
+---
+
+# Análise obrigatória
+
+Toda alteração deve verificar impacto sobre:
+
+- regras atuais;
+- fluxo da página;
+- permissões;
+- componentes compartilhados;
+- APIs;
+- banco de dados;
+- entidades;
+- estados;
+- mensagens;
+- eventos;
+- métricas;
+- documentação;
+- outras páginas.
+
+---
+
+# Classificação
+
+Toda alteração deve ser classificada como:
+
+## Sem impacto
+
+Nenhuma regra será alterada.
+
+Pode seguir normalmente.
+
+---
+
+## Complementar
+
+A nova funcionalidade complementa uma regra existente.
+
+Atualizar documentação.
+
+---
+
+## Alteração de regra
+
+Uma regra existente será modificada.
+
+Solicitar autorização.
+
+---
+
+## Conflito
+
+A nova funcionalidade contradiz uma regra existente.
+
+Não implementar.
+
+Explicar o motivo.
+
+Aguardar autorização.
+
+---
+
+## Impacto desconhecido
+
+Não existem informações suficientes.
+
+Solicitar esclarecimentos.
+
+---
+
+# Quando pedir autorização
+
+Sempre solicitar autorização quando:
+
+- alterar regra existente;
+- remover funcionalidade;
+- alterar modelo de dados;
+- alterar permissões;
+- alterar fluxo principal;
+- alterar hierarquia;
+- alterar componentes compartilhados;
+- alterar integrações;
+- alterar regras de cobrança;
+- alterar regras de créditos;
+- alterar comportamento de outra página.
+
+---
+
+# Formato da comunicação
+
+Sempre apresentar:
+
+## Regra atual
+
+...
+
+## Nova solicitação
+
+...
+
+## Impacto
+
+...
+
+## Consequências
+
+...
+
+## Recomendação
+
+...
+
+## Pergunta
+
+Posso seguir com esta alteração?
+
+---
+
+# Planejamento obrigatório
+
+Antes da implementação gerar:
+
+## Página
+
+...
+
+## Objetivo
+
+...
+
+## Regras consultadas
+
+...
+
+## Situação atual
+
+...
+
+## Nova solução
+
+...
+
+## Impactos
+
+...
+
+## Dependências
+
+...
+
+## Arquivos afetados
+
+...
+
+## Critérios de aceite
+
+...
+
+## Necessita autorização?
+
+Sim ou Não
+
+---
+
+# Atualização da documentação
+
+Após concluir qualquer alteração:
+
+Atualizar automaticamente:
+
+- regras;
+- histórico;
+- versão;
+- critérios de aceite;
+- dependências;
+- novas funcionalidades;
+- regras alteradas.
+
+Nunca deixar documentação desatualizada.
+
+---
+
+# Versionamento
+
+Sempre utilizar versionamento semântico.
+
+```
+1.0.0
+
+1.1.0
+
+1.1.1
+
+2.0.0
+```
+
+Nunca apagar histórico.
+
+---
+
+# Identificadores
+
+Cada regra deve possuir um ID.
+
+Exemplo:
+
+```
+EMP-LIST-001
+
+EMP-LIST-002
+
+EMP-LIST-003
+```
+
+Esses identificadores devem ser utilizados:
+
+- documentação;
+- planejamento;
+- implementação;
+- testes.
+
+---
+
+# Estados obrigatórios
+
+Toda página deve avaliar:
+
+- Primeiro acesso;
+- Vazio;
+- Carregando;
+- Sucesso;
+- Erro;
+- Sem permissão;
+- Arquivado;
+- Offline;
+- Sessão expirada;
+- Integração indisponível.
+
+Caso algum estado não seja aplicável, justificar.
+
+---
+
+# Proibições
+
+A Inteligência Artificial nunca poderá:
+
+- implementar antes de consultar documentação;
+- alterar regras silenciosamente;
+- apagar histórico;
+- criar regras inexistentes;
+- misturar regras entre módulos;
+- alterar componentes compartilhados sem análise;
+- ignorar estados da interface;
+- concluir implementação sem atualizar documentação.
+
+---
+
+# Critérios de sucesso
+
+A Skill será considerada executada corretamente quando:
+
+- localizar a documentação;
+- compreender as regras;
+- analisar impactos;
+- gerar planejamento;
+- solicitar autorização quando necessário;
+- implementar somente após aprovação;
+- atualizar documentação;
+- atualizar histórico;
+- manter documentação e código sincronizados.
+
+---
+
+# Prompt Operacional
+
+Sempre que uma página for criada ou modificada:
+
+1. Identifique a página.
+2. Localize a documentação.
+3. Leia integralmente as regras existentes.
+4. Consulte componentes, Figma, modelo de dados e fluxos relacionados.
+5. Analise impactos.
+6. Classifique o impacto.
+7. Caso exista conflito, explique e solicite autorização.
+8. Gere um planejamento completo.
+9. Após implementação, atualize automaticamente a documentação.
+10. Nunca deixe documentação e implementação divergentes.
+
+---
+
+# Princípio
+
+> **Nenhuma página da Plataforma de Design pode ser criada ou modificada sem que suas regras de negócio sejam analisadas, preservadas e atualizadas.**

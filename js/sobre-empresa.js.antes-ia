@@ -1,0 +1,185 @@
+/* ============================================================
+   SOBRE A EMPRESA — Sobre_a_empresa.html
+   ============================================================
+   Regras: Regras_de_negocio/modulos/ia/ia-pacote-contexto.md
+
+     PACOTE-CONT   o "Gerar prompt" baixa o contexto do projeto em
+                   markdown, para a pessoa levar à IA que quiser.
+
+   ATENÇÃO AO ESCOPO. Esta página é, no resto, protótipo: o grafo,
+   o "68% estruturado" e as pastas continuam conteúdo fixo, sem API.
+   Este arquivo liga só o que o botão precisa — saber de qual
+   empresa e projeto a tela está falando, e baixar o pacote. Não é
+   a implementação do módulo "Sobre a empresa", que ainda não tem
+   regra de negócio escrita.
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  var EMPRESAS = 'empresas.html';
+  var PROJETOS = 'projetos.html';
+  var LOGIN = 'login.html';
+
+  var empresaId = null;
+  var projetoId = null;
+
+  function irPara(url) { window.location.href = url; }
+
+  function aviso(msg) {
+    if (window.mostrarMensagem) window.mostrarMensagem(msg);
+    else alert(msg);
+  }
+
+  /* Mesma renovação silenciosa das outras telas: um 401 não é "vá
+     para o login", é "o token de acesso venceu". */
+  function chamarComRenovacao(caminho, opcoes, jaRenovou) {
+    return API.chamar(caminho, opcoes).catch(function (e) {
+      if (e.status === 401 && !jaRenovou) {
+        return API.chamar('/auth/sessao').then(
+          function () { return chamarComRenovacao(caminho, opcoes, true); },
+          function () { throw e; }
+        );
+      }
+      throw e;
+    });
+  }
+
+  function tratarErroFatal(e) {
+    if (e.status === 401) {
+      irPara(LOGIN + '?motivo=sessao-expirada&destino=' +
+        encodeURIComponent(location.pathname + location.search));
+      return true;
+    }
+    if (e.status === 403 && e.dados && e.dados.suspensao) {
+      irPara(LOGIN + '?motivo=suspenso&tipo=' + encodeURIComponent(e.dados.suspensao));
+      return true;
+    }
+    return false;
+  }
+
+  /* ------------------------------------------------------------
+     PACOTE-CONT-005: o download
+     ------------------------------------------------------------
+     Vai por `fetch` e não por `window.location`, por um motivo: a
+     navegação direta não passa pela renovação silenciosa da sessão.
+     Com o token vencido, a pessoa veria um JSON de erro cru no
+     lugar do arquivo. Assim, ou baixa, ou recebe um aviso na tela.
+
+     O nome do arquivo vem do servidor (Content-Disposition) — é
+     ele que conhece o nome da empresa e a data de geração.
+     ------------------------------------------------------------ */
+  function baixarPacote() {
+    var caminho = '/empresas/' + encodeURIComponent(empresaId) +
+      '/projetos/' + encodeURIComponent(projetoId) + '/ia/pacote';
+
+    return brutoComRenovacao(caminho, false).then(function (r) {
+      var nome = nomeDoCabecalho(r.headers.get('Content-Disposition')) || 'contexto-do-projeto.md';
+      return r.blob().then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = nome;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        /* Sem o revoke, o blob fica na memória até a aba fechar. */
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        aviso('Pacote de contexto baixado.');
+      });
+    }, function (e) {
+      if (tratarErroFatal(e)) return;
+      if (e.status === 404) { irPara(EMPRESAS); return; }
+      aviso(e.rede
+        ? 'Não conseguimos falar com o servidor. Verifique sua conexão.'
+        : 'Não foi possível gerar o pacote de contexto.');
+    });
+  }
+
+  /* Mesma renovação silenciosa de `chamarComRenovacao`, para o
+     caminho que não devolve JSON. Sem isto, baixar com o token
+     vencido falharia na cara da pessoa em vez de renovar. */
+  function brutoComRenovacao(caminho, jaRenovou) {
+    return API.bruto(caminho).catch(function (e) {
+      if (e.status === 401 && !jaRenovou) {
+        return API.chamar('/auth/sessao').then(
+          function () { return brutoComRenovacao(caminho, true); },
+          function () { throw e; }
+        );
+      }
+      throw e;
+    });
+  }
+
+  /* `attachment; filename="contexto-x-y-2026-08-29.md"` */
+  function nomeDoCabecalho(cabecalho) {
+    if (!cabecalho) return null;
+    var m = /filename="([^"]+)"/.exec(cabecalho);
+    return m ? m[1] : null;
+  }
+
+  /* ------------------------------------------------------------
+     Carga
+     ------------------------------------------------------------ */
+  function carregar() {
+    var q = new URLSearchParams(location.search);
+    empresaId = q.get('empresa');
+    projetoId = q.get('projeto');
+
+    /* Sem os dois ids esta página não sabe de quem está falando —
+       mesmo raciocínio das outras telas: é navegação inválida, não
+       estado vazio. */
+    if (!empresaId) { irPara(EMPRESAS); return; }
+    if (!projetoId) { irPara(PROJETOS + '?empresa=' + encodeURIComponent(empresaId)); return; }
+
+    /* Os links que saem daqui precisam levar o contexto junto, ou a
+       tela de destino devolve a pessoa para trás. */
+    ajustarLinks();
+
+    var botao = document.getElementById('gerarPrompt');
+    if (botao) {
+      botao.addEventListener('click', function () {
+        botao.disabled = true;
+        baixarPacote().then(function () { botao.disabled = false; },
+          function () { botao.disabled = false; });
+      });
+    }
+
+    /* Reaproveita GET /empresas — a mesma chamada das outras telas,
+       que já aplica o filtro de vínculo. Serve para duas coisas:
+       validar o caminho e pôr o nome certo no título, que hoje está
+       fixo em "Nike". */
+    chamarComRenovacao('/empresas', {}, false).then(function (r) {
+      var empresas = (r && r.empresas) || [];
+      var empresa = null;
+      for (var i = 0; i < empresas.length; i++) {
+        if (empresas[i].id === empresaId) { empresa = empresas[i]; break; }
+      }
+      if (!empresa) { irPara(EMPRESAS); return; }
+
+      var titulo = document.querySelector('.page-title');
+      if (titulo) titulo.textContent = empresa.nome;
+      document.title = empresa.nome + ' · Sobre a empresa · Plataforma de Design';
+    }, function (e) {
+      if (tratarErroFatal(e)) return;
+      /* O título continua o do protótipo, mas o botão segue
+         funcionando — quem valida o acesso de verdade é o servidor,
+         na hora de gerar o pacote. */
+    });
+  }
+
+  function ajustarLinks() {
+    var ctx = '?empresa=' + encodeURIComponent(empresaId) +
+      '&projeto=' + encodeURIComponent(projetoId);
+
+    var voltar = document.querySelector('.breadcrumb-back');
+    if (voltar) voltar.setAttribute('href', 'visao_do_projeto.html' + ctx);
+
+    var aqui = document.querySelector('.breadcrumb-link[href="Sobre_a_empresa.html"]');
+    if (aqui) aqui.setAttribute('href', 'Sobre_a_empresa.html' + ctx);
+
+    window.SobreEmpresaContexto = ctx;
+  }
+
+  carregar();
+})();

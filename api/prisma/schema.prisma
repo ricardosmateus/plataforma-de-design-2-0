@@ -1,0 +1,1199 @@
+// ============================================================
+// SCHEMA — Autenticação
+// ============================================================
+// Autenticação + o começo do módulo de empresas (22/08/2026):
+// `empresas` e `empresa_membros`, autorizadas para que a listagem
+// possa dizer a verdade sobre quem tem o quê (EMP-LIST-009).
+// Perfil de especialista e créditos continuam fora — a decisão D2
+// (créditos por usuário ou por empresa) segue destravada.
+//
+// Módulo de projetos (24/08/2026): `projetos`, sempre vinculado a
+// uma empresa (PROJ-ISO-001). Catálogo de tipo nasce só com
+// `startup` (PROJ-CRIA-006).
+//
+// Assistente de IA (25/08/2026): `ia_conversas` e `ia_mensagens`.
+// A conversa é por pessoa dentro de cada projeto (decisão A10), e
+// `fontes` guarda a procedência verificada de cada resposta
+// (IA-GARANT-003).
+//
+// Módulo de atividades (28/08/2026): `tarefas`, presa direto ao id
+// da idéia — não existe tabela `atividades` própria; a atividade É
+// a idéia (decisão A17, atividade-lista.md §0). A primeira vez que
+// alguém acessa a idéia pela tela de atividade nasce uma tarefa
+// copiando título/descrição da idéia (ATV-ACESSO-002); dali em
+// diante são registros independentes.
+//
+// Módulo de idéias (25/08/2026): `ideias`, sempre dentro de um
+// projeto (IDEIA-ISO-001). A corrente passa a ter três elos —
+// empresa → projeto → idéia — e toda rota percorre os três antes
+// de tocar em qualquer linha (IDEIA-ISO-004).
+//
+// Ações propostas pelo assistente (26/08/2026): o assistente passa a
+// poder PROPOR criar, editar ou mover uma idéia quando a pessoa pede
+// — mas nunca executa por conta própria (decisão A18,
+// IA-ACAO-001/002). A proposta viaja na própria mensagem
+// (`acao_tipo`/`acao_dados`/`acao_status`), e só vira escrita real no
+// quadro depois de um clique explícito de confirmação, que passa
+// pela MESMA validação de `ideias.ts` — o servidor não confia no que
+// o modelo propôs, confia no que o servidor confere de novo.
+//
+// Regras: Regras_de_negocio/modulos/acesso/login.md
+//         Regras_de_negocio/modulos/empresas/empresas-listagem.md §3
+//         Regras_de_negocio/modulos/projetos/projetos-listagem.md §3
+//         Regras_de_negocio/modulos/ideias/ideias-quadro.md §3
+//         Regras_de_negocio/modulos/ia/ia-assistente-conversa.md §3
+//         Regras_de_negocio/modulos/ia/ia-assistente-conhecimento.md §1.5
+// Plano:  Documentacao/Backend/PLANO_BACKEND_LOGIN.md §4
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  /* Só para `prisma migrate` — o lock consultivo de migração não
+     convive bem com a conexão EM POOL do Neon (mesmo motivo
+     documentado em scripts/migrar-teste.ts). A API continua
+     rodando inteira sobre `url` (com pooler); isto aqui não muda
+     nada em tempo de execução normal. */
+  directUrl = env("DIRECT_URL")
+}
+
+enum MotivoSuspensao {
+  violacao
+  inadimplencia
+}
+
+enum PropositoOtp {
+  login
+  cadastro
+}
+
+enum PapelMembro {
+  proprietario
+  membro
+  especialista
+}
+
+// Catálogo fechado de tipos de projeto — PROJ-CRIA-006/007. Nasce só
+// com `startup`; os demais entram um de cada vez, cada um como uma
+// migração aditiva própria, junto da tela que aquele tipo abre.
+enum TipoProjeto {
+  startup
+}
+
+// Quem escreveu a mensagem. Enum e não booleano: se um dia entrar
+// uma terceira origem (uma nota do sistema, por exemplo), ela nasce
+// nomeada em vez de virar um "não é pessoa".
+enum AutorMensagem {
+  pessoa
+  assistente
+}
+
+// O tipo de ação que o assistente propôs numa resposta (IA-ACAO-002).
+// Fechado de propósito: só os três verbos que a pessoa autorizou —
+// criar, editar, mover. Arquivar/excluir continuam fora do alcance
+// do assistente, propostos ou não (IA-ACAO-001).
+enum TipoAcaoIa {
+  criar_ideia
+  editar_ideia
+  mover_ideia
+}
+
+// O ciclo de vida de uma ação proposta. `pendente` é o único estado
+// em que a confirmação ainda pode agir — depois disso a decisão já
+// foi tomada e não volta atrás por engano de um segundo clique
+// (IA-ACAO-006).
+enum StatusAcaoIa {
+  nenhuma
+  pendente
+  confirmada
+  descartada
+}
+
+// As três colunas do quadro de idéias (IDEIA-QUADRO-001). É enum, e
+// não texto livre, porque as colunas são fixas: o banco precisa
+// recusar um quarto valor em vez de aceitá-lo e quebrar a tela.
+enum StatusIdeia {
+  ideias
+  andamento
+  finalizado
+}
+
+// O ciclo de uma tarefa dentro da atividade (ATV-TAR-CONCLUIR-001).
+// Só dois estados — nascer "pendente" é a única forma de entrada
+// (ATV-TAR-CRIA-003), e "concluida" sempre pode voltar a
+// "pendente" (ATV-TAR-CONCLUIR-002).
+enum StatusTarefa {
+  pendente
+  concluida
+}
+
+// O que acontece quando a pessoa acessa a tarefa (BOARD-ACESSO-001).
+// Catálogo fechado, e o roteamento olha ESTE campo — nunca mais o
+// texto do título, que é o defeito que `IDEIA-MOV-015` já teve que
+// corrigir em outro lugar do produto.
+//
+// Hoje os dois tipos abrem uma tela local. O catálogo existe para
+// crescer: um tipo pode, no futuro, disparar uma ferramenta externa
+// que traz o conteúdo pronto em vez de abrir um quadro em branco
+// (board-lista.md §5). Por isso o campo se chama `tipo` e não
+// `tela`: ele diz o que a tarefa É, e a tela é consequência.
+//
+// `sem_tela` foi retirado em 29/08/2026 (decisão A31): toda tarefa
+// tem um espaço de trabalho, e `pesquisa` é o padrão.
+enum TipoTarefa {
+  pesquisa
+  matriz_csd
+}
+
+// ------------------------------------------------------------
+// Uma pessoa = uma conta = um e-mail (ACS-CONTA-001).
+// A conta NÃO carrega tipo: as capacidades virão de vínculos com
+// empresas, que ainda não existem neste escopo (ACS-CONTA-002).
+// CPF não vive aqui — sai só no primeiro recebimento do
+// especialista (ACS-CONTA-008, decisão D5).
+// ------------------------------------------------------------
+model Usuario {
+  id              String    @id @default(uuid()) @db.Uuid
+  nome            String
+  email           String    @unique              // sempre minúsculo
+  senhaHash       String    @map("senha_hash")   // argon2id
+  emailVerificado Boolean   @default(false) @map("email_verificado")
+
+  suspensoEm      DateTime?        @map("suspenso_em")
+  suspensaoMotivo MotivoSuspensao? @map("suspensao_motivo")
+
+  // Aceite dos termos: guardar QUANDO e QUAL versão, senão não há
+  // como demonstrar depois o que a pessoa aceitou (CAD-ACEITE-002).
+  termosVersao    String?   @map("termos_versao")
+  termosAceitosEm DateTime? @map("termos_aceitos_em")
+
+  // Saldo em MICRO DE REAL. É CACHE da soma de creditos_lancamentos,
+  // gravado na mesma transação do lançamento — nunca sozinho.
+  // Ver src/creditos/razao.ts.
+  saldoMicros     Int       @default(0) @map("saldo_micros")
+
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+  atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
+
+  sessoes      Sessao[]
+  codigos      CodigoOtp[]
+  dispositivos DispositivoConfiavel[]
+  tentativas   TentativaLogin[]
+  vinculos     EmpresaMembro[]
+  empresasCriadas Empresa[]    @relation("criador")
+  projetosCriados Projeto[]    @relation("criadorProjeto")
+  ideiasCriadas   Ideia[]      @relation("criadorIdeia")
+  conversasIa     IaConversa[]
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// EMPRESA — o contêiner de projetos. Regras em
+// empresas-listagem.md §3.
+//
+// `arquivadoEm` existe por causa da decisão E1: arquivar tira a
+// empresa da listagem de verdade, e não apenas coloca um rótulo
+// nela (EMP-LIST-011).
+// ------------------------------------------------------------
+model Empresa {
+  id          String    @id @default(uuid()) @db.Uuid
+  nome        String
+  // Nome normalizado (minúsculo, sem acento), gravado pelo servidor —
+  // nunca recebido do cliente. É sobre esta coluna que a unicidade de
+  // nome por conta (EMP-CRIA-002) é verificada.
+  //
+  // A restrição em si é um ÍNDICE ÚNICO PARCIAL — único por
+  // (criado_por, nome_busca) somente WHERE arquivado_em IS NULL — e o
+  // Prisma Schema Language não tem sintaxe para isso. Fica só na
+  // migração hand-written, junto de empresa_membros_ativo_unico, que
+  // segue o mesmo padrão.
+  nomeBusca   String    @map("nome_busca")
+  descricao   String?
+  logotipoUrl String?   @map("logotipo_url")
+  fonte       String?   // identidade visual — EMP-LIST-004
+  cor         String?
+
+  criadoPor   String    @map("criado_por") @db.Uuid
+  criador     Usuario   @relation("criador", fields: [criadoPor], references: [id])
+
+  arquivadoEm  DateTime? @map("arquivado_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  membros  EmpresaMembro[]
+  projetos Projeto[]
+  sinteses SinteseTema[]
+
+  @@map("empresas")
+}
+
+// ------------------------------------------------------------
+// PROJETO — vive sempre dentro de uma empresa. `empresaId` é
+// obrigatório e nunca muda depois de criado (PROJ-ISO-001): não
+// existe projeto solto nem projeto que troca de empresa.
+//
+// Sem `nome`/`descricao` próprios (decisão P1, projetos-listagem.md
+// §4) — o rótulo exibido vem do catálogo de `tipo`, resolvido pelo
+// servidor. Ver projetos-criacao.md §3.
+// ------------------------------------------------------------
+model Projeto {
+  id        String      @id @default(uuid()) @db.Uuid
+  empresaId String      @map("empresa_id") @db.Uuid
+  tipo      TipoProjeto
+
+  criadoPor String    @map("criado_por") @db.Uuid
+  criador   Usuario   @relation("criadorProjeto", fields: [criadoPor], references: [id])
+
+  arquivadoEm  DateTime? @map("arquivado_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  ideias  Ideia[]
+  conversasIa IaConversa[]
+
+  // Toda listagem filtra por empresa + não-arquivado (PROJ-LIST-001).
+  @@index([empresaId, arquivadoEm])
+  @@map("projetos")
+}
+
+// ------------------------------------------------------------
+// IDÉIA — vive sempre dentro de um projeto. `projetoId` é
+// obrigatório e imutável (IDEIA-ISO-001).
+//
+// Diferente de `empresas`, NÃO há unicidade de título: duas idéias
+// do mesmo projeto podem se chamar igual (IDEIA-CRIA-007, decisão
+// I10), porque repetir é legítimo em brainstorm. A consequência
+// está registrada em IDEIA-MOV-015 e vale para todo o código:
+// nada identifica uma idéia por título — só por id.
+//
+// `importancia` aceita 0 = "sem prioridade definida" (IDEIA-CRIA-002).
+// ------------------------------------------------------------
+model Ideia {
+  id        String      @id @default(uuid()) @db.Uuid
+  projetoId String      @map("projeto_id") @db.Uuid
+
+  titulo      String
+  descricao   String
+  importancia Int         @default(0)
+  status      StatusIdeia @default(ideias)
+
+  // Taxonomia (semana 1: grafo de conhecimento)
+  // Preenchidos ao entrar em "finalizado", limpados ao sair
+  assunto String?        // Categoria principal (pasta) — 1 por ideia
+  tags    String[] @default([])  // Categorias secundárias (arestas) — N por ideia
+
+  // Decidida por uma pessoa, não pela IA. A classificação automática
+  // não sobrescreve o que está marcado aqui; sair de "finalizado"
+  // zera junto com assunto e tags.
+  taxonomiaManual Boolean @default(false) @map("taxonomia_manual")
+
+  criadoPor String    @map("criado_por") @db.Uuid
+  criador   Usuario   @relation("criadorIdeia", fields: [criadoPor], references: [id])
+
+  arquivadoEm  DateTime? @map("arquivado_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  projeto  Projeto            @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  tarefas  Tarefa[]
+  recortes RecorteTaxonomia[]
+
+  // Toda listagem filtra por projeto + não-arquivado (IDEIA-QUADRO-004).
+  @@index([projetoId, arquivadoEm])
+  @@map("ideias")
+}
+
+// ------------------------------------------------------------
+// RECORTE DE TAXONOMIA — o texto da idéia partido por tema
+// ------------------------------------------------------------
+// Regras: Skills/categorizacao-taxonomia.skill
+//
+// A classificação diz que uma idéia finalizada fala de "Mercado,
+// Estratégia e Concorrentes". Isso é um rótulo, e rótulo não
+// responde a pergunta seguinte, que é a que a pessoa faz: "o que
+// exatamente esta idéia diz sobre concorrentes?". Ler a atividade
+// inteira de novo para achar os dois parágrafos que interessam é o
+// trabalho que a classificação deveria ter poupado.
+//
+// Um recorte é UM BLOCO DE TEXTO QUE JÁ EXISTE (um registro de um
+// quadro) apontado para uma categoria. O texto não é reescrito nem
+// resumido: é copiado do registro de origem. Por isso `registroId`
+// não é enfeite de auditoria — é a prova de que o trecho é real, e
+// é o que permite devolver a pessoa ao quadro exato onde ela edita.
+//
+// Um bloco pertence a NO MÁXIMO UMA categoria. Essa restrição é a
+// razão de a tabela existir em vez de um Json solto: é o banco, e
+// não a boa vontade do modelo, que impede o mesmo parágrafo de
+// aparecer em "Mercado" e em "Concorrentes" ao mesmo tempo — que é
+// exatamente o "não misturar os temas" que a tela promete.
+// ------------------------------------------------------------
+model RecorteTaxonomia {
+  id      String @id @default(uuid()) @db.Uuid
+  ideiaId String @map("ideia_id") @db.Uuid
+
+  // Sempre uma das categorias de taxonomia-vocabulario.ts, e sempre
+  // uma que a idéia realmente tem em `assunto`/`tags`: tema que a
+  // classificação não atribuiu não ganha recorte.
+  categoria String
+
+  // Cópia do texto do registro no momento da segmentação. Cópia, e
+  // não `include`, porque o registro pode ser editado ou apagado
+  // depois — e um recorte que muda sozinho debaixo de quem está
+  // lendo é pior do que um recorte com data.
+  texto String
+
+  // Origem. `tarefaId` é o que monta o link do board no fim do
+  // trecho; os outros dois existem para saber de onde o texto veio
+  // quando o quadro for reorganizado.
+  tarefaId   String  @map("tarefa_id") @db.Uuid
+  quadroId   String  @map("quadro_id") @db.Uuid
+  registroId String  @map("registro_id") @db.Uuid
+
+  // Ordem de leitura dentro da categoria: a mesma em que os blocos
+  // aparecem no quadro. Sem ela a página remontaria o texto numa
+  // ordem diferente a cada carga.
+  ordem Int
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  ideia Ideia @relation(fields: [ideiaId], references: [id], onDelete: Cascade)
+  /* O link do rodapé é para o quadro DESTA tarefa. Tarefa apagada
+     com recorte vivo = um "editar no quadro" que leva a lugar
+     nenhum, e o texto continuaria na página do tema como se ainda
+     houvesse onde corrigi-lo. */
+  tarefa Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  // Um registro cai em uma categoria só. O banco recusa a mistura.
+  @@unique([registroId])
+  // A página do tema pergunta sempre "desta categoria, o que existe";
+  // a limpeza pergunta sempre "desta idéia, apague tudo".
+  @@index([categoria])
+  @@index([ideiaId])
+  @@map("recortes_taxonomia")
+}
+
+/* ============================================================
+   SinteseTema — leitura guiada, gráficos e lacunas de UM tema
+   ============================================================
+   Documentacao/enriquecimento-tema.md
+
+   Uma linha por (empresa, categoria) — não por idéia. A síntese é
+   do TEMA inteiro ("tudo que esta empresa já registrou sobre
+   Mercado"), então soma recortes de idéias diferentes; não faz
+   sentido uma síntese por idéia, do mesmo jeito que não faz sentido
+   uma pasta por idéia.
+
+   Cada fase (leitura, gráficos, lacunas) tem seu próprio status e
+   seu próprio fingerprint, e é gravada em colunas separadas, não em
+   linhas separadas: elas são independentes na FALHA (gráficos vazio
+   nunca esconde uma leitura que já funcionava) mas são a MESMA
+   síntese de um mesmo tema, e um `upsert` por (empresaId, categoria)
+   é mais simples do que coordenar três tabelas.
+   ============================================================ */
+model SinteseTema {
+  id        String @id @default(uuid()) @db.Uuid
+  empresaId String @map("empresa_id") @db.Uuid
+
+  categoria String
+
+  // Fingerprint dos recortes usados na ÚLTIMA geração de cada fase —
+  // hash da lista ordenada de ids de recorte daquele (empresa,
+  // categoria). Comparado antes de reprocessar: como recortes.ts
+  // recria os recortes por inteiro (deleteMany + createMany) a cada
+  // segmentação, o conjunto de ids muda sempre que há algo novo para
+  // reler, mesmo que o texto final seja idêntico — e não muda
+  // quando uma idéia sem relação nenhuma finaliza. Sem isto, toda
+  // finalização na empresa reprocessaria toda síntese de toda
+  // categoria, gastando crédito à toa.
+  fingerprintLeitura  String? @map("fingerprint_leitura")
+  fingerprintGraficos String? @map("fingerprint_graficos")
+  fingerprintLacunas  String? @map("fingerprint_lacunas")
+
+  // Fase 1 — leitura guiada. Ver api/src/ia/enriquecimento-leitura.ts
+  // para o contrato exato da resposta do modelo.
+  leitura       Json?
+  statusLeitura String @default("pendente") @map("status_leitura")
+  // "pendente" | "ok" | "falhou"
+
+  // Fase 2 — gráficos. "pendente" também é o estado de um tema sem
+  // nada extraível em gráfico — não é erro, é o resultado comum.
+  graficos       Json?
+  statusGraficos String @default("pendente") @map("status_graficos")
+
+  // Fase 3 — lacunas: sugestões de tópicos ainda não cobertos,
+  // sempre dentro do escopo desta categoria (nunca de outra).
+  lacunas       Json?
+  statusLacunas String @default("pendente") @map("status_lacunas")
+
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  // Uma síntese por tema da empresa — nunca duas linhas concorrentes
+  // para "Mercado" da mesma empresa. O `upsert` de gravação depende
+  // desta chave composta.
+  @@unique([empresaId, categoria])
+  @@map("sintese_tema")
+}
+
+// ------------------------------------------------------------
+// TAREFA — vive sempre dentro de uma idéia (a "atividade",
+// atividade-lista.md §0). `ideiaId` é obrigatório e nunca muda.
+//
+// Mesmos limites de campo de idéia (ATV-TAR-CRIA-001, decisão A18):
+// 60/280 caracteres. `ordem` é um inteiro simples, renumerado a
+// cada reordenação (ATV-TAR-ORDEM-001) — a lista é pequena o
+// bastante para isso ser barato, mesmo raciocínio do resto do
+// projeto (sem indexação fracionária para um problema pequeno).
+// ------------------------------------------------------------
+model Tarefa {
+  id      String @id @default(uuid()) @db.Uuid
+  ideiaId String @map("ideia_id") @db.Uuid
+
+  titulo    String
+  descricao String
+  status    StatusTarefa @default(pendente)
+  tipo      TipoTarefa   @default(pesquisa)
+  ordem     Int
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  ideia    Ideia              @relation(fields: [ideiaId], references: [id], onDelete: Cascade)
+  quadros  Quadro[]
+  recortes RecorteTaxonomia[]
+
+  // Toda listagem busca por idéia, sempre em ordem de prioridade
+  // (ATV-TAR-ORDEM-001).
+  @@index([ideiaId, ordem])
+  @@map("tarefas")
+}
+
+// ------------------------------------------------------------
+// O QUADRO DE TRABALHO DE UMA TAREFA — board.html
+// ------------------------------------------------------------
+// Regras: Regras_de_negocio/modulos/atividades/board-lista.md
+//
+// O quadro é da TAREFA, não da atividade (decisão A24): quem abre
+// "Pesquisar sobre Tuk Tuk" vê o quadro daquela pesquisa, não um
+// espaço compartilhado com as outras tarefas da mesma idéia.
+//
+// Três níveis — quadro > coluna > registro — em vez de um Json
+// só. O Json seria menos código hoje e cobraria caro depois: o
+// registro é a unidade que a pessoa move, edita e (um dia) vai
+// querer buscar entre tarefas, e nada disso se consulta dentro de
+// um blob.
+// ------------------------------------------------------------
+/* Um quadro de post-its e um quadro de documento têm regras
+   diferentes de conteúdo, não só de aparência: o post-it é uma
+   anotação curta que cabe num cartão, e o documento é um texto que se
+   lê corrido, com referências no fim. Espremer o segundo no formato do
+   primeiro produzia "Resposta (1/4)" — quatro cartões que ninguém lê
+   como texto e ninguém usa como anotação.
+
+   O tipo nasce com default `postits` para que todo quadro que já
+   existe continue exatamente como está. */
+enum QuadroTipo {
+  postits
+  documento
+}
+
+model Quadro {
+  id       String @id @default(uuid()) @db.Uuid
+  tarefaId String @map("tarefa_id") @db.Uuid
+
+  // Vazio é válido: o protótipo já permite quadro sem título, e a
+  // interface trata isso como decisão de layout, não como falta.
+  titulo String @default("")
+  ordem  Int
+
+  tipo QuadroTipo @default(postits)
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  tarefa  Tarefa        @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+  colunas QuadroColuna[]
+
+  @@index([tarefaId, ordem])
+  @@map("quadros")
+}
+
+model QuadroColuna {
+  id       String @id @default(uuid()) @db.Uuid
+  quadroId String @map("quadro_id") @db.Uuid
+
+  titulo String @default("")
+  ordem  Int
+
+  quadro    Quadro     @relation(fields: [quadroId], references: [id], onDelete: Cascade)
+  registros Registro[]
+
+  @@index([quadroId, ordem])
+  @@map("quadro_colunas")
+}
+
+model Registro {
+  id      String @id @default(uuid()) @db.Uuid
+  colunaId String @map("coluna_id") @db.Uuid
+
+  titulo String
+  // Diferente do título, a descrição pode faltar: um post-it de uma
+  // linha é um registro legítimo.
+  descricao String @default("")
+  ordem     Int
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  coluna QuadroColuna @relation(fields: [colunaId], references: [id], onDelete: Cascade)
+
+  @@index([colunaId, ordem])
+  @@map("registros")
+}
+
+// ------------------------------------------------------------
+// VÍNCULO — é ele, e não um campo em `users`, que define o que a
+// pessoa pode fazer (ACS-CONTA-002, decisão D1). A mesma conta é
+// proprietária de uma empresa e especialista contratada em outra.
+//
+// `revogadoEm` em vez de DELETE: o histórico de quem teve acesso a
+// quê é a única forma de responder "quem viu esse projeto?" depois.
+// `expiraEm` cobre contrato com prazo.
+// ------------------------------------------------------------
+model EmpresaMembro {
+  id        String      @id @default(uuid()) @db.Uuid
+  empresaId String      @map("empresa_id") @db.Uuid
+  usuarioId String      @map("user_id") @db.Uuid
+  papel     PapelMembro
+
+  convidadoPor String? @map("convidado_por") @db.Uuid
+  expiraEm     DateTime? @map("expira_em")
+
+  criadoEm   DateTime  @default(now()) @map("criado_em")
+  revogadoEm DateTime? @map("revogado_em")
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, revogadoEm])
+  @@index([empresaId, revogadoEm])
+  @@map("empresa_membros")
+}
+
+// ------------------------------------------------------------
+// Refresh tokens ativos. Guardamos só o hash: se o banco vazar,
+// os tokens não são utilizáveis.
+// "Lembrar de mim" controla o tempo de vida (ACS-LOGIN-008).
+// ------------------------------------------------------------
+model Sessao {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuarioId        String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  lembrarDeMim     Boolean   @default(false) @map("lembrar_de_mim")
+  expiraEm         DateTime  @map("expira_em")
+  criadoEm         DateTime  @default(now()) @map("criado_em")
+  revogadoEm       DateTime? @map("revogado_em")
+
+  ip               String?
+  agente           String?   @map("user_agent")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([expiraEm])
+  @@map("sessions")
+}
+
+// ------------------------------------------------------------
+// Códigos de verificação. O código NUNCA é gravado em texto puro
+// (plano §4). Usamos HMAC com um segredo do servidor, não hash
+// simples: seis dígitos são só um milhão de combinações, e um
+// hash rápido cairia em segundos se o banco vazasse. Sem o
+// segredo, que não vive no banco, o ataque offline não anda.
+// ------------------------------------------------------------
+model CodigoOtp {
+  id         String       @id @default(uuid()) @db.Uuid
+  usuarioId  String       @map("user_id") @db.Uuid
+  proposito  PropositoOtp
+  codigoHash String       @map("codigo_hash")
+  expiraEm   DateTime     @map("expira_em")
+  tentativas Int          @default(0)
+  usadoEm    DateTime?    @map("usado_em")
+  criadoEm   DateTime     @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, proposito])
+  @@index([expiraEm])
+  @@map("otp_codes")
+}
+
+// ------------------------------------------------------------
+// Dispositivos reconhecidos: é o que dispensa o código a cada
+// login (ACS-LOGIN-002 e 011). O token é aleatório e guardado
+// hasheado; o cookie carrega o valor cru.
+// ------------------------------------------------------------
+model DispositivoConfiavel {
+  id          String    @id @default(uuid()) @db.Uuid
+  usuarioId   String    @map("user_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  apelido     String?
+  expiraEm    DateTime  @map("expira_em")
+  ultimoUsoEm DateTime  @default(now()) @map("ultimo_uso_em")
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("dispositivos_confiaveis")
+}
+
+// ------------------------------------------------------------
+// Auditoria de tentativas. Alimenta o limite por e-mail que
+// produz o 429 e o alerta "Muitas tentativas" (ACS-LOGIN-005).
+// usuarioId é nulo quando a tentativa usou e-mail inexistente —
+// é justamente aí que mora o ataque de enumeração.
+// ------------------------------------------------------------
+model TentativaLogin {
+  id           String   @id @default(uuid()) @db.Uuid
+  usuarioId    String?  @map("user_id") @db.Uuid
+  emailTentado String   @map("email_tentado")
+  sucesso      Boolean
+  ip           String?
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([emailTentado, criadoEm])
+  @@index([ip, criadoEm])
+  @@map("login_attempts")
+}
+
+
+// ------------------------------------------------------------
+// CONVERSA COM O ASSISTENTE — uma por pessoa, por projeto
+// (decisão A10, IA-CONV-001).
+//
+// Privada: ninguém lê a conversa de outra pessoa, nem o proprietário
+// da empresa (IA-CONV-003). A conversa carrega o raciocínio em
+// construção de quem pergunta, e o especialista é alguém de fora.
+// ------------------------------------------------------------
+model IaConversa {
+  id        String @id @default(uuid()) @db.Uuid
+  projetoId String @map("projeto_id") @db.Uuid
+  usuarioId String @map("usuario_id") @db.Uuid
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  projeto  Projeto      @relation(fields: [projetoId], references: [id], onDelete: Cascade)
+  usuario  Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagens IaMensagem[]
+
+  @@unique([projetoId, usuarioId])
+  @@map("ia_conversas")
+}
+
+// ------------------------------------------------------------
+// MENSAGEM — pergunta da pessoa ou resposta do assistente.
+//
+// `fontes` guarda a procedência COMO FOI VERIFICADA no momento da
+// resposta (IA-GARANT-003). Se a idéia sair de `Finalizado` depois,
+// a mensagem antiga continua registrando o que valia quando foi
+// dita: reescrever o passado apagaria a única evidência de que a
+// regra chegou a ser aplicada.
+// ------------------------------------------------------------
+model IaMensagem {
+  id         String        @id @default(uuid()) @db.Uuid
+  conversaId String        @map("conversa_id") @db.Uuid
+  autor      AutorMensagem
+  texto      String
+
+  // [{ ideiaId, categoria: 'validada' | 'hipotese' }] — só em
+  // mensagens do assistente.
+  fontes Json?
+
+  // true quando a resposta saiu sem nenhuma idéia de `Finalizado`
+  // por trás (IA-VAZIO-001). Guardado, e não recalculado depois,
+  // pelo mesmo motivo de `fontes`.
+  semVerdadeValidada Boolean @default(false) @map("sem_verdade_validada")
+
+  // ---------- Ação proposta (IA-ACAO) — só em mensagens do
+  // assistente, e só quando a pessoa pediu explicitamente para
+  // criar, editar ou mover uma idéia (IA-ACAO-003). `acaoDados` é o
+  // que o MODELO propôs — dado não confiável até a confirmação
+  // repetir a mesma validação de `ideias.ts` (IA-ACAO-005).
+  acaoTipo    TipoAcaoIa?  @map("acao_tipo")
+  acaoDados   Json?        @map("acao_dados")
+  acaoStatus  StatusAcaoIa @default(nenhuma) @map("acao_status")
+  // Preenchido só depois de confirmada: a idéia criada, ou a idéia
+  // editada/movida. É o que a tela usa para atualizar o quadro sem
+  // recarregar tudo.
+  acaoIdeiaId String?      @map("acao_ideia_id") @db.Uuid
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  conversa IaConversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+
+  @@index([conversaId, criadoEm])
+  @@map("ia_mensagens")
+}
+
+// ------------------------------------------------------------
+// CONSUMO DE IA — quanto cada chamada custou
+// Planejamento: planejamento-creditos-e-pagamento.md §4.3, Fase 0
+//
+// Nesta fase a tabela só REGISTRA: nada é cobrado de ninguém, e não
+// existe saldo ainda. O objetivo é sair do palpite — depois de uma
+// semana de uso real, dá para saber quanto custa de verdade uma
+// pergunta e uma classificação, e só então decidir preço, mínimo de
+// recarga e se 5% dão conta.
+//
+// SEM CHAVE ESTRANGEIRA, de propósito. Registro financeiro precisa
+// SOBREVIVER ao que ele descreve: apagar um usuário não pode apagar
+// a prova de quanto se gastou com ele. Por isso os ids ficam como
+// colunas soltas, não como relações em cascata.
+//
+// Unidades (ver src/creditos/dinheiro.ts):
+//   custoUsdMicros    micro-dólar  (milionésimo de dólar)
+//   custo/comissao/total  micro de real (milionésimo de real)
+//   cotacaoMilesimos  milésimos de real por dólar (R$ 5,42 -> 5420)
+// Micro, e não centavo, porque uma classificação custa MENOS de um
+// centavo — em centavos ela viraria zero ou seria arredondada para
+// mil por cento do custo real.
+// ------------------------------------------------------------
+enum TipoConsumoIa {
+  assistente     // pergunta no painel lateral
+  classificacao  // taxonomia automática da idéia
+  sintese_tema   // enriquecimento de um tema (leitura guiada, gráficos, lacunas)
+}
+
+enum ResultadoConsumoIa {
+  entregue    // a resposta chegou ao usuário
+  descartado  // pagamos, mas a resposta não passou na verificação
+}
+
+model ConsumoIa {
+  id String @id @default(uuid()) @db.Uuid
+
+  usuarioId String? @map("user_id") @db.Uuid
+  empresaId String? @map("empresa_id") @db.Uuid
+  projetoId String? @map("projeto_id") @db.Uuid
+  ideiaId   String? @map("ideia_id") @db.Uuid
+
+  tipo      TipoConsumoIa
+  resultado ResultadoConsumoIa
+  modelo    String
+
+  tokensEntrada      Int @map("tokens_entrada")
+  tokensSaida        Int @map("tokens_saida")
+  tokensCacheEscrita Int @default(0) @map("tokens_cache_escrita")
+  tokensCacheLeitura Int @default(0) @map("tokens_cache_leitura")
+
+  // Custo de origem, na moeda do provedor. É o dado mais confiável
+  // da linha: se a cotação usada estiver errada, o real se recalcula
+  // a partir daqui. O contrário não é possível.
+  custoUsdMicros   Int? @map("custo_usd_micros")
+  cotacaoMilesimos Int? @map("cotacao_milesimos")
+
+  // As três partes SEPARADAS — DIN-005. Guardar só o total impede
+  // responder depois "quanto paguei ao provedor?" e "quanto lucrei?".
+  custoMicros    Int? @map("custo_micros")
+  comissaoMicros Int? @map("comissao_micros")
+  totalMicros    Int? @map("total_micros")
+
+  // Modelo fora da tabela de preços: tokens ficam gravados, custo
+  // fica nulo. Um palpite entraria na razão com cara de fato.
+  precoDesconhecido Boolean @default(false) @map("preco_desconhecido")
+
+  // Se este consumo seria cobrável quando houver saldo (Fase 2).
+  // `descartado` nasce falso: cobrar por resposta que o próprio
+  // servidor recusou é cobrar por nada (IA-CUSTO-003).
+  cobravel Boolean @default(true)
+
+  // request-id da resposta do provedor, para conciliar com a fatura.
+  requisicaoId String? @map("requisicao_id")
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  @@index([usuarioId, criadoEm])
+  @@index([criadoEm])
+  @@map("consumos_ia")
+}
+
+// ------------------------------------------------------------
+// CRÉDITOS — a razão (Fase 1)
+// Planejamento: planejamento-creditos-e-pagamento.md §4.1
+//
+// APPEND-ONLY. Nunca sofre UPDATE, nunca sofre DELETE. Todo
+// movimento é uma linha nova (DIN-002).
+//
+// `Usuario.saldoMicros` é CACHE, gravado na MESMA transação do
+// lançamento. A verdade é a soma desta tabela; o saldo existe só
+// para não somar o histórico inteiro a cada leitura de tela. Uma
+// rotina de conferência compara os dois e grita se divergirem —
+// saldo sem histórico é um número sem defesa.
+//
+// Unidade: MICRO DE REAL (milionésimo). Ver src/creditos/dinheiro.ts
+// para por que não é centavo.
+// ------------------------------------------------------------
+enum TipoLancamento {
+  recarga    // entrou dinheiro (Pix, ou ajuste manual nesta fase)
+  consumo    // saiu: uso de IA já liquidado
+  reserva    // saiu: valor retido antes de uma chamada (Fase 2)
+  liberacao  // volta: a reserva que não virou consumo
+  estorno    // volta: devolução de um consumo já lançado
+  ajuste     // correção manual, sempre com motivo escrito
+}
+
+enum OrigemLancamento {
+  cobranca_pix
+  uso_ia
+  contratacao
+  manual
+  pesquisa
+}
+
+model CreditoLancamento {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Sem chave estrangeira, mesmo motivo de ConsumoIa: registro
+  // financeiro precisa sobreviver ao que descreve.
+  usuarioId String @map("user_id") @db.Uuid
+
+  tipo   TipoLancamento
+  origem OrigemLancamento
+
+  // Com sinal: positivo entra, negativo sai. Um único campo com
+  // sinal, e não duas colunas débito/crédito, porque a soma da
+  // coluna TEM que dar o saldo — é essa igualdade que a conferência
+  // verifica.
+  valorMicros Int @map("valor_micros")
+
+  // Fotografia do saldo depois deste lançamento. Redundante de
+  // propósito: permite auditar a sequência sem recalcular a soma
+  // inteira, e denuncia gravação feita fora de transação.
+  saldoDepois Int @map("saldo_depois")
+
+  // Aponta para a cobrança / o consumo que gerou o lançamento.
+  origemId String? @map("origem_id") @db.Uuid
+
+  // O que a pessoa lê no extrato. Escrito pelo servidor.
+  descricao String
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  @@index([usuarioId, criadoEm])
+  // A trava do DIN-004: uma origem só pode gerar UM lançamento de
+  // cada tipo. Webhook de pagamento reenviado — o que é normal e
+  // esperado — não credita duas vezes.
+  @@unique([tipo, origemId], name: "lancamento_unico_por_origem")
+  @@map("creditos_lancamentos")
+}
+
+// ------------------------------------------------------------
+// COBRANÇAS PIX — Fase 3
+// Planejamento: planejamento-creditos-e-pagamento.md §4.2
+//
+// O que foi PEDIDO ao PSP (Payment Service Provider), não o
+// lançamento em si — o crédito de verdade só nasce quando
+// `rotas/webhooks.ts` confirma o pagamento e chama `razao.lancar()`
+// com tipo 'recarga'. Esta tabela e `creditos_lancamentos` contam a
+// mesma história de dois ângulos: uma é "o que foi cobrado", a
+// outra é "o que entrou na conta".
+//
+// `valorMicros`, não `valor_centavos` como o planejamento original
+// dizia: DIN-001 (`dinheiro.ts`) exige que TUDO fique em micro de
+// real, sem exceção — inclusive aqui, mesmo o valor de uma recarga
+// sendo sempre "redondo" em reais. Duas unidades de conta no mesmo
+// módulo é uma conversão a mais para errar.
+// ------------------------------------------------------------
+enum StatusCobrancaPix {
+  aguardando
+  pago
+  expirado
+  cancelado
+}
+
+model CobrancaPix {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Sem chave estrangeira, mesmo motivo de ConsumoIa e
+  // CreditoLancamento: registro financeiro sobrevive ao que descreve.
+  usuarioId String @map("user_id") @db.Uuid
+
+  // Identificador Pix — nossa chave de idempotência com o PSP, e o
+  // mesmo valor usado como `origemId` do lançamento tipo 'recarga'
+  // em `creditos_lancamentos` (a trava do DIN-004 vive lá).
+  txid String @unique
+
+  valorMicros Int @map("valor_micros")
+
+  // Quanto o PSP reteve como taxa da transação (ex.: comissão do
+  // Mercado Pago sobre o Pix recebido) — nulo quando o PSP não
+  // reporta taxa (sandbox) ou antes de confirmar o pagamento. O
+  // valor de fato creditado ao usuário é `valorMicros - taxaMicros`,
+  // nunca `valorMicros` sozinho: cobrar do usuário o valor cheio
+  // quando a plataforma recebeu menos seria um passivo silencioso.
+  taxaMicros Int? @map("taxa_micros")
+
+  status StatusCobrancaPix @default(aguardando)
+
+  // 'sandbox' nesta fase; troca por 'efi' | 'inter' | ... na Fase 4,
+  // por configuração — nunca por reescrever este módulo (§3, C3).
+  psp String
+
+  // O payload EMV completo — o "copia e cola". Gerado uma vez, na
+  // criação, e nunca recalculado: um BR Code reemitido com o mesmo
+  // txid mas outro conteúdo confundiria quem já escaneou o primeiro.
+  brcode String
+
+  expiraEm DateTime  @map("expira_em")
+  pagoEm   DateTime? @map("pago_em")
+
+  // Id que o Banco Central dá ao Pix pago de verdade. Nulo até
+  // `status = pago`. Único quando presente — o mesmo pagamento não
+  // pode confirmar duas cobranças diferentes.
+  e2eId String? @unique @map("e2e_id")
+
+  // O aviso do PSP como chegou, cru. É o que salva numa disputa:
+  // "o que exatamente o banco mandou?" precisa ter resposta meses
+  // depois — e reconstruir isso a partir de colunas já
+  // interpretadas não é possível.
+  retornoBruto Json? @map("retorno_bruto")
+
+  criadoEm    DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@index([usuarioId, criadoEm])
+  @@map("cobrancas_pix")
+}
+
+// ------------------------------------------------------------
+// PESQUISA DE CONCORRENTES — Fase 1 do módulo
+// Planejamento: planejamento-pesquisa-concorrentes.md §5
+//
+// A investigação é uma CONVERSA COM ESTADO, não uma sequência de
+// consultas soltas: "o concorrente 01" só significa alguma coisa
+// porque uma consulta anterior o descobriu. É esse estado que estas
+// tabelas guardam — e é ele que `pesquisa/roteador.ts` recebe para
+// resolver a referência antes de gastar qualquer coisa (PES-004).
+// ------------------------------------------------------------
+
+// Catálogo FECHADO, e todo o código de custo olha este campo, nunca
+// o texto da pergunta (PES-001). A diferença entre o primeiro e o
+// último é de cerca de cem vezes no preço.
+enum NivelPesquisa {
+  conhecimento // o modelo já sabe — não sai chamada para fora
+  busca        // fato atual, com fonte
+  lugares      // geográfico e estruturado
+  navegacao    // entrar num site específico — fora da v1 (PES-005)
+}
+
+// PES-008, que é DIN-006 outra vez: "não achei nada" e "a busca
+// falhou" são resultados DIFERENTES. Guardados diferentes aqui
+// porque é daqui que a tela tira o texto — e um disfarce faz o
+// concorrente parecer inexistente.
+enum ResultadoConsulta {
+  entregue
+  vazio
+  falhou
+}
+
+enum TipoEntidadePesquisa {
+  empresa
+  unidade
+  perfil
+}
+
+model PesquisaSessao {
+  id String @id @default(uuid()) @db.Uuid
+
+  usuarioId String  @map("user_id") @db.Uuid
+  empresaId String? @map("empresa_id") @db.Uuid
+  projetoId String? @map("projeto_id") @db.Uuid
+
+  // A tarefa que abriu esta sessão, quando veio de uma. O comentário
+  // de `TipoTarefa` já previa isto: um tipo que dispara ferramenta
+  // externa em vez de abrir quadro em branco.
+  tarefaId String? @map("tarefa_id") @db.Uuid
+
+  titulo String
+
+  // Teto de gasto da investigação inteira (PES-007). Nulo = sem
+  // teto próprio; vale só o saldo do usuário. Em micros, DIN-001.
+  tetoMicros Int? @map("teto_micros")
+
+  // De quem a conversa está tratando AGORA. É o que resolve "ele" na
+  // pergunta seguinte — sem isso a consulta sai sem sujeito e o
+  // provedor responde sobre qualquer um. Aponta para
+  // `pesquisa_entidades`, sem chave estrangeira pelo mesmo motivo dos
+  // registros financeiros: a sessão sobrevive à entidade.
+  focoId String? @map("foco_id") @db.Uuid
+
+  criadoEm   DateTime  @default(now()) @map("criado_em")
+  encerradoEm DateTime? @map("encerrado_em")
+
+  consultas PesquisaConsulta[]
+  entidades PesquisaEntidade[]
+
+  @@index([usuarioId, criadoEm])
+  @@map("pesquisa_sessoes")
+}
+
+model PesquisaConsulta {
+  id String @id @default(uuid()) @db.Uuid
+
+  sessaoId String         @map("sessao_id") @db.Uuid
+  sessao   PesquisaSessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  nivel     NivelPesquisa
+  resultado ResultadoConsulta
+
+  // O texto do usuário como ele escreveu. Guardado cru porque é a
+  // única coisa que permite conferir depois se o roteador entendeu
+  // certo — reconstruir a pergunta original a partir da resolvida
+  // não é possível.
+  pergunta String
+
+  // O que de fato saiu para o provedor, com apelidos e pronomes já
+  // trocados pelos nomes reais.
+  perguntaResolvida String @map("pergunta_resolvida")
+
+  // `false` quando a heurística não teve certeza do nível e o
+  // usuário confirmou. Guardado para poder medir depois com que
+  // frequência isso acontece — é o número que decide se vale a pena
+  // trocar a heurística por um classificador de verdade (§8).
+  decididoSozinho Boolean @default(true) @map("decidido_sozinho")
+
+  // Qual driver atendeu. Mesma ideia de `cobrancas_pix.psp`: saber
+  // depois de onde veio cada resposta.
+  provedor String?
+
+  // O consumo que esta consulta custou. Nulo quando não custou nada
+  // (nível `conhecimento` sem chamada) ou quando falhou antes de
+  // gastar.
+  consumoId String? @map("consumo_id") @db.Uuid
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  fontes PesquisaFonte[]
+
+  @@index([sessaoId, criadoEm])
+  @@map("pesquisa_consultas")
+}
+
+model PesquisaEntidade {
+  id String @id @default(uuid()) @db.Uuid
+
+  sessaoId String         @map("sessao_id") @db.Uuid
+  sessao   PesquisaSessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  tipo TipoEntidadePesquisa @default(empresa)
+
+  // Como o usuário chama: "concorrente 01". NUNCA muda de dono
+  // depois de atribuído — a numeração só cresce, e não reaproveita
+  // número de entidade removida. Uma renumeração faria toda pergunta
+  // anterior apontar para outra empresa, sem erro na tela.
+  // Ver o cabeçalho de `pesquisa/entidades.ts`.
+  apelido String
+
+  nome String
+
+  // O que cada tipo carrega: endereço e avaliação para unidade, URL
+  // para perfil. Formato aberto de propósito — o que a Places API
+  // devolve para uma unidade não é o que uma busca devolve para uma
+  // empresa, e engessar isso agora só criaria migração depois.
+  dados Json?
+
+  // Qual consulta trouxe esta entidade. Sem chave estrangeira: a
+  // entidade sobrevive à consulta que a descobriu.
+  descobertaEm String? @map("descoberta_em") @db.Uuid
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  // O apelido é único DENTRO da sessão — é isso que faz "concorrente
+  // 01" ter um dono só.
+  @@unique([sessaoId, apelido], name: "apelido_unico_na_sessao")
+  @@index([sessaoId])
+  @@map("pesquisa_entidades")
+}
+
+model PesquisaFonte {
+  id String @id @default(uuid()) @db.Uuid
+
+  consultaId String           @map("consulta_id") @db.Uuid
+  consulta   PesquisaConsulta @relation(fields: [consultaId], references: [id], onDelete: Cascade)
+
+  url    String
+  titulo String?
+
+  // O trecho citado, guardado junto. A URL sozinha não basta:
+  // página sai do ar, muda de conteúdo, some atrás de login — e aí a
+  // afirmação fica sem lastro justamente quando alguém foi conferir
+  // (PES-006).
+  trecho String?
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  @@index([consultaId])
+  @@map("pesquisa_fontes")
+}
+
+// ------------------------------------------------------------
+// O custo de uma consulta de pesquisa.
+//
+// Tabela IRMÃ de `consumos_ia`, não a mesma: as colunas de dinheiro
+// são idênticas porque DIN-005 exige a mesma forma, mas a UNIDADE
+// cobrada muda por provedor — busca cobra por token e por requisição,
+// Places cobra por chamada. `consumos_ia` tem tokens obrigatórios.
+//
+// Mexer em `consumos_ia` para acomodar isso seria alterar caminho de
+// dinheiro que já funciona, para atender o segundo caso. Se aparecer
+// um terceiro consumidor, aí vale generalizar as duas numa só.
+// ------------------------------------------------------------
+model ConsumoPesquisa {
+  id String @id @default(uuid()) @db.Uuid
+
+  usuarioId  String  @map("user_id") @db.Uuid
+  sessaoId   String? @map("sessao_id") @db.Uuid
+  consultaId String? @map("consulta_id") @db.Uuid
+
+  nivel     NivelPesquisa
+  provedor  String
+  resultado ResultadoConsulta
+
+  // As unidades, como o provedor as cobra. Todas opcionais: cada
+  // provedor preenche as suas, e o que não se aplica fica nulo em
+  // vez de zero — zero diria "cobrou zero", nulo diz "não cobra
+  // assim".
+  tokensEntrada Int? @map("tokens_entrada")
+  tokensSaida   Int? @map("tokens_saida")
+  requisicoes   Int?
+  buscas        Int?
+
+  // PES-003: o custo vem da resposta do provedor, na moeda dele. É o
+  // dado mais confiável da linha — se a cotação usada estiver errada,
+  // o real se recalcula a partir daqui; o contrário não é possível.
+  // Mesma decisão de `consumos_ia`.
+  custoUsdMicros   Int? @map("custo_usd_micros")
+  cotacaoMilesimos Int? @map("cotacao_milesimos")
+
+  // DIN-005: as três partes separadas, nunca só o total.
+  custoMicros    Int? @map("custo_micros")
+  comissaoMicros Int? @map("comissao_micros")
+  totalMicros    Int? @map("total_micros")
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  @@index([usuarioId, criadoEm])
+  @@index([sessaoId])
+  @@map("consumos_pesquisa")
+}

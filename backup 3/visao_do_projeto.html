@@ -1,0 +1,2866 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Idéias · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   Espelha o :root de meus-projetos.html, acrescido da camada de
+   Motion (--dur-*, --ease-*) e de --bg-primary-strong, usado nos
+   cabeçalhos das colunas do board.
+   ==================/* Tokens do sistema: css/tokens.css */1);
+  --ease-in-out:cubic-bezier(.4,0,.2,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+  min-width:1024px;
+}
+body.modal-open{overflow:hidden}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+img{display:block;max-width:100%}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;
+  padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ---------- Acessibilidade: focus rings ---------- */
+button:focus-visible,
+a:focus-visible,
+select:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:var(--focus-offset);
+}
+.nav-item:focus-visible{
+  outline:2px solid var(--neutral-900);
+  outline-offset:var(--focus-offset);
+  border-radius:var(--radius);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:flex;min-height:100vh}
+
+/* ---------- Rail ---------- */
+.rail{
+  width:var(--rail-w);
+  flex:0 0 var(--rail-w);
+  background:var(--fill-primary);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 24px;
+  position:sticky;top:0;height:100vh;
+  z-index:10;
+}
+/* Símbolo da marca: mesma caixa de 44px dos itens do menu, para o
+   logo e a "bolacha" do Início ficarem alinhados e do mesmo tamanho.
+   Monograma PD geométrico — contra-formas circulares, em amarelo
+   sobre bolacha preta. */
+.logomark{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+  margin-bottom:24px;
+}
+.logomark svg{width:28px;height:auto;display:block;fill:var(--fill-primary)}
+.rail-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.rail-spacer{flex:1}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.rail-divider{width:40px;height:1px;background:var(--border-strong)}
+
+.nav-item{
+  position:relative;
+  width:44px;height:44px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-on-primary);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover{background:var(--fill-primary-hover)}
+.nav-item[aria-current="page"]{background:var(--fill-primary-hover)}
+.nav-item::after{
+  content:attr(data-label);
+  position:absolute;left:calc(100% + 10px);top:50%;
+  transform:translateY(-50%) translateX(-4px);
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:12px;font-weight:500;line-height:18px;
+  padding:6px 10px;border-radius:var(--radius);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;
+  transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+  z-index:60;
+}
+.nav-item:hover::after,.nav-item:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  overflow:hidden;background:var(--fill-primary-hover);
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Painel ---------- */
+.panel{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;
+  background:var(--surface-1);
+  border-radius:var(--radius-panel);
+  margin-top:12px;
+  min-height:calc(100vh - 12px);
+  padding:0 32px 32px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header{
+  width:100%;
+  padding:36px 0 0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.page-title{
+  display:flex;align-items:center;gap:12px;
+}
+.page-title-logo{width:64px;height:auto;flex-shrink:0}
+.page-title-main{
+  font-size:30px;line-height:38px;font-weight:600;
+  letter-spacing:-.02em;color:var(--text-primary);
+}
+
+.section-head{width:100%}
+.rule{height:1px;background:var(--border);margin:24px 0}
+
+/* ---------- Breadcrumb ---------- */
+.breadcrumb{display:flex;align-items:center}
+.breadcrumb-list{display:flex;align-items:center;flex-wrap:wrap;gap:4px;list-style:none}
+.breadcrumb-item{display:flex;align-items:center;gap:4px}
+.breadcrumb-link,
+.breadcrumb-current{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 8px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;
+}
+.breadcrumb-link{
+  color:var(--text-secondary);text-decoration:none;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.breadcrumb-link:hover{background:var(--surface-0);color:var(--text-primary)}
+.breadcrumb-current{background:var(--surface-0);color:var(--text-primary);font-weight:600}
+.breadcrumb-sep{
+  width:16px;height:16px;flex-shrink:0;color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.breadcrumb-back{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:var(--radius);
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  font-size:14px;line-height:20px;font-weight:500;
+  text-decoration:none;white-space:nowrap;
+  margin-right:12px;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.breadcrumb-back:hover{background:var(--surface-0);color:var(--text-primary);border-color:var(--text-secondary)}
+.breadcrumb-back:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--secondary{
+  width:100%;height:40px;
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  font-size:14px;line-height:20px;
+}
+.btn--secondary:hover{background:var(--sky-100);color:var(--text-primary)}
+.btn--lg{width:auto;height:48px;padding:0 24px;font-size:16px;line-height:24px;gap:10px}
+.btn--lg svg{width:22px;height:22px}
+.btn--ghost{
+  height:40px;padding:0 16px;
+  color:var(--text-secondary);
+  font-size:14px;line-height:20px;font-weight:500;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+}
+.btn--ghost:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* ============================================================
+   TOOLBAR — busca + filtro
+   ============================================================ */
+.toolbar{
+  width:100%;
+  padding:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.field-search{position:relative;width:380px;max-width:100%}
+.field-search svg{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  width:20px;height:20px;pointer-events:none;
+  color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.field-search .input{padding-left:44px}
+.input::placeholder{color:var(--text-muted)}
+.input:focus{
+  outline:none;
+  border-color:var(--fill-accent);
+  box-shadow:0 0 0 4px var(--sky-100);
+}
+.input[type="search"]::-webkit-search-cancel-button{cursor:pointer}
+
+.field-filter{position:relative;width:380px;max-width:100%}
+.select{
+  width:100%;height:44px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:0 14px 0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  color:var(--text-primary);
+  cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.select svg{
+  width:20px;height:20px;flex-shrink:0;
+  color:var(--text-secondary);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.select[aria-expanded="true"],.select:focus-visible{
+  outline:none;
+  border-color:var(--fill-accent);
+  box-shadow:0 0 0 4px var(--sky-100);
+}
+.select-menu{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-menu);
+  padding:4px;
+  z-index:40;
+  display:none;
+}
+.select-menu button{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+}
+.select-menu button svg{
+  width:16px;height:16px;flex-shrink:0;
+  color:var(--fill-accent);
+  stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+  opacity:0;
+}
+.select-menu button:hover{background:var(--surface-0);color:var(--text-primary)}
+.select-menu button[aria-selected="true"]{color:var(--text-primary);font-weight:600}
+.select-menu button[aria-selected="true"] svg{opacity:1}
+
+/* ============================================================
+   BOARD
+   ============================================================ */
+.board-wrap{
+  width:100%;
+}
+.board{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  align-items:stretch;
+}
+/* align-items:stretch faz cada .column ocupar a altura da linha do
+   grid, que por sua vez é ditada pela coluna mais alta — assim as
+   três colunas sempre terminam no mesmo ponto. */
+.column{display:flex;flex-direction:column}
+
+/* O cabeçalho gruda no topo da janela assim que a rolagem da página
+   o alcança — sticky é relativo ao scroller do documento, já que
+   nenhum ancestral entre .column-head e <body> define overflow. */
+.column-head{
+  position:sticky;top:0;z-index:3;
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  height:40px;padding:0 16px;
+  background:var(--bg-primary-strong);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-on-primary);
+  box-shadow:0 1px 0 var(--border-strong);
+}
+.column-count{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  min-width:24px;height:24px;padding:0 8px;
+  display:grid;place-items:center;
+  border-radius:999px;
+  background:var(--surface-1);
+  font-size:12px;line-height:18px;font-weight:600;
+  color:var(--text-secondary);
+}
+
+.column-body{
+  flex:1;
+  display:flex;flex-direction:column;
+  background:var(--surface-0);
+  border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  padding:16px;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+
+.card-list{list-style:none;display:flex;flex-direction:column;gap:16px}
+
+/* ---------- Card de idéia ---------- */
+.idea{
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  padding:16px;
+  display:flex;flex-direction:column;gap:16px;
+  transition:box-shadow var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.idea:hover{box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+.idea.is-entering{animation:idea-in var(--dur-base) var(--ease-out)}
+@keyframes idea-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.idea:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Arrastar e soltar entre colunas ---------- */
+/* draggable só fica "true" quando o gesto não começou num botão, então
+   o cursor de arraste também só aparece nesse caso. */
+.idea[draggable="true"]{cursor:grab}
+.idea.is-dragging{
+  opacity:.5;
+  cursor:grabbing;
+  box-shadow:var(--shadow-lg);
+  border-color:var(--border-strong);
+}
+/* Realce só nas colunas que de fato aceitam o card (a de origem não). */
+.column-body.is-drop-target{
+  background:var(--bg-primary);
+  outline:2px dashed var(--fill-primary-strong);
+  outline-offset:-2px;
+}
+
+/* Card fake — adicionar nova idéia (apenas coluna "ideias") */
+.idea-add{
+  background:var(--surface-0);
+  border:1px dashed var(--border-strong);
+  border-radius:var(--radius-lg);
+  padding:16px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.idea-add:hover{border-color:var(--fill-accent);background:var(--surface-1)}
+.idea-add:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.idea-add-icon{
+  width:28px;height:28px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--surface-1);
+  border:1px dashed var(--border-strong);
+  color:var(--text-secondary);
+}
+.idea-add-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.idea-add-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary)}
+
+.idea-head{display:flex;align-items:center;gap:12px}
+.idea-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--bg-primary-strong);
+  color:var(--text-on-primary);
+}
+.idea-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.idea-icon.is-done{
+  background:var(--green-500);
+  color:var(--neutral-0);
+}
+.idea-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+.idea-stars-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.idea-stars{display:flex;align-items:center;gap:2px}
+.idea-stars svg{width:16px;height:16px;fill:var(--text-muted)}
+.idea-stars svg.is-on{fill:var(--green-500)}
+.idea-date{font-size:13px;line-height:18px;font-weight:500;color:var(--text-muted);white-space:nowrap}
+.idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary)}
+
+/* ---------- Card ilustrado (ex.: "Matriz CSD") ----------
+   Variante do Figma sem estrelas/descrição: no lugar entra uma
+   ilustração quadrada de 209x210, herdada do frame "Idéias". */
+.idea-illustration{
+  width:100%;aspect-ratio:5/4;
+  border-radius:var(--radius);
+  object-fit:contain;
+  background:var(--surface-1);
+}
+
+/* ---------- Menu de ações do card (kebab) ---------- */
+.idea{position:relative}
+.idea:has(.card-menu[aria-expanded="true"]){border-color:var(--border-strong);box-shadow:var(--shadow-lg);z-index:40}
+.card-menu{
+  position:absolute;top:8px;right:8px;
+  width:32px;height:32px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-secondary);
+  transition:background .15s ease,color .15s ease;
+  z-index:2;
+}
+.card-menu:hover,.card-menu[aria-expanded="true"]{background:rgba(255,255,255,.9);color:var(--text-primary)}
+.card-menu svg{width:20px;height:20px;fill:currentColor}
+.menu{
+  position:absolute;top:48px;right:16px;
+  min-width:184px;padding:4px;
+  background:var(--surface-1);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-menu);
+  z-index:30;
+  display:none;
+}
+.menu.is-open{display:block}
+.menu button{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+}
+.menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.menu button:hover{background:var(--surface-0)}
+.menu .sep{height:1px;background:var(--border);margin:4px}
+.menu .danger{color:var(--text-danger)}
+.menu .danger:hover{background:var(--bg-danger)}
+
+/* ---------- Empty state por coluna ---------- */
+.column-empty{
+  flex:1;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:32px 16px;text-align:center;
+}
+.column-empty svg{
+  width:28px;height:28px;color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;
+}
+.column-empty p{font-size:14px;line-height:22px;color:var(--text-muted)}
+
+/* ============================================================
+   EMPTY STATE — nenhuma idéia cadastrada
+   ============================================================ */
+.empty-wrap{
+  width:100%;
+  margin:24px 0 0;
+  display:none;
+}
+body.is-empty .empty-wrap{
+  display:flex;flex-direction:column;
+  height:100%;
+  flex:1;
+}
+.empty{
+  width:100%;height:100%;
+  padding:48px 32px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  background:var(--neutral-50);
+  border-radius:var(--radius-lg);
+  flex:1;
+}
+/* Ilustração do empty state: substitui o antigo selo de 56px por
+   uma arte de largura maior, sem moldura nem fundo. */
+.empty-art{
+  width:220px;height:auto;
+  margin-bottom:24px;
+  display:block;
+}
+.empty h2{font-size:18px;line-height:28px;font-weight:600;margin-bottom:8px;color:var(--text-primary)}
+.empty p{font-size:14px;line-height:22px;color:var(--text-secondary);max-width:380px;margin-bottom:32px}
+.empty-actions{display:flex;align-items:center;gap:12px}
+
+/* Estado alternado */
+body.is-empty .page-header .btn--primary{display:none}
+body.is-empty .toolbar{display:none}
+body.is-empty .board-wrap{display:none}
+body.is-empty .rule--hide-on-empty{display:none}
+body.is-empty .section-head .rule:last-child{margin-bottom:0}
+
+/* ============================================================
+   TOGGLE DE PREVIEW (fora do design — só para inspeção)
+   ============================================================ */
+.preview-toggle{
+  position:fixed;right:20px;bottom:20px;z-index:100;
+  display:flex;align-items:center;gap:8px;
+  background:var(--text-primary);color:var(--surface-1);
+  padding:9px 14px;border-radius:999px;
+  font-size:13px;font-weight:500;
+  box-shadow:0 8px 20px rgba(10,13,18,.28);
+}
+.preview-toggle:hover{background:var(--neutral-700)}
+.preview-toggle svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   MODAL — nova idéia
+   ============================================================ */
+.modal{
+  position:fixed;inset:0;margin:auto;
+  width:480px;max-width:calc(100vw - 48px);
+  height:fit-content;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.modal::backdrop{background:var(--overlay)}
+.modal[open]{animation:modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:fade-in var(--dur-base) var(--ease-out)}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-header{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.np-shell{display:flex;flex-direction:column;height:auto;min-height:0}
+
+.np-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;
+  padding:20px 24px;
+  overflow:visible;
+}
+
+.modal-form{display:flex;flex-direction:column;gap:14px;margin-top:18px;flex:0 0 auto}
+.field{display:flex;flex-direction:column;gap:6px}
+
+/* Estrelas de classificação (régua de radio) */
+.radio-stars{display:flex;align-items:center;gap:0px}
+.radio-star{
+  width:32px;height:32px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  color:var(--text-muted);
+  transition:color var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+}
+.radio-star svg{width:22px;height:22px;fill:currentColor}
+.radio-star:hover{transform:scale(1.08)}
+.radio-star:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.radio-star[aria-checked="true"]{color:var(--green-500)}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.textarea{
+  width:100%;min-height:104px;resize:vertical;
+  padding:10px 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.textarea::placeholder{color:var(--text-muted)}
+.textarea:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+
+.modal-footer{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:auto;padding-top:16px}
+.modal-divider{height:1px;background:var(--border);flex-shrink:0;margin:0}
+.modal-footer .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px}
+.modal .btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.modal .btn--primary:hover{background:var(--fill-accent-hover)}
+.modal .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.modal .btn--secondary:hover{background:var(--surface-0)}
+.modal .btn--danger{background:var(--fill-danger);color:var(--text-on-danger);box-shadow:var(--shadow-xs)}
+.modal .btn--danger:hover{filter:brightness(.92)}
+
+/* Modais de confirmação (Excluir / Duplicar) */
+.modal--stacked{width:440px;padding:24px}
+.modal-shell{display:flex;flex-direction:column;height:100%;gap:0}
+.modal-confirm{display:flex;flex-direction:column;align-items:flex-start;gap:24px}
+.modal-confirm-text{font-size:15px;line-height:24px;color:var(--text-primary);margin:0;margin-top:24px;max-width:360px}
+.modal-confirm-actions{display:flex;align-items:center;gap:12px;width:100%}
+
+/* ============================================================
+   ASSISTANT — coluna à direita, sobre o fundo amarelo da página
+   Não é overlay: entra como terceiro filho flex de .app, então o
+   painel branco encolhe em vez de ficar coberto.
+   ============================================================ */
+.assistant{
+  flex:0 0 320px;
+  align-self:flex-start;
+  position:sticky;top:0;
+  height:100vh;
+  overflow:hidden;
+  transition:flex-basis var(--dur-base) var(--ease-in-out);
+}
+/* Fechado o painel nao some: encolhe ate a faixa de 80px que sobra
+   a direita, exatamente como no Figma. */
+body.is-assistant-closed .assistant{flex-basis:80px}
+
+/* O gatilho fica FORA de .assistant-inner para nao desaparecer junto
+   com o conteudo. right:16px o deixa centrado na faixa de 80px
+   (80 - 48 - 16 = 16) e a 16px da borda quando aberto. */
+.assistant-toggle{
+  position:absolute;top:32px;right:32px;z-index:2;
+  width:48px;height:48px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  background:var(--fill-primary-hover);
+  color:var(--text-on-primary);
+  transition:box-shadow var(--dur-fast) var(--ease-out),right var(--dur-base) var(--ease-in-out);
+}
+/* Fechado: 80 - 48 - 16 = 16, ou seja, centrado na faixa. */
+body.is-assistant-closed .assistant-toggle{right:16px}
+.assistant-toggle:hover{box-shadow:inset 0 0 0 999px var(--bg-on-primary)}
+.assistant-toggle:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+.assistant-toggle svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+/* Ícone de IA (sparkles) é preenchido, não contornado — sobrescreve
+   a regra genérica de stroke acima. */
+.assistant-toggle .icon-ai{fill:currentColor;stroke:none}
+.assistant-toggle .icon-ai{display:none}
+body.is-assistant-closed .assistant-toggle .icon-collapse{display:none}
+body.is-assistant-closed .assistant-toggle .icon-ai{display:block}
+
+/* Largura fixa no miolo: enquanto a coluna encolhe, o conteudo desliza
+   para fora em vez de refluir e embaralhar o texto. */
+.assistant-inner{
+  width:320px;height:100%;
+  display:flex;flex-direction:column;
+  padding:32px 32px 24px;
+  transition:opacity var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out);
+}
+body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
+
+@media (prefers-reduced-motion:reduce){
+  .assistant,.assistant-inner{transition-duration:1ms}
+}
+
+/* ---------- Toast de feedback ---------- */
+.toast{
+  position:fixed;
+  left:50%;bottom:32px;
+  transform:translateX(-50%) translateY(12px);
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  border-radius:var(--radius);
+  background:var(--fill-success);
+  color:var(--text-on-success);
+  box-shadow:var(--shadow-lg);
+  font-size:14px;line-height:20px;font-weight:500;
+  z-index:100;
+  opacity:0;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.toast.is-visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-check{width:20px;height:20px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.toast-close{
+  display:grid;place-items:center;
+  width:24px;height:24px;flex-shrink:0;
+  margin-left:12px;
+  border-radius:6px;
+  color:inherit;
+  background:transparent;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.toast-close:hover{background:rgba(255,255,255,.2)}
+.toast-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Cabeçalho ---------- */
+.assistant-head{
+  display:flex;align-items:center;
+  height:48px;flex-shrink:0;
+  padding-right:64px;            /* 48 do gatilho + 16 de folga */
+}
+.assistant-heading{
+  font-size:18px;line-height:28px;font-weight:600;
+  color:var(--text-on-primary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.assistant-rule{
+  height:1px;flex-shrink:0;
+  margin:24px 0;
+  background:var(--bg-on-primary);
+}
+
+/* ---------- Thread ---------- */
+.assistant-thread{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  display:flex;flex-direction:column;gap:24px;
+  padding:0 16px;
+}
+.assistant-thread::-webkit-scrollbar{width:8px}
+.assistant-thread::-webkit-scrollbar-thumb{background:var(--bg-on-primary-hover);border-radius:999px}
+.assistant-thread::-webkit-scrollbar-track{background:transparent}
+
+/* Cada mensagem: avatar em cima, balão embaixo. */
+.msg{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.msg--user{align-items:flex-end}
+
+.msg-avatar{
+  width:24px;height:24px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;
+  background:var(--surface-1);
+}
+.msg-avatar img{width:100%;height:100%;object-fit:cover}
+.msg-avatar--bot{
+  display:grid;place-items:center;
+  background:var(--bg-primary-strong);
+  color:var(--text-primary);
+}
+.msg-avatar--bot svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Mensagem sem balão: o texto assenta direto sobre o amarelo do
+   painel, ocupando a largura inteira da thread. Sem fundo, sem
+   padding e sem raio — o alinhamento é o que distingue quem falou. */
+.msg-bubble{
+  width:100%;
+  font-size:14px;line-height:20px;
+  color:var(--text-secondary);
+}
+.msg--user .msg-bubble{text-align:right}
+
+/* ---------- Composer ---------- */
+.composer{
+  flex-shrink:0;
+  display:flex;flex-direction:column;gap:20px;
+  padding:16px;
+  background:var(--surface-1);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  transition:box-shadow var(--dur-fast) var(--ease-out);
+}
+.composer:focus-within{box-shadow:0 0 0 4px var(--sky-100)}
+
+.composer-input{
+  width:100%;min-height:44px;
+  border:none;background:none;resize:none;
+  font-size:14px;line-height:22px;
+  color:var(--text-primary);
+}
+.composer-input::placeholder{color:var(--text-muted)}
+.composer-input:focus{outline:none}
+
+.composer-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+.composer-attach{
+  width:36px;height:36px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  color:var(--text-muted);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.composer-attach:hover{background:var(--surface-0);color:var(--text-secondary)}
+.composer-attach svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+.composer-send{
+  display:inline-flex;align-items:center;gap:8px;
+  height:36px;padding:0 16px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);
+  color:var(--text-on-accent);
+  font-size:14px;line-height:20px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.composer-send:hover{background:var(--fill-accent-hover)}
+.composer-send svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Conteúdo expandível dentro de um card (.pf-row) ----------
+   Usado pelo "Histórico de uso" e por "Comprar créditos": vive dentro
+   do próprio card, por isso não tem borda/fundo próprios — só um
+   respiro e uma linha fina separando do cabeçalho do card. */
+.pf-row-expand{
+  width:100%;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+
+@keyframes expandDown{
+  from{opacity:0;transform:translateY(-8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.pf-row-expand[hidden]{
+  display:none;
+}
+
+.timeline-container{
+  display:flex;flex-direction:column;gap:0;
+}
+
+.timeline-item{
+  display:flex;gap:16px;padding:12px 0;
+  position:relative;
+  padding-left:20px;
+}
+
+.timeline-item:not(:last-child)::before{
+  content:"";
+  position:absolute;
+  left:7px;top:0;
+  width:2px;height:100%;
+  background:var(--border-strong);
+}
+
+.timeline-dot{
+  position:absolute;left:0;top:12px;
+  width:16px;height:16px;flex-shrink:0;
+  border-radius:50%;
+  background:var(--fill-accent);
+  border:3px solid var(--surface-0);
+  box-shadow:0 0 0 1px var(--border-strong);
+}
+
+.timeline-content{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:0}
+
+.timeline-date{
+  font-size:11px;line-height:16px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+.timeline-task{
+  font-size:13px;line-height:20px;font-weight:500;color:var(--text-primary);
+}
+
+.timeline-cost{
+  font-size:12px;line-height:18px;font-weight:500;color:var(--text-secondary);
+}
+
+.timeline-cost strong{color:var(--text-primary);font-weight:700}
+
+.timeline-item:first-child .timeline-dot{
+  background:var(--fill-success);
+  box-shadow:0 0 0 3px var(--green-100),0 0 0 4px var(--border-strong);
+}
+
+/* ---------- Compra de créditos via Pix ---------- */
+.pf-compra-form{display:flex;flex-direction:column;gap:16px}
+
+.pf-valor-wrap{
+  display:flex;align-items:center;gap:8px;
+  height:44px;padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-valor-wrap:focus-within{border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-valor-prefixo{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);flex-shrink:0}
+.pf-input--valor{
+  border:none;padding:0;height:auto;box-shadow:none;
+  font-size:16px;font-weight:600;
+}
+.pf-input--valor:focus{box-shadow:none}
+
+.pf-btn--success{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+.pf-btn--success:hover{filter:brightness(.96)}
+.pf-btn--accent{background:var(--fill-accent);color:var(--text-on-accent);border-color:transparent}
+.pf-btn--accent:hover{background:var(--fill-accent-hover)}
+.pf-btn--accent:disabled{opacity:.5;cursor:not-allowed}
+.pf-btn--accent:disabled:hover{background:var(--fill-accent)}
+
+.pf-pix{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  margin-top:4px;padding:20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+.pf-pix[hidden]{display:none}
+
+.pf-pix-qr{
+  padding:12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+  line-height:0;
+}
+.pf-pix-qr canvas{display:block;width:176px;height:176px}
+
+.pf-pix-legenda{font-size:13px;line-height:20px;font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
+
+.pf-pix-copia{display:flex;align-items:center;gap:8px;width:100%}
+.pf-pix-codigo{
+  flex:1;min-width:0;height:40px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--surface-1);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;color:var(--text-secondary);
+  text-overflow:ellipsis;
+}
+.pf-pix-copia .pf-btn{flex-shrink:0;height:40px}
+.pf-pix-copia .pf-btn.is-copiado{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+
+
+/* ============================================================
+   MODAL — perfil do usuário
+   Mesma casca da modal "Novo projeto": 825x674, lateral de 192 e
+   conteúdo de 632. <dialog> nativo, então foco preso e Esc já vêm
+   de graça. Componente autocontido (.pf-*) para poder viver em
+   qualquer página que tenha o menu lateral.
+   ============================================================ */
+body.modal-open{overflow:hidden}
+
+.pf-modal{
+  position:fixed;inset:0;margin:auto;
+  width:825px;max-width:calc(100vw - 48px);
+  height:674px;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.pf-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.pf-modal[open]{animation:pf-in var(--dur-base) var(--ease-out)}
+.pf-modal[open]::backdrop{animation:pf-fade var(--dur-base) var(--ease-out)}
+@keyframes pf-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes pf-fade{from{opacity:0}to{opacity:1}}
+
+/* 192 + 1 do divisor + 632 = 825 */
+.pf-shell{display:flex;height:100%}
+
+/* ---------- Lateral: seções ---------- */
+.pf-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.pf-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-side-item:hover{background:var(--surface-0)}
+.pf-side-item[aria-current="true"]{background:var(--sky-200)}
+.pf-side-spacer{flex:1;min-height:12px}
+.pf-side-item--danger{color:var(--text-danger)}
+.pf-side-item--danger:hover{background:var(--bg-danger)}
+
+.pf-divider{flex:0 0 1px;background:var(--border)}
+
+/* ---------- Conteúdo ---------- */
+.pf-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:32px;
+  padding:24px 32px;
+}
+.pf-head{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  height:48px;
+}
+.pf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.pf-title-icon{
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+  box-shadow:0 0 0 6px var(--bg-primary);
+}
+.pf-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pf-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.pf-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Área rolável, com a barra afastada do conteúdo */
+.pf-body{flex:1;min-height:0;overflow-y:auto;padding-right:16px}
+.pf-body::-webkit-scrollbar{width:10px}
+.pf-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.pf-body::-webkit-scrollbar-track{background:transparent}
+
+.pf-panel{display:flex;flex-direction:column;gap:24px}
+/* A regra acima venceria o display:none do atributo [hidden] na
+   ordem do cascata — daí esta guarda explícita. */
+.pf-panel[hidden]{display:none}
+
+/* ---------- Foto ---------- */
+.pf-avatar-row{display:flex;align-items:center;gap:20px}
+.pf-avatar{
+  width:80px;height:80px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;background:var(--surface-0);
+}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-avatar-actions{display:flex;align-items:center;gap:8px}
+
+.pf-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 14px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.pf-btn:hover{background:var(--surface-0)}
+.pf-btn--danger{color:var(--text-danger);border-color:var(--border-strong)}
+.pf-btn--danger:hover{background:var(--bg-danger);border-color:var(--fill-danger)}
+
+/* ---------- Campos ---------- */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pf-label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.pf-input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font:inherit;font-size:14px;line-height:20px;
+  color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-input::placeholder{color:var(--text-muted)}
+.pf-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-hint{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+/* Barra de evolução do crédito: o trecho disponível encolhe conforme
+   o uso aumenta (a faixa restante da barra representa o usado). */
+.pf-credito-barra{
+  width:100%;height:12px;
+  border-radius:999px;
+  background:var(--border-strong);
+  overflow:hidden;
+}
+.pf-credito-uso{
+  height:100%;
+  border-radius:999px;
+  background:var(--fill-accent);
+  transition:width var(--dur-base) var(--ease-out);
+}
+.pf-credito-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:12px;line-height:18px;font-weight:600;color:var(--text-secondary);
+}
+
+/* ---------- Linha com interruptor ---------- */
+.pf-row{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+/* Efeito de âncora: pisca uma vez para guiar o olhar até a sessão
+   que acabou de aparecer/expandir, sem deixar destaque permanente.
+   Em box-shadow para funcionar sobre qualquer card (.pf-row, .pf-pix
+   etc.) sem brigar com o background/borda próprios do elemento. */
+@keyframes pf-anchor-flash{
+  0%{box-shadow:0 0 0 4px var(--sky-100), 0 0 0 1px var(--fill-accent) inset}
+  100%{box-shadow:0 0 0 0 transparent, 0 0 0 0 transparent}
+}
+.pf-anchor-flash{
+  animation:pf-anchor-flash 1.1s var(--ease-out);
+}
+.pf-row--stack{flex-direction:column}
+.pf-row--stack .pf-row-actions{width:100%}
+.pf-row-actions{display:flex;align-items:flex-start}
+.pf-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pf-row-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.pf-row-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+
+.pf-switch{
+  appearance:none;-webkit-appearance:none;
+  position:relative;flex-shrink:0;
+  width:44px;height:24px;margin-top:2px;
+  border-radius:999px;
+  background:var(--neutral-300);
+  cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.pf-switch:checked{background:var(--fill-accent)}
+.pf-switch:checked::after{transform:translateX(20px)}
+.pf-switch:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Cartões de escolha (tema) ---------- */
+.pf-option{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.pf-option:hover{border-color:var(--border-strong)}
+.pf-option[aria-checked="true"]{background:var(--neutral-100);border-color:var(--neutral-300)}
+.pf-option-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pf-option-mark{
+  width:16px;height:16px;flex-shrink:0;margin-top:2px;
+  display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);color:transparent;
+}
+.pf-option-mark svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;display:block}
+.pf-option[aria-checked="true"] .pf-option-mark{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--text-on-accent)}
+
+/* ---------- Rodapé ---------- */
+.pf-rule{flex-shrink:0;height:1px;background:var(--border)}
+.pf-foot{flex-shrink:0;display:flex;align-items:center;gap:12px;height:48px}
+.pf-save{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:48px;padding:0 24px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-save:hover{background:var(--fill-accent-hover)}
+.pf-cancel{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:48px;padding:0 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-cancel:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* Avatar do menu vira o gatilho da modal */
+.avatar{padding:0;cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-out)}
+.avatar:hover{box-shadow:0 0 0 2px var(--text-primary)}
+.avatar:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+</style>
+</head>
+<body class="is-empty">
+
+<div class="app">
+
+  <!-- ===================== RAIL ===================== -->
+  <aside class="rail">
+    <div class="logomark" role="img" aria-label="Plataforma de Design">
+      <svg viewBox="5.6 9 28.8 22" aria-hidden="true"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegação principal">
+      <button type="button" class="nav-item" data-label="Início">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Empresas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Projetos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      </button>
+      <button type="button" class="nav-item" aria-current="page" data-label="Idéias">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Sobre a empresa">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5Z"/><path d="M13 3v5.5H18.5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+      </button>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-foot">
+      <button type="button" class="nav-item" data-label="Configurações">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="rail-divider"></div>
+      <button type="button" class="avatar" id="avatarBtn"
+              aria-haspopup="dialog" aria-label="Abrir perfil de Ricardo Mateus">
+        <img src="https://i.pravatar.cc/80?img=47" alt="">
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="panel">
+
+    <header class="page-header">
+      <h1 class="page-title">
+        <svg class="page-title-logo" viewBox="0 6.7 24 9.8" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M24 7.8L6.442 15.276c-1.456.616-2.679.925-3.668.925-1.12 0-1.933-.392-2.437-1.177-.317-.504-.41-1.143-.28-1.918.13-.775.476-1.6 1.036-2.478.467-.71 1.232-1.643 2.297-2.8a6.122 6.122 0 00-.784 1.848c-.28 1.195-.028 2.072.756 2.632.373.261.886.392 1.54.392.522 0 1.11-.084 1.764-.252L24 7.8z"
+                fill="currentColor"/>
+        </svg>
+        <span class="page-title-main">Nike / Startup</span>
+      </h1>
+      <button class="btn btn--primary" id="openModal">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Nova idéia
+      </button>
+    </header>
+
+    <div class="section-head">
+      <div class="rule"></div>
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <ol class="breadcrumb-list">
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-back" href="projetos.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              Voltar
+            </a>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="empresas.html">
+              Empresas
+            </a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="projetos.html">Projetos</a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <span class="breadcrumb-current" aria-current="page">Visão do projeto</span>
+          </li>
+        </ol>
+      </nav>
+      <div class="rule"></div>
+    </div>
+
+    <!-- ---------- Toolbar ---------- -->
+    <div class="toolbar">
+      <div class="field-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="input" type="search" id="search" placeholder="Pesquisar" aria-label="Pesquisar idéias">
+      </div>
+
+      <div class="field-filter">
+        <button type="button" class="select" id="filter" data-value="recentes" aria-haspopup="listbox" aria-expanded="false" aria-label="Filtrar por">
+          <span id="filterLabel">Mais recente</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="select-menu" role="listbox" aria-labelledby="filterLabel">
+          <button type="button" role="option" aria-selected="true" data-value="recentes">
+            Mais recente
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+          <button type="button" role="option" aria-selected="false" data-value="relevancia">
+            Maior relevância
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+          <button type="button" role="option" aria-selected="false" data-value="data">
+            Por data
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head rule--hide-on-empty"><div class="rule"></div></div>
+
+    <!-- ---------- Board ---------- -->
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <!-- ---------- Empty state ---------- -->
+    <div class="empty-wrap">
+      <section class="empty" aria-label="Nenhuma idéia cadastrada">
+        <img class="empty-art" src="img/ideia-lampada.svg" alt="" aria-hidden="true" width="1000" height="1000">
+        <h2>Nenhuma idéia por aqui ainda</h2>
+        <p>Crie sua primeira idéia para começar a organizar o que ainda está na cabeça em um só lugar.</p>
+        <div class="empty-actions">
+          <button class="btn btn--primary" id="openModalEmpty" type="button">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Nova idéia
+          </button>
+          <button type="button" class="btn btn--secondary btn--lg" id="openAiModal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+            Gerar com ajuda da IA
+          </button>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Mensagem de feedback (toast) -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <svg class="toast-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+    <span id="toastText"></span>
+    <button type="button" class="toast-close" id="toastClose" aria-label="Fechar mensagem">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <button class="preview-toggle" id="toggleEmpty">
+    <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+    <span id="toggleLabel">Ver quadro com idéias</span>
+  </button>
+
+  <!-- ===================== ASSISTANT (visual) ===================== -->
+  <aside class="assistant" id="assistant" aria-labelledby="assistantHeading">
+    <button type="button" class="assistant-toggle" id="assistantToggle"
+            aria-controls="assistantInner" aria-expanded="true" aria-label="Fechar assistente">
+      <svg class="icon-collapse" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <svg class="icon-ai" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+    </button>
+
+    <div class="assistant-inner" id="assistantInner">
+
+      <div class="assistant-head">
+        <h2 class="assistant-heading" id="assistantHeading">Assistente de IA</h2>
+      </div>
+      <div class="assistant-rule" role="presentation"></div>
+
+      <div class="assistant-thread">
+      <article class="msg msg--bot">
+        <span class="msg-avatar msg-avatar--bot" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12.5c0 3.9-3.8 7-8.5 7-.9 0-1.8-.1-2.6-.3l-4.9 1.6 1.3-3.8c-1.4-1.2-2.3-2.8-2.3-4.5 0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7Z"/></svg></span>
+        <p class="msg-bubble">Os nossos serviços geram renda interna e podem ajudar a diminuir a inadimplência, pois assim os moradores vão poder ter uma renda extra vendendo em e-commerces.</p>
+      </article>
+
+        <article class="msg msg--user">
+          <span class="msg-avatar"><img src="https://i.pravatar.cc/80?img=47" alt="Ricardo Mateus"></span>
+          <p class="msg-bubble">Os nossos serviços geram renda interna e podem ajudar a diminuir a inadimplência.</p>
+        </article>
+
+      <article class="msg msg--bot">
+        <span class="msg-avatar msg-avatar--bot" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12.5c0 3.9-3.8 7-8.5 7-.9 0-1.8-.1-2.6-.3l-4.9 1.6 1.3-3.8c-1.4-1.2-2.3-2.8-2.3-4.5 0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7Z"/></svg></span>
+        <p class="msg-bubble">Os nossos serviços geram renda interna e podem ajudar a diminuir a inadimplência, pois assim os moradores vão poder ter uma renda extra vendendo em e-commerces.</p>
+      </article>
+      </div>
+
+      <div class="assistant-rule" role="presentation"></div>
+
+    <div class="composer">
+      <label class="sr-only" for="assistantInput">Mensagem para o assistente</label>
+      <textarea class="composer-input" id="assistantInput" rows="2" placeholder="Digite sua mensagem"></textarea>
+      <div class="composer-actions">
+        <button type="button" class="composer-attach" aria-label="Anexar arquivo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5 12.5 20a5 5 0 0 1-7-7l8.2-8.2a3.3 3.3 0 0 1 4.7 4.7l-8.2 8.2a1.7 1.7 0 0 1-2.4-2.4l7.6-7.6"/></svg>
+        </button>
+        <button type="button" class="composer-send">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Enviar
+        </button>
+      </div>
+    </div>
+
+   </div>
+  </aside>
+</div>
+
+<!-- Região viva: anuncia movimentações de card a leitores de tela -->
+<p class="sr-only" role="status" aria-live="polite" id="liveRegion"></p>
+<p class="sr-only" id="dragHelp">Arraste o card para outra coluna ou use as setas esquerda e direita para movê-lo.</p>
+
+<!-- ===================== MODAL: nova idéia ===================== -->
+<dialog class="modal" id="modal" aria-labelledby="modalTitle">
+  <div class="np-shell">
+
+    <div class="np-main">
+
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">
+          <span class="modal-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+          </span>
+          <span id="modalTitleText">Nova idéia</span>
+        </h2>
+<button class="modal-close" id="closeModal">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  Fechar
+</button>
+      </div>
+
+      <form class="modal-form" id="ideaForm" method="dialog">
+        <div class="field">
+          <label class="label" for="ideaTitle">Título</label>
+          <input class="input" type="text" id="ideaTitle" name="title" required maxlength="60">
+        </div>
+
+        <div class="field">
+          <label class="label" for="ideaDesc">Descrição</label>
+          <textarea class="textarea" id="ideaDesc" name="desc" required maxlength="280"></textarea>
+        </div>
+
+        <div class="field">
+          <span class="label" id="ideaImportanceLabel">Importância da idéia</span>
+          <div class="radio-stars" id="ideaStars" role="radiogroup" aria-labelledby="ideaImportanceLabel">
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 1 de 5" data-value="1">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 2 de 5" data-value="2">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 3 de 5" data-value="3">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 4 de 5" data-value="4">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+            <button type="button" class="radio-star" role="radio" aria-checked="false" aria-label="Importância 5 de 5" data-value="5">
+              <svg viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>
+            </button>
+          </div>
+        </div>
+
+<div class="modal-divider"></div>
+<div class="modal-footer">
+          <button type="submit" class="btn btn--primary">Salvar</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL EXCLUIR IDÉIA ===================== -->
+<dialog class="modal modal--stacked" id="ideiaDeleteModal" aria-labelledby="ideiaDeleteTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="ideiaDeleteTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+        </span>
+        Excluir idéia
+      </h2>
+      <button type="button" class="modal-close" id="closeIdeaDeleteBtn" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-confirm">
+      <p class="modal-confirm-text">Tem certeza que deseja excluir essa idéia? Esta ação não pode ser desfeita.</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn btn--danger" id="confirmIdeaDeleteBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+          Excluir
+        </button>
+        <button type="button" class="btn btn--secondary" id="cancelIdeaDeleteBtn">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- ===================== MODAL DUPLICAR IDÉIA ===================== -->
+<dialog class="modal modal--stacked" id="ideiaDupModal" aria-labelledby="ideiaDupTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="ideiaDupTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        </span>
+        Duplicar idéia
+      </h2>
+      <button type="button" class="modal-close" id="closeIdeaDupBtn" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-confirm">
+      <p class="modal-confirm-text">Tem certeza que deseja duplicar essa idéia?</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn btn--primary" id="confirmIdeaDupBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          Duplicar
+        </button>
+        <button type="button" class="btn btn--secondary" id="cancelIdeaDupBtn">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- ===================== MODAL GERAR COM IA ===================== -->
+<dialog class="modal modal--stacked" id="ideaAiModal" aria-labelledby="ideaAiTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="ideaAiTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+        </span>
+        Gerar com ajuda da IA
+      </h2>
+      <button type="button" class="modal-close" id="closeIdeaAiBtn" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-confirm">
+      <p class="modal-confirm-text">A IA vai analisar o contexto do projeto e sugerir novas idéias para o quadro. Deseja continuar?</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn btn--primary" id="confirmIdeaAiBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+          Gerar
+        </button>
+        <button type="button" class="btn btn--secondary" id="cancelIdeaAiBtn">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- Dados ---------- */
+  var COLUMNS = [
+    { id:'ideias',     label:'Minhas idéias', action:'Acessar',  next:'andamento'  },
+    { id:'andamento',  label:'Em andamento',  action:'Acessar', next:'finalizado' },
+    { id:'finalizado', label:'Finalizado',    action:'Acessar',  next:'ideias'     }
+  ];
+
+  var IDEAS = [];
+
+  var nextId = 1;
+  var enteringId = null;
+
+  var board  = document.getElementById('board');
+  var search = document.getElementById('search');
+  var filter = document.getElementById('filter');
+  var live   = document.getElementById('liveRegion');
+
+  var ICON_IDEA =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M9 18h6"/><path d="M10 22h4"/>' +
+    '<path d="M12 2a7 7 0 0 0-4.1 12.7c.8.7 1.1 1.4 1.1 2.3h6c0-.9.3-1.6 1.1-2.3A7 7 0 0 0 12 2Z"/>' +
+    '</svg>';
+
+  var ICON_DONE =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  var ICON_EMPTY =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M9 18h6"/><path d="M10 21h4"/>' +
+    '<path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/>' +
+    '</svg>';
+
+  var ICON_DOTS = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>';
+
+  var MENU_IDEA = function(id, title){
+    return (
+      '<div class="menu" role="menu">' +
+        '<button role="menuitem" data-idea-action="editar" data-id="' + id + '" data-title="' + escapeHtml(title) + '">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>Editar idéia</button>' +
+        '<button role="menuitem" data-idea-action="duplicar" data-id="' + id + '" data-title="' + escapeHtml(title) + '">' +
+          '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Duplicar</button>' +
+        '<div class="sep"></div>' +
+        '<button role="menuitem" class="danger" data-idea-action="excluir" data-id="' + id + '" data-title="' + escapeHtml(title) + '">' +
+          '<svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir</button>' +
+      '</div>'
+    );
+  };
+
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  /* ---------- Filtro ---------- */
+  function filterValue(){
+    return filter.getAttribute('data-value');
+  }
+
+  function visibleIdeas(){
+    var term = search.value.trim().toLowerCase();
+    var list = IDEAS.filter(function(idea){
+      if(!term) return true;
+      return (idea.title + ' ' + idea.desc).toLowerCase().indexOf(term) !== -1;
+    });
+    var sort = filterValue();
+    return list.slice().sort(function(a,b){
+      if(sort === 'relevancia'){
+        return (b.importance||0) - (a.importance||0);
+      } else if(sort === 'data'){
+        return a.id - b.id;
+      }
+      return b.id - a.id;
+    });
+  }
+
+  /* ---------- Render ---------- */
+  function render(){
+    var shown = visibleIdeas();
+    var isFiltered = search.value.trim() !== '';
+
+    board.innerHTML = COLUMNS.map(function(col){
+      var items = shown.filter(function(i){ return i.status === col.id; });
+      var headId = 'col-' + col.id;
+
+      var body = items.length
+        ? '<ul class="card-list">' + items.map(function(idea){
+            return (
+              '<li class="idea' + (idea.id === enteringId ? ' is-entering' : '') + '" data-id="' + idea.id + '"' +
+                  ' draggable="true" tabindex="0"' +
+                  ' aria-roledescription="Card arrastável"' +
+                  ' aria-describedby="dragHelp">' +
+                '<button type="button" class="card-menu" aria-haspopup="true" aria-expanded="false" aria-label="Opções de ' + escapeHtml(idea.title) + '">' + ICON_DOTS + '</button>' +
+                '<div class="idea-head">' +
+                  '<span class="idea-icon' + (col.id === 'finalizado' ? ' is-done' : '') + '">' + (col.id === 'finalizado' ? ICON_DONE : ICON_IDEA) + '</span>' +
+                  '<h3 class="idea-title">' + escapeHtml(idea.title) + '</h3>' +
+                '</div>' +
+                // Variante ilustrada (ex.: "Matriz CSD"): sem estrelas,
+                // data ou descrição — o corpo do card é a própria imagem.
+                (idea.illustration
+                  ? '<img class="idea-illustration" src="' + escapeHtml(idea.illustration) + '" alt="" aria-hidden="true">'
+                  : '<div class="idea-stars-row">' +
+                      '<div class="idea-stars" aria-label="Importância ' + (idea.importance || 0) + ' de 5">' +
+                        '<svg class="' + ((idea.importance || 0) >= 1 ? 'is-on' : '') + '" viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>' +
+                        '<svg class="' + ((idea.importance || 0) >= 2 ? 'is-on' : '') + '" viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>' +
+                        '<svg class="' + ((idea.importance || 0) >= 3 ? 'is-on' : '') + '" viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>' +
+                        '<svg class="' + ((idea.importance || 0) >= 4 ? 'is-on' : '') + '" viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>' +
+                        '<svg class="' + ((idea.importance || 0) >= 5 ? 'is-on' : '') + '" viewBox="0 0 24 24"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.9 21l1.2-6.9-5-4.9 6.9-1Z"/></svg>' +
+                      '</div>' +
+                      '<span class="idea-date">10/02/2027</span>' +
+                    '</div>' +
+                    '<p class="idea-desc">' + escapeHtml(idea.desc) + '</p>') +
+                (col.id === 'ideias' ? '' :
+                  '<button type="button" class="btn btn--secondary" data-move="' + idea.id + '">' +
+                    escapeHtml(col.action) +
+                    '<span class="sr-only"> a idéia ' + escapeHtml(idea.title) + '</span>' +
+                  '</button>') +
+                MENU_IDEA(idea.id, idea.title) +
+              '</li>'
+            );
+          }).join('')
+            + (col.id === 'ideias' ? '<li class="idea-add" role="button" tabindex="0">' +
+                '<span class="idea-add-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>' +
+                '<span class="idea-add-title">Nova idéia</span>' +
+              '</li>' : '')
+            + '</ul>'
+        : '<div class="column-empty">' + ICON_EMPTY +
+            '<p>' + (isFiltered ? 'Nenhuma idéia corresponde à busca.' : 'Nenhuma idéia por aqui ainda.') + '</p>' +
+          '</div>';
+
+      return (
+        '<section class="column" aria-labelledby="' + headId + '">' +
+          '<h2 class="column-head" id="' + headId + '">' +
+            escapeHtml(col.label) +
+            '<span class="column-count" aria-hidden="true">' + items.length + '</span>' +
+            '<span class="sr-only">, ' + items.length + ' idéia' + (items.length === 1 ? '' : 's') + '</span>' +
+          '</h2>' +
+          '<div class="column-body" data-status="' + col.id + '">' + body + '</div>' +
+        '</section>'
+      );
+    }).join('');
+
+    enteringId = null;
+  }
+
+  /* ---------- Mover card ---------- */
+  function ideaById(id){
+    return IDEAS.find(function(i){ return i.id === id; });
+  }
+
+  /* Única porta de entrada para trocar um card de coluna — usada pelo
+     botão, pelo drop e pelas setas do teclado. `focar` diz onde devolver
+     o foco depois do render, que recria todo o DOM do board. */
+  function moveIdea(id, statusId, focar){
+    var idea = ideaById(id);
+    if(!idea || idea.status === statusId) return false;
+
+    var to = COLUMNS.find(function(c){ return c.id === statusId; });
+    if(!to) return false;
+
+    idea.status = to.id;
+    enteringId = id;
+    render();
+
+    live.textContent = '“' + idea.title + '” movida para ' + to.label + '.';
+
+    if(focar){
+      var alvo = focar === 'botao'
+        ? board.querySelector('[data-move="' + id + '"]')
+        : board.querySelector('.idea[data-id="' + id + '"]');
+      if(alvo) alvo.focus();
+    }
+    return true;
+  }
+
+  function fecharMenus(){
+    Array.prototype.forEach.call(
+      board.querySelectorAll('.menu.is-open'),
+      function(m){ m.classList.remove('is-open'); }
+    );
+    Array.prototype.forEach.call(
+      board.querySelectorAll('.card-menu[aria-expanded="true"]'),
+      function(b){ b.setAttribute('aria-expanded', 'false'); }
+    );
+  }
+
+  board.addEventListener('click', function(e){
+    /* Kebab: abre/fecha o menu do card */
+    var kebab = e.target.closest('.card-menu');
+    if(kebab){
+      var ideiaMenu = kebab.parentElement.querySelector('.menu');
+      var estavaAberto = ideiaMenu.classList.contains('is-open');
+      fecharMenus();
+      if(!estavaAberto){
+        ideiaMenu.classList.add('is-open');
+        kebab.setAttribute('aria-expanded', 'true');
+      }
+      e.stopPropagation();
+      return;
+    }
+
+    /* Ação do menu (Editar idéia / Duplicar / Excluir) */
+    var item = e.target.closest('.menu [data-idea-action]');
+    if(item){
+      var actionId = Number(item.dataset.id);
+      var acao     = item.dataset.ideaAction;
+      fecharMenus();
+
+      if(acao === 'editar'){
+        openEditModal(actionId);
+      } else if(acao === 'duplicar'){
+        ideiaDuplicando = actionId;
+        ideiaDupModal.showModal();
+        document.body.classList.add('modal-open');
+      } else if(acao === 'excluir'){
+        ideiaExcluindo = actionId;
+        ideiaDeleteModal.showModal();
+        document.body.classList.add('modal-open');
+      }
+      return;
+    }
+
+    var btn = e.target.closest('[data-move]');
+    if(btn){
+      var idea = ideaById(Number(btn.dataset.move));
+      if(!idea) return;
+
+      if(idea.illustration){
+        window.location.href = 'matriz_csd.html';
+      } else {
+        window.location.href = 'atividade.html';
+      }
+      return;
+    }
+
+    /* Card ilustrado (ex.: "Matriz CSD"): clicar no card também navega */
+    var card = e.target.closest('.idea[data-id]');
+    if(!card) return;
+    var clicado = ideaById(Number(card.dataset.id));
+    if(!clicado || !clicado.illustration) return;
+    window.location.href = 'matriz_csd.html';
+  });
+
+  /* Fecha os menus ao clicar fora do board. */
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.menu') || e.target.closest('.card-menu')) return;
+    fecharMenus();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') fecharMenus();
+  });
+
+  /* ---------- Arrastar e soltar entre colunas ---------- */
+  var draggedId = null;
+
+  function limparAlvos(){
+    Array.prototype.forEach.call(
+      board.querySelectorAll('.column-body.is-drop-target'),
+      function(el){ el.classList.remove('is-drop-target'); }
+    );
+  }
+
+  /* Um card inteiro arrastável engoliria o clique em "Acessar", já que o
+     mousedown no botão inicia o arraste do ancestral draggable. Então o
+     atributo só é ligado quando o gesto NÃO começa num botão. */
+  board.addEventListener('pointerdown', function(e){
+    var card = e.target.closest('.idea');
+    if(card) card.draggable = !e.target.closest('button');
+  });
+
+  board.addEventListener('dragstart', function(e){
+    var card = e.target.closest('.idea');
+    if(!card) return;
+    draggedId = Number(card.dataset.id);
+    card.classList.add('is-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(draggedId));
+  });
+
+  board.addEventListener('dragover', function(e){
+    if(draggedId === null) return;
+    var alvo = e.target.closest('.column-body');
+    var idea = ideaById(draggedId);
+    if(!alvo || !idea) return;
+
+    // Soltar na coluna de origem não muda nada — não sinalizamos como alvo
+    // nem chamamos preventDefault, então o cursor mostra "não permitido".
+    if(alvo.dataset.status === idea.status){ limparAlvos(); return; }
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if(!alvo.classList.contains('is-drop-target')){
+      limparAlvos();
+      alvo.classList.add('is-drop-target');
+    }
+  });
+
+  board.addEventListener('dragleave', function(e){
+    var alvo = e.target.closest('.column-body');
+    // relatedTarget fora da coluna = saiu de verdade; dentro = só trocou
+    // de filho, e o realce deve continuar.
+    if(alvo && !alvo.contains(e.relatedTarget)) alvo.classList.remove('is-drop-target');
+  });
+
+  board.addEventListener('drop', function(e){
+    var alvo = e.target.closest('.column-body');
+    if(!alvo || draggedId === null) return;
+    e.preventDefault();
+
+    var id = Number(e.dataTransfer.getData('text/plain'));
+    if(!id) id = draggedId;
+
+    limparAlvos();
+    draggedId = null;
+    moveIdea(id, alvo.dataset.status, 'card');
+  });
+
+  board.addEventListener('dragend', function(){
+    // Após um drop bem-sucedido o render já trocou o DOM e não há nada
+    // para limpar; isto cobre o arraste cancelado (Esc, solto fora).
+    var card = board.querySelector('.idea.is-dragging');
+    if(card) card.classList.remove('is-dragging');
+    limparAlvos();
+    draggedId = null;
+  });
+
+  /* Alternativa por teclado ao arraste (WCAG 2.5.7 Movimentos de arrastar):
+     com o card focado, ← e → o levam para a coluna vizinha. */
+  board.addEventListener('keydown', function(e){
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+    var card = e.target.closest('.idea');
+    if(!card) return;
+
+    var idea = ideaById(Number(card.dataset.id));
+    if(!idea) return;
+
+    var atual = COLUMNS.findIndex(function(c){ return c.id === idea.status; });
+    var destino = atual + (e.key === 'ArrowRight' ? 1 : -1);
+    if(destino < 0 || destino >= COLUMNS.length) return;
+
+    e.preventDefault();
+    moveIdea(idea.id, COLUMNS[destino].id, 'card');
+  });
+
+  /* ---------- Busca e filtro ---------- */
+  search.addEventListener('input', render);
+
+  /* Dropdown customizado "Filtrar por" */
+  var filterMenu = filter.nextElementSibling;
+  var filterLabel = document.getElementById('filterLabel');
+
+  filter.addEventListener('click', function(){
+    var open = filter.getAttribute('aria-expanded') === 'true';
+    filter.setAttribute('aria-expanded', String(!open));
+    filterMenu.style.display = open ? 'none' : 'block';
+  });
+
+  filterMenu.addEventListener('click', function(e){
+    var opt = e.target.closest('button[role="option"]');
+    if(!opt) return;
+    var value = opt.dataset.value;
+    filter.setAttribute('data-value', value);
+    filterLabel.textContent = opt.textContent.trim();
+    filterMenu.querySelectorAll('button').forEach(function(b){
+      b.setAttribute('aria-selected', String(b === opt));
+    });
+    filter.setAttribute('aria-expanded', 'false');
+    filterMenu.style.display = 'none';
+    render();
+  });
+
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('.field-filter')){
+      filter.setAttribute('aria-expanded', 'false');
+      filterMenu.style.display = 'none';
+    }
+  });
+
+  /* ---------- Modal ---------- */
+  var modal         = document.getElementById('modal');
+  var modalTitleTxt = document.getElementById('modalTitleText');
+  var form          = document.getElementById('ideaForm');
+  var openBtn       = document.getElementById('openModal');
+  var editingId     = null;
+
+  function openModal(){
+    editingId = null;
+    modalTitleTxt.textContent = 'Nova idéia';
+    form.reset();
+    importance = 0;
+    paintStars();
+    modal.showModal();
+    document.body.classList.add('modal-open');
+    document.getElementById('ideaTitle').focus();
+  }
+  function openEditModal(id){
+    var idea = ideaById(id);
+    if(!idea) return;
+
+    editingId = id;
+    modalTitleTxt.textContent = 'Editar idéia';
+    document.getElementById('ideaTitle').value = idea.title;
+    document.getElementById('ideaDesc').value  = idea.desc || '';
+    importance = idea.importance || 0;
+    paintStars();
+
+    modal.showModal();
+    document.body.classList.add('modal-open');
+    document.getElementById('ideaTitle').focus();
+  }
+  function closeModal(){
+    modal.close();
+  }
+
+  /* ---------- Estrelas de importância ---------- */
+  var starGroup  = document.getElementById('ideaStars');
+  var starBtns   = Array.prototype.slice.call(starGroup.querySelectorAll('.radio-star'));
+  var importance = 0;
+
+  function paintStars(){
+    starBtns.forEach(function(btn, i){
+      btn.setAttribute('aria-checked', String(i < importance));
+    });
+  }
+  starGroup.addEventListener('click', function(e){
+    var btn = e.target.closest('.radio-star');
+    if(!btn) return;
+    importance = Number(btn.dataset.value);
+    paintStars();
+  });
+
+  openBtn.addEventListener('click', openModal);
+  document.getElementById('closeModal').addEventListener('click', closeModal);
+  document.getElementById('openModalEmpty').addEventListener('click', openModal);
+
+  // Card fake "Adicionar idéia" abre o modal de nova idéia.
+  board.addEventListener('click', function(e){
+    var add = e.target.closest('.idea-add');
+    if(!add) return;
+    openModal();
+  });
+  board.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){
+      var add = e.target.closest('.idea-add');
+      if(add){ e.preventDefault(); openModal(); }
+    }
+  });
+
+  /* ---------- Modais de confirmação (Excluir / Duplicar) ---------- */
+  var ideiaDeleteModal = document.getElementById('ideiaDeleteModal');
+  var ideiaDupModal    = document.getElementById('ideiaDupModal');
+  var ideiaExcluindo   = null;
+  var ideiaDuplicando  = null;
+
+  document.getElementById('confirmIdeaDeleteBtn').addEventListener('click', function(){
+    var idea = ideaById(ideiaExcluindo);
+    if(!idea){ closeConfirmModals(); return; }
+
+    var idx = IDEAS.indexOf(idea);
+    if(idx !== -1) IDEAS.splice(idx, 1);
+
+    ideiaExcluindo = null;
+    if(ideiaDeleteModal.open) ideiaDeleteModal.close();
+    document.body.classList.remove('modal-open');
+    render();
+    window.mostrarMensagem('Idéia excluída com sucesso.');
+  });
+  document.getElementById('cancelIdeaDeleteBtn').addEventListener('click', closeConfirmModals);
+  document.getElementById('closeIdeaDeleteBtn').addEventListener('click', closeConfirmModals);
+
+  document.getElementById('confirmIdeaDupBtn').addEventListener('click', function(){
+    var idea = ideaById(ideiaDuplicando);
+    if(ideiaDuplicando !== null && idea){
+      var copia = {
+        id: nextId++,
+        status: idea.status,
+        title: idea.title,
+        desc: idea.desc,
+        importance: idea.importance,
+        illustration: idea.illustration
+      };
+      IDEAS.splice(IDEAS.indexOf(idea) + 1, 0, copia);
+      enteringId = copia.id;
+      ideiaDuplicando = null;
+      if(ideiaDupModal.open) ideiaDupModal.close();
+      document.body.classList.remove('modal-open');
+      render();
+      window.mostrarMensagem('Idéia duplicada com sucesso.');
+      return;
+    }
+    ideiaDuplicando = null;
+    closeConfirmModals();
+  });
+  document.getElementById('cancelIdeaDupBtn').addEventListener('click', closeConfirmModals);
+  document.getElementById('closeIdeaDupBtn').addEventListener('click', closeConfirmModals);
+
+  /* ---------- Modal "Gerar com ajuda da IA" ---------- */
+  var ideaAiModal = document.getElementById('ideaAiModal');
+
+  function abrirIdeaAiModal(){
+    if(ideaAiModal.open) return;
+    ideaAiModal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fecharIdeaAiModal(){
+    if(ideaAiModal.open) ideaAiModal.close();
+    document.body.classList.remove('modal-open');
+  }
+  document.getElementById('openAiModal').addEventListener('click', abrirIdeaAiModal);
+  document.getElementById('closeIdeaAiBtn').addEventListener('click', fecharIdeaAiModal);
+  document.getElementById('cancelIdeaAiBtn').addEventListener('click', fecharIdeaAiModal);
+  ideaAiModal.addEventListener('click', function(e){
+    if(e.target === ideaAiModal) fecharIdeaAiModal();
+  });
+  ideaAiModal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+  });
+  document.getElementById('confirmIdeaAiBtn').addEventListener('click', function(){
+    fecharIdeaAiModal();
+    window.mostrarMensagem('Idéias geradas com sucesso.');
+  });
+
+  // Clique no backdrop fecha os diálogos de confirmação.
+  ideiaDeleteModal.addEventListener('click', function(e){
+    if(e.target === ideiaDeleteModal) closeConfirmModals();
+  });
+  ideiaDupModal.addEventListener('click', function(e){
+    if(e.target === ideiaDupModal) closeConfirmModals();
+  });
+
+  var closeConfirmModals = function(){
+    ideiaExcluindo  = null;
+    ideiaDuplicando = null;
+    if(ideiaDeleteModal.open) ideiaDeleteModal.close();
+    if(ideiaDupModal.open)    ideiaDupModal.close();
+    document.body.classList.remove('modal-open');
+  };
+
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    form.reset();
+    importance = 0;
+    paintStars();
+    openBtn.focus();
+  });
+
+  // Clique no backdrop fecha o dialog.
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) closeModal();
+  });
+
+  var titleInput = document.getElementById('ideaTitle');
+  var descInput  = document.getElementById('ideaDesc');
+
+  form.addEventListener('submit', function(){
+    // Acesso via getElementById, não form.title/form.desc: "title" colide
+    // com a propriedade nativa HTMLElement.title e sempre retorna "".
+    var title = titleInput.value.trim();
+    var desc  = descInput.value.trim();
+    if(!title || !desc) return;
+
+    var idea;
+    var foiEdicao = editingId !== null;
+    if(editingId !== null){
+      idea = ideaById(editingId);
+      if(!idea) return;
+      idea.title = title;
+      idea.desc  = desc;
+      idea.importance = importance;
+    } else {
+      idea = { id:nextId++, status:'ideias', title:title, desc:desc, importance:importance };
+      IDEAS.unshift(idea);
+      document.body.classList.remove('is-empty');
+      var toggleLabel = document.getElementById('toggleLabel');
+      if(toggleLabel) toggleLabel.textContent = 'Ver empty state';
+    }
+
+    // Limpa filtros que esconderiam a idéia recém-criada.
+    search.value = '';
+    filter.setAttribute('data-value', 'recentes');
+    filterLabel.textContent = 'Mais recente';
+    filterMenu.querySelectorAll('button').forEach(function(b){
+      b.setAttribute('aria-selected', String(b.dataset.value === 'recentes'));
+    });
+
+    enteringId = idea.id;
+    render();
+    live.textContent = foiEdicao
+      ? '“' + title + '” editada.'
+      : '“' + title + '” adicionada a Minhas idéias.';
+    if(foiEdicao) window.mostrarMensagem('Idéia editada com sucesso.');
+  });
+
+  /* ---------- Assistente: abrir / fechar ---------- */
+  var assistantInner  = document.getElementById('assistantInner');
+  var assistantToggle = document.getElementById('assistantToggle');
+
+  function setAssistant(open){
+    document.body.classList.toggle('is-assistant-closed', !open);
+    assistantToggle.setAttribute('aria-expanded', String(open));
+    assistantToggle.setAttribute('aria-label', open ? 'Fechar assistente' : 'Abrir assistente');
+
+    // inert so no miolo: o gatilho continua na faixa e segue focavel,
+    // entao o foco nunca fica preso num elemento que sumiu.
+    assistantInner.inert = !open;
+  }
+
+  assistantToggle.addEventListener('click', function(){
+    setAssistant(document.body.classList.contains('is-assistant-closed'));
+  });
+
+  setAssistant(true);
+
+  /* Visão "Ver board com idéias": quando a página é aberta com
+     ?board=1, remove o empty state e mostra o quadro direto. */
+  if(new URLSearchParams(window.location.search).get('board') === '1'){
+    document.body.classList.remove('is-empty');
+    var toggleLabelIni = document.getElementById('toggleLabel');
+    if(toggleLabelIni) toggleLabelIni.textContent = 'Ver empty state';
+  }
+
+  /* ---------- Card vindo de /pesquisa.html ----------
+     Quando o usuário finaliza uma tarefa lá, o card chega aqui via
+     localStorage e nasce direto na coluna "Finalizado". Se já existir
+     um card com o mesmo título em outra coluna, ele é movido em vez
+     de duplicado. */
+  var ideaFinalizada = null;
+  try{ ideaFinalizada = JSON.parse(localStorage.getItem('idea-finalizada') || 'null'); }catch(e){}
+  if(ideaFinalizada && ideaFinalizada.titulo){
+    try{ localStorage.removeItem('idea-finalizada'); }catch(e){}
+
+    var ideaFinalizando = IDEAS.find(function(i){ return i.title === ideaFinalizada.titulo; });
+    if(ideaFinalizando){
+      ideaFinalizando.status = 'finalizado';
+    } else {
+      ideaFinalizando = {
+        id: nextId++,
+        status: 'finalizado',
+        title: ideaFinalizada.titulo,
+        desc: ideaFinalizada.desc || '',
+        importance: ideaFinalizada.importance || 5
+      };
+      IDEAS.push(ideaFinalizando);
+    }
+    enteringId = ideaFinalizando.id;
+
+    document.body.classList.remove('is-empty');
+    var toggleLabelFinal = document.getElementById('toggleLabel');
+    if(toggleLabelFinal) toggleLabelFinal.textContent = 'Ver empty state';
+  }
+
+  render();
+
+  if(ideaFinalizada && ideaFinalizada.titulo){
+    live.textContent = '“' + ideaFinalizada.titulo + '” movida para Finalizado.';
+  }
+
+  /* ---------- Toggle empty state (preview) ---------- */
+  var toggleEmpty = document.getElementById('toggleEmpty');
+  var toggleLabel = document.getElementById('toggleLabel');
+  toggleEmpty.addEventListener('click', function(){
+    var empty = document.body.classList.toggle('is-empty');
+    toggleLabel.textContent = empty ? 'Ver board com idéias' : 'Ver empty state';
+  });
+})();
+
+/* ------------------------------------------------------------
+   Navegação do rail
+   ------------------------------------------------------------ */
+document.querySelector('.rail-nav .nav-item[data-label="Início"]')
+  .addEventListener('click', function(){ window.location.href = 'empresas.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Empresas"]')
+  .addEventListener('click', function(){ window.location.href = 'empresas.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Projetos"]')
+  .addEventListener('click', function(){ window.location.href = 'projetos.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Sobre a empresa"]')
+  .addEventListener('click', function(){ window.location.href = 'Sobre_a_empresa.html'; });
+
+/* ------------------------------------------------------------
+   Toast de feedback
+   ------------------------------------------------------------ */
+(function(){
+  var toast     = document.getElementById('toast');
+  var toastText = document.getElementById('toastText');
+  var toastTimer = null;
+
+  function ocultarMensagem(){
+    toast.classList.remove('is-visible');
+    setTimeout(function(){ toast.hidden = true; }, 200);
+  }
+  function mostrarMensagem(msg){
+    toastText.textContent = msg;
+    toast.hidden = false;
+    requestAnimationFrame(function(){ toast.classList.add('is-visible'); });
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(ocultarMensagem, 3000);
+  }
+  document.getElementById('toastClose').addEventListener('click', function(){
+    clearTimeout(toastTimer);
+    ocultarMensagem();
+  });
+
+  /* Expõe a função para o escopo principal reutilizar. */
+  window.mostrarMensagem = mostrarMensagem;
+
+  if(new URLSearchParams(window.location.search).get('criado') === '1'){
+    mostrarMensagem('Projeto criado com sucesso.');
+  }
+  if(new URLSearchParams(window.location.search).get('atividade_excluida') === '1'){
+    mostrarMensagem('Atividade excluída com sucesso.');
+  }
+})();
+</script>
+
+
+<!-- ===================== MODAL — PERFIL DO USUÁRIO ===================== -->
+<dialog class="pf-modal" id="perfilModal" aria-labelledby="pfTitulo">
+  <div class="pf-shell">
+
+    <nav class="pf-side" aria-label="Seções do perfil">
+      <button type="button" class="pf-side-item" data-painel="perfil" aria-current="true">Perfil</button>
+      <button type="button" class="pf-side-item" data-painel="conta">Conta</button>
+      <button type="button" class="pf-side-item" data-painel="notificacoes">Notificações</button>
+      <button type="button" class="pf-side-item" data-painel="preferencias">Preferências</button>
+      <button type="button" class="pf-side-item" data-painel="creditos">Créditos de uso</button>
+      <span class="pf-side-spacer"></span>
+      <button type="button" class="pf-side-item pf-side-item--danger" id="pfSair">Sair da conta</button>
+    </nav>
+
+    <div class="pf-divider" role="presentation"></div>
+
+    <div class="pf-main">
+      <div class="pf-head">
+        <h2 class="pf-title">
+          <span class="pf-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+          </span>
+          <span id="pfTitulo">Perfil</span>
+        </h2>
+        <button type="button" class="pf-close" id="pfFechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <div class="pf-body">
+
+        <!-- ---------- Perfil ---------- -->
+        <section class="pf-panel" id="pf-perfil" aria-label="Perfil">
+          <div class="pf-avatar-row">
+            <span class="pf-avatar"><img src="https://i.pravatar.cc/160?img=47" alt="Foto de Ricardo Mateus"></span>
+            <div class="pf-avatar-actions">
+              <button type="button" class="pf-btn">Trocar foto</button>
+              <button type="button" class="pf-btn pf-btn--danger">Remover</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfNome">Nome completo</label>
+            <input class="pf-input" type="text" id="pfNome" value="Ricardo Mateus" autocomplete="name">
+          </div>
+
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfEmail">E-mail</label>
+              <input class="pf-input" type="email" id="pfEmail" value="ricardosmateus@gmail.com" autocomplete="email">
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfCargo">Cargo</label>
+              <input class="pf-input" type="text" id="pfCargo" value="Designer de produto">
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfBio">Sobre você</label>
+            <input class="pf-input" type="text" id="pfBio" placeholder="Uma linha sobre o seu trabalho">
+            <p class="pf-hint">Aparece ao lado das suas idéias e comentários.</p>
+          </div>
+        </section>
+
+        <!-- ---------- Conta ---------- -->
+        <section class="pf-panel" id="pf-conta" aria-label="Conta" hidden>
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfIdioma">Idioma</label>
+              <select class="pf-input" id="pfIdioma">
+                <option selected>Português (Brasil)</option>
+                <option>English (US)</option>
+                <option>Español</option>
+              </select>
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfFuso">Fuso horário</label>
+              <select class="pf-input" id="pfFuso">
+                <option selected>(GMT-03:00) São Paulo</option>
+                <option>(GMT-05:00) Nova York</option>
+                <option>(GMT+01:00) Lisboa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfSenha">Senha</label>
+            <input class="pf-input" type="password" id="pfSenha" value="douglas123" autocomplete="current-password">
+            <p class="pf-hint">Última alteração há 3 meses.</p>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Excluir conta</span>
+              <span class="pf-row-desc">Remove seus dados e projetos em definitivo. Não dá para desfazer.</span>
+            </div>
+            <button type="button" class="pf-btn pf-btn--danger">Excluir</button>
+          </div>
+        </section>
+
+        <!-- ---------- Notificações ---------- -->
+        <section class="pf-panel" id="pf-notificacoes" aria-label="Notificações" hidden>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Novidades por e-mail</span>
+              <span class="pf-row-desc">Avisos quando alguém comentar ou mover uma idéia sua.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Novidades por e-mail">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Resumo semanal</span>
+              <span class="pf-row-desc">Um apanhado do que andou pelos seus projetos na semana.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Resumo semanal">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Menções</span>
+              <span class="pf-row-desc">Quando citarem seu nome numa atividade ou tarefa.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Menções">
+          </div>
+        </section>
+
+        <!-- ---------- Preferências ---------- -->
+        <section class="pf-panel" id="pf-preferencias" aria-label="Preferências" hidden>
+          <div role="radiogroup" aria-label="Tema" style="display:flex;flex-direction:column;gap:12px">
+            <button type="button" class="pf-option" role="radio" aria-checked="true">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Claro</span>
+                <span class="pf-row-desc">O tema que a plataforma usa hoje.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Escuro</span>
+                <span class="pf-row-desc">Para trabalhar com pouca luz.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Seguir o sistema</span>
+                <span class="pf-row-desc">Acompanha a preferência do seu computador.</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Reduzir animações</span>
+              <span class="pf-row-desc">Desliga as transições de abertura e movimento.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Reduzir animações">
+          </div>
+        </section>
+
+        <!-- ---------- Créditos de uso ---------- -->
+        <section class="pf-panel" id="pf-creditos" aria-label="Créditos de uso" hidden>
+          <div class="pf-field">
+            <label class="pf-label" for="pfCreditos">Créditos disponíveis</label>
+            <div class="pf-credito-barra" role="img" aria-label="Evolução do crédito disponível">
+              <div class="pf-credito-uso" style="width:40%"></div>
+            </div>
+            <div class="pf-credito-meta">
+              <span>500 créditos disponíveis</span>
+              <span>200 usados de 500</span>
+            </div>
+            <p class="pf-hint">A barra diminui conforme os créditos são usados em pesquisas com IA, sugestões e conclusões geradas.</p>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="comprarRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Comprar créditos</span>
+              <span class="pf-row-desc">Adicione créditos para continuar usando as funcionalidades de IA.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn pf-btn--success" id="comprarBtn">Comprar</button>
+            </div>
+
+            <!-- Formulário de compra + Pix (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="comprarConteudo" hidden>
+              <div class="pf-compra-form">
+                <div class="pf-field">
+                  <label class="pf-label" for="pfValorCredito">Valor a adicionar</label>
+                  <div class="pf-valor-wrap">
+                    <span class="pf-valor-prefixo" aria-hidden="true">R$</span>
+                    <input class="pf-input pf-input--valor" type="text" inputmode="decimal"
+                           id="pfValorCredito" placeholder="0,00" aria-describedby="pfValorHint">
+                  </div>
+                  <p class="pf-hint" id="pfValorHint">1 crédito equivale a R$ 1,00. Valor mínimo de R$ 10,00.</p>
+                </div>
+
+                <button type="button" class="pf-btn pf-btn--accent" id="gerarQrBtn" disabled>Gerar QR Code Pix</button>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr">
+                    <canvas id="pfPixCanvas" width="176" height="176" role="img" aria-label="QR Code para pagamento via Pix"></canvas>
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="historicoRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Histórico de uso</span>
+              <span class="pf-row-desc">Acompanhe quando e onde os seus créditos foram usados.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn" id="verHistoricoBtn">Ver histórico</button>
+            </div>
+
+            <!-- Timeline de histórico de créditos (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="historicoTimeline" hidden>
+              <div class="timeline-container" id="timelineContainer">
+                <!-- Timeline será preenchida por JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="pf-rule" role="presentation"></div>
+
+      <div class="pf-foot">
+        <button type="button" class="pf-save" id="pfSalvar">Salvar alterações</button>
+        <button type="button" class="pf-cancel" id="pfCancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var modal = document.getElementById('perfilModal');
+  var gatilho = document.getElementById('avatarBtn');
+  if(!modal || !gatilho) return;
+
+  var itens   = Array.prototype.slice.call(modal.querySelectorAll('.pf-side-item[data-painel]'));
+  var paineis = Array.prototype.slice.call(modal.querySelectorAll('.pf-panel'));
+  var titulo  = document.getElementById('pfTitulo');
+
+  function mostrar(id){
+    itens.forEach(function(i){ i.setAttribute('aria-current', String(i.getAttribute('data-painel') === id)); });
+    paineis.forEach(function(p){ p.hidden = p.id !== 'pf-' + id; });
+    var atual = itens.filter(function(i){ return i.getAttribute('data-painel') === id; })[0];
+    if(atual) titulo.textContent = atual.textContent.trim();
+    modal.querySelector('.pf-body').scrollTop = 0;
+  }
+  itens.forEach(function(i){
+    i.addEventListener('click', function(){ mostrar(i.getAttribute('data-painel')); });
+  });
+
+  // Cartões de tema: um só marcado por vez
+  var temas = Array.prototype.slice.call(modal.querySelectorAll('.pf-option[role="radio"]'));
+  temas.forEach(function(t){
+    t.addEventListener('click', function(){
+      temas.forEach(function(o){ o.setAttribute('aria-checked', String(o === t)); });
+    });
+  });
+
+  function abrir(){
+    mostrar('perfil');
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fechar(){ if(modal.open) modal.close(); }
+
+  gatilho.addEventListener('click', abrir);
+  document.getElementById('pfFechar').addEventListener('click', fechar);
+  document.getElementById('pfCancelar').addEventListener('click', fechar);
+  document.getElementById('pfSalvar').addEventListener('click', fechar);
+  document.getElementById('pfSair').addEventListener('click', function(){ window.location.href = 'login.html'; });
+
+  // Clique no backdrop (fora da casca) fecha
+  modal.addEventListener('click', function(e){
+    var r = modal.getBoundingClientRect();
+    var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!dentro) fechar();
+  });
+
+  // Esc já fecha sozinho no <dialog>; aqui só devolvemos o estado
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    gatilho.focus();
+  });
+})();
+</script>
+
+<script>
+/* ---------- Efeito de âncora, compartilhado entre os cards ----------
+   Rola até o card e faz o destaque piscar uma vez, sem deixar
+   estado permanente — usado por "Histórico de uso" e "Comprar
+   créditos" ao expandir seu conteúdo. */
+window.pfAncorarCard = function(row){
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'nearest'});
+  row.classList.remove('pf-anchor-flash');
+  void row.offsetWidth;                        // reflow: reinicia a animação a cada clique
+  row.classList.add('pf-anchor-flash');
+  setTimeout(function(){
+    row.classList.remove('pf-anchor-flash');
+  }, 1100);
+};
+</script>
+
+<script>
+/* ---------- Histórico de Créditos ----------
+   Expande a timeline dentro da sessão "Histórico de uso"
+   do modal de Perfil, aba "Crédito de uso".
+*/
+(function(){
+  'use strict';
+  var verHistoricoBtn = document.getElementById('verHistoricoBtn');
+  var historicoTimeline = document.getElementById('historicoTimeline');
+  var timelineContainer = document.getElementById('timelineContainer');
+  var historicoRow = document.getElementById('historicoRow');
+
+  if(!verHistoricoBtn || !historicoTimeline || !timelineContainer) return;
+
+  // Dados de exemplo do histórico de créditos
+  var historicoData = [
+    {
+      data: '10 de ago de 2026',
+      tarefa: 'Pesquisa: Análise de tendências 2025',
+      custo: '25,00'
+    },
+    {
+      data: '08 de ago de 2026',
+      tarefa: 'Sugestão de nome para startup',
+      custo: '15,00'
+    },
+    {
+      data: '05 de ago de 2026',
+      tarefa: 'Análise de mercado e concorrentes',
+      custo: '30,00'
+    },
+    {
+      data: '02 de ago de 2026',
+      tarefa: 'Conclusão sobre viabilidade de projeto',
+      custo: '20,00'
+    },
+    {
+      data: '01 de ago de 2026',
+      tarefa: 'Pesquisa: Tendências de design 2025',
+      custo: '25,00'
+    },
+    {
+      data: '31 de jul de 2026',
+      tarefa: 'Sugestão de funcionalidades principais',
+      custo: '18,00'
+    },
+    {
+      data: '28 de jul de 2026',
+      tarefa: 'Análise de escopo e viabilidade',
+      custo: '22,00'
+    }
+  ];
+
+  function renderTimeline(){
+    timelineContainer.innerHTML = '';
+    historicoData.forEach(function(item){
+      var timelineItem = document.createElement('div');
+      timelineItem.className = 'timeline-item';
+      timelineItem.innerHTML =
+        '<div class="timeline-dot" aria-hidden="true"></div>' +
+        '<div class="timeline-content">' +
+          '<div class="timeline-date">' + item.data + '</div>' +
+          '<div class="timeline-task">' + item.tarefa + '</div>' +
+          '<div class="timeline-cost">Custo: <strong>R$ ' + item.custo + '</strong></div>' +
+        '</div>';
+      timelineContainer.appendChild(timelineItem);
+    });
+  }
+
+  function toggle(){
+    var isHidden = historicoTimeline.hidden;
+    if(isHidden){
+      renderTimeline();
+      historicoTimeline.hidden = false;
+      verHistoricoBtn.textContent = 'Ocultar histórico';
+      window.pfAncorarCard(historicoRow);
+    } else {
+      historicoTimeline.hidden = true;
+      verHistoricoBtn.textContent = 'Ver histórico';
+    }
+  }
+
+  verHistoricoBtn.addEventListener('click', toggle);
+})();
+</script>
+
+<script>
+/* ---------- Comprar créditos via Pix ----------
+   Expande o formulário de valor + QR Code Pix dentro do card
+   "Comprar créditos". Protótipo: o QR e o código copia-e-cola
+   são gerados no cliente só para representar o fluxo visualmente,
+   não há integração real de pagamento.
+*/
+(function(){
+  'use strict';
+  var comprarBtn = document.getElementById('comprarBtn');
+  var comprarRow = document.getElementById('comprarRow');
+  var comprarConteudo = document.getElementById('comprarConteudo');
+  var valorInput = document.getElementById('pfValorCredito');
+  var gerarQrBtn = document.getElementById('gerarQrBtn');
+  var pfPix = document.getElementById('pfPix');
+  var pfPixCanvas = document.getElementById('pfPixCanvas');
+  var pfPixValor = document.getElementById('pfPixValor');
+  var pfPixCodigo = document.getElementById('pfPixCodigo');
+  var copiarPixBtn = document.getElementById('pfCopiarPix');
+
+  if(!comprarBtn || !comprarConteudo || !valorInput || !gerarQrBtn) return;
+
+  var VALOR_MINIMO = 10;
+
+  /* ---- Máscara de moeda: usuário digita só números, formata como R$ ---- */
+  function valorNumerico(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    return digitos ? parseInt(digitos, 10) / 100 : 0;
+  }
+
+  function formatarValorInput(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    if(!digitos){ valorInput.value = ''; atualizarEstadoBotao(); return; }
+    var valor = parseInt(digitos, 10) / 100;
+    valorInput.value = valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    atualizarEstadoBotao();
+  }
+
+  function atualizarEstadoBotao(){
+    var valor = valorNumerico();
+    gerarQrBtn.disabled = valor < VALOR_MINIMO;
+    // Muda o valor: o QR anterior não vale mais para o novo valor
+    if(!pfPix.hidden) esconderPix();
+  }
+
+  function esconderPix(){
+    pfPix.hidden = true;
+  }
+
+  /* ---- Geração do código Pix "copia e cola" (simulado) ---- */
+  function gerarCodigoPixFake(valor){
+    var valorFormatado = valor.toFixed(2);
+    var idTransacao = Math.random().toString(36).slice(2, 10).toUpperCase();
+    return '00020126580014BR.GOV.BCB.PIX0136' + idTransacao +
+      '5204000053039865406' + valorFormatado.replace('.', '') +
+      '5802BR5920PLATAFORMA DE DESIGN6009SAO PAULO62070503***6304' + idTransacao.slice(0, 4);
+  }
+
+  /* ---- QR code fake: grid pseudo-aleatório com "olhos" de QR real,
+     determinístico a partir do texto, só para representar o Pix. ---- */
+  function hashTexto(str){
+    var h = 0;
+    for(var i = 0; i < str.length; i++){
+      h = (h << 5) - h + str.charCodeAt(i);
+      h |= 0;
+    }
+    return h || 1;
+  }
+
+  function criarGeradorAleatorio(seed){
+    var s = Math.abs(seed) % 2147483647;
+    if(s <= 0) s += 2147483646;
+    return function(){
+      s = s * 16807 % 2147483647;
+      return (s - 1) / 2147483646;
+    };
+  }
+
+  function naAreaFinder(x, y, modulos){
+    function noCanto(cx, cy){ return x >= cx && x < cx + 8 && y >= cy && y < cy + 8; }
+    return noCanto(0, 0) || noCanto(modulos - 8, 0) || noCanto(0, modulos - 8);
+  }
+
+  function desenharFinder(ctx, ox, oy, m){
+    ctx.fillStyle = '#181D27';
+    ctx.fillRect(ox, oy, 7 * m, 7 * m);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(ox + m, oy + m, 5 * m, 5 * m);
+    ctx.fillStyle = '#181D27';
+    ctx.fillRect(ox + 2 * m, oy + 2 * m, 3 * m, 3 * m);
+  }
+
+  function desenharQrFake(canvas, texto){
+    var ctx = canvas.getContext('2d');
+    var tamanho = canvas.width;
+    var modulos = 29;
+    var m = tamanho / modulos;
+    var aleatorio = criarGeradorAleatorio(hashTexto(texto));
+
+    ctx.clearRect(0, 0, tamanho, tamanho);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, tamanho, tamanho);
+    ctx.fillStyle = '#181D27';
+
+    for(var y = 0; y < modulos; y++){
+      for(var x = 0; x < modulos; x++){
+        if(naAreaFinder(x, y, modulos)) continue;
+        if(aleatorio() > 0.55){
+          ctx.fillRect(x * m, y * m, m, m);
+        }
+      }
+    }
+
+    desenharFinder(ctx, 0, 0, m);
+    desenharFinder(ctx, (modulos - 7) * m, 0, m);
+    desenharFinder(ctx, 0, (modulos - 7) * m, m);
+  }
+
+  function gerarQr(){
+    var valor = valorNumerico();
+    if(valor < VALOR_MINIMO) return;
+
+    var codigo = gerarCodigoPixFake(valor);
+    desenharQrFake(pfPixCanvas, codigo);
+    pfPixCodigo.value = codigo;
+    pfPixValor.textContent = valor.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+    pfPix.hidden = false;
+    // Mesmo motion de âncora do "Comprar", agora guiando o olhar
+    // até o QR Code recém-gerado.
+    window.pfAncorarCard(pfPix);
+  }
+
+  function copiarCodigo(){
+    var restaurarTexto = copiarPixBtn.textContent;
+    function marcarCopiado(){
+      copiarPixBtn.textContent = 'Copiado!';
+      copiarPixBtn.classList.add('is-copiado');
+      setTimeout(function(){
+        copiarPixBtn.textContent = restaurarTexto;
+        copiarPixBtn.classList.remove('is-copiado');
+      }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(pfPixCodigo.value).then(marcarCopiado);
+    } else {
+      pfPixCodigo.select();
+      document.execCommand('copy');
+      marcarCopiado();
+    }
+  }
+
+  function toggle(){
+    var isHidden = comprarConteudo.hidden;
+    if(isHidden){
+      comprarConteudo.hidden = false;
+      comprarBtn.textContent = 'Fechar';
+      window.pfAncorarCard(comprarRow);
+    } else {
+      comprarConteudo.hidden = true;
+      comprarBtn.textContent = 'Comprar';
+      esconderPix();
+    }
+  }
+
+  comprarBtn.addEventListener('click', toggle);
+  valorInput.addEventListener('input', formatarValorInput);
+  gerarQrBtn.addEventListener('click', gerarQr);
+  copiarPixBtn.addEventListener('click', copiarCodigo);
+})();
+</script>
+
+</body>
+</html>

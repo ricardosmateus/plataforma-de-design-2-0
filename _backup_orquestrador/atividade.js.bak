@@ -1,0 +1,468 @@
+/* ============================================================
+   ATIVIDADE — atividade.html
+   ============================================================
+   Regras: Regras_de_negocio/modulos/atividades/atividade-lista.md
+
+     §0               não existe tabela `atividades` — a atividade É
+                       a idéia; a tela abre uma idéia específica.
+     ATV-ACESSO        a lista de tarefas nasce (ou já existe) no
+                        primeiro GET — "encontra ou cria".
+     ATV-TAR-CRIA       nova tarefa entra sempre no fim, pendente.
+     ATV-TAR-ORDEM      reordenar é dado gravado, não visual.
+     ATV-TAR-CONCLUIR   concluir/reabrir só muda `status`.
+
+   Mesma divisão de ideias.js: este arquivo fala com a API e decide
+   o que a tela mostra; ele NÃO conhece drag-and-drop nem os modais —
+   isso continua nos <script> de atividade.html, que chamam
+   window.AtividadeAcoes quando algo precisa virar gravação.
+
+   Editar / duplicar / excluir tarefa NÃO são gravados aqui de
+   propósito: não fazem parte das regras definidas em
+   atividade-lista.md (pendências P9/P10/"Excluir tarefa", §5) — o
+   protótipo continua com o comportamento só-na-tela que já tinha
+   para esses três, sem fingir uma persistência que ninguém decidiu.
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  var EMPRESAS = 'empresas.html';
+  var PROJETOS = 'projetos.html';
+  var VISAO = 'visao_do_projeto.html';
+  var LOGIN = 'login.html';
+
+  var empresaId = null;
+  var projetoId = null;
+  var ideiaId = null;
+  var ideiaAtual = null; // { id, titulo, descricao, status }
+  var papelAtual = null;
+
+  var listEl = document.querySelector('.task-list');
+  var tituloEl = document.getElementById('atividadeTitulo');
+
+  function irPara(url) { window.location.href = url; }
+
+  /* ------------------------------------------------------------
+     Fim da espera — CSS em css/esqueleto.css
+     ------------------------------------------------------------
+     Um lugar por região, porque os dois caminhos que encerram a
+     espera (o dado chegou / a carga falhou) precisam limpar
+     exatamente as mesmas coisas. Esqueleto que fica girando promete
+     uma chegada que não vem.
+     ------------------------------------------------------------ */
+  function revelarTitulo() {
+    var h = document.getElementById('tituloAtividade');
+    if (!h) return;
+    h.classList.remove('is-carregando');
+    h.setAttribute('aria-busy', 'false');
+  }
+
+  function limparEsqueletoTarefas() {
+    if (!listEl) return;
+    Array.prototype.forEach.call(listEl.querySelectorAll('.esq-tarefa'), function (el) {
+      el.parentNode.removeChild(el);
+    });
+  }
+
+  /* "Falhou" e "não tem nenhuma" são coisas diferentes — e uma lista
+     vazia afirma a segunda. Sem esta linha, uma queda de rede seria
+     lida como "esta atividade não tem tarefas". */
+  function mostrarFalhaTarefas() {
+    if (!listEl || listEl.querySelector('.task-falha')) return;
+    var li = document.createElement('li');
+    li.className = 'task task-falha';
+    li.textContent = 'Não foi possível carregar as tarefas. Recarregue a página.';
+    listEl.appendChild(li);
+  }
+
+  function escapar(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function aviso(msg) {
+    if (window.mostrarMensagemAtividade) window.mostrarMensagemAtividade(msg);
+  }
+
+  function base() {
+    return '/empresas/' + encodeURIComponent(empresaId) +
+      '/projetos/' + encodeURIComponent(projetoId) +
+      '/ideias/' + encodeURIComponent(ideiaId) + '/tarefas';
+  }
+
+  /* Renovação silenciosa — mesmo padrão de ideias.js: um 401 aqui
+     não é "vá para o login", é "o token de acesso venceu". */
+  function chamarComRenovacao(caminho, opcoes, jaRenovou) {
+    return API.chamar(caminho, opcoes).catch(function (e) {
+      if (e.status === 401 && !jaRenovou) {
+        return API.chamar('/auth/sessao').then(
+          function () { return chamarComRenovacao(caminho, opcoes, true); },
+          function () { throw e; }
+        );
+      }
+      throw e;
+    });
+  }
+
+  function tratarErroFatal(e) {
+    if (e.status === 401) {
+      irPara(LOGIN + '?motivo=sessao-expirada&destino=' +
+        encodeURIComponent(location.pathname + location.search));
+      return true;
+    }
+    if (e.status === 403 && e.dados && e.dados.suspensao) {
+      irPara(LOGIN + '?motivo=suspenso&tipo=' + encodeURIComponent(e.dados.suspensao));
+      return true;
+    }
+    return false;
+  }
+
+  function mensagemDeFalha(e, oQue) {
+    return e.rede
+      ? 'Não conseguimos falar com o servidor. Verifique sua conexão.'
+      : (e.dados && e.dados.mensagem) || oQue;
+  }
+
+  /* ------------------------------------------------------------
+     Renderização dos cards de tarefa
+     ------------------------------------------------------------
+     Mesma estrutura de classes do protótipo (task-drag, task-status,
+     task-info, task-menu-wrap) — só o conteúdo passa a vir do
+     servidor. `menuTarefaPendente`/`menuTarefaConcluida` continuam
+     definidas no <script> de kebab do próprio atividade.html; esta
+     função só as chama, para não duplicar a lista de ações.
+     ------------------------------------------------------------ */
+  var ICON_PENDENTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.2"/><path d="M12 17.2h.01"/></svg>';
+  var ICON_CONCLUIDA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>';
+
+  function cardHTML(t) {
+    var concluida = t.status === 'concluida';
+    var statusClasses = concluida ? 'task-status--done task-status--labeled' : 'task-status--pending task-status--labeled task-status--labeled--pending';
+    var statusLabel = concluida ? 'Concluída' : 'Pendente';
+    var statusIcon = concluida ? ICON_CONCLUIDA : ICON_PENDENTE;
+    var statusTexto = concluida ? 'Concluída' : 'Pendente';
+
+    /* BOARD-ACESSO-001 (resolve P3): a tela de destino vem do campo
+       `tipo` da tarefa, não mais da comparação do TEXTO do título
+       com "Matriz CSD" — o mesmo defeito que IDEIA-MOV-015 já teve
+       que corrigir em outro lugar do produto.
+
+       `board.html` recebe os quatro ids porque abre UMA tarefa;
+       `matriz_csd.html` continua como estava (aquela tela ainda não
+       fala com a API — pendência própria dela). Tarefa `sem_tela`
+       não tem para onde ir, e um botão que não leva a lugar nenhum
+       é pior que botão nenhum (decisão A13). */
+    var contexto = '?empresa=' + encodeURIComponent(empresaId) +
+      '&projeto=' + encodeURIComponent(projetoId) +
+      '&ideia=' + encodeURIComponent(ideiaId);
+
+    /* Todo tipo do catálogo tem um destino (decisão A31). O `null`
+       continua possível de propósito: é a rede para um tipo novo
+       cujo destino ainda não foi construído — melhor não mostrar o
+       botão do que mostrar um que não leva a lugar nenhum (A13). */
+    var linkAcessar = null;
+    if (t.tipo === 'pesquisa') {
+      linkAcessar = 'board.html' + contexto + '&tarefa=' + encodeURIComponent(t.id);
+    } else if (t.tipo === 'matriz_csd') {
+      linkAcessar = concluida ? 'matriz_csd.html?modo=leitura' : 'matriz_csd.html';
+    }
+
+    var menu = concluida
+      ? (window.menuTarefaConcluida ? window.menuTarefaConcluida() : '')
+      : (window.menuTarefaPendente ? window.menuTarefaPendente() : '');
+
+    /* BOARD-ACESSO-001: o destino é calculado UMA vez e guardado no
+       próprio card. O botão "Acessar tarefa" e o item "Acessar" do
+       menu de três pontinhos leem os dois o mesmo `data-destino` —
+       mesma razão de IDEIA-MOV-009 ("três gestos, uma porta"): dois
+       caminhos para a mesma ação são duas chances de divergirem.
+       Sem destino, o atributo não existe, e é isso que esconde o
+       botão e o item do menu. */
+    return (
+      '<li class="task" data-id="' + escapar(t.id) + '"' +
+      ' data-tipo="' + escapar(t.tipo || 'sem_tela') + '"' +
+      (linkAcessar ? ' data-destino="' + escapar(linkAcessar) + '"' : '') + '>' +
+      '<button type="button" class="task-drag" aria-describedby="dragHelp" aria-label="Reordenar ' + escapar(t.titulo) + '">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v16M15 4v16"/></svg>' +
+      '</button>' +
+      '<span class="task-status ' + statusClasses + '" role="img" aria-label="' + statusLabel + '">' + statusIcon + statusTexto + '</span>' +
+      '<div class="task-info">' +
+      '<h3 class="task-title">' + escapar(t.titulo) + '</h3>' +
+      '<p class="task-desc">' + escapar(t.descricao) + '</p>' +
+      '</div>' +
+      (linkAcessar
+        ? '<a class="btn btn--secondary btn--sm" href="' + linkAcessar + '">Acessar tarefa</a>'
+        : '') +
+      '<div class="task-menu-wrap">' +
+      '<button type="button" class="task-menu" aria-haspopup="true" aria-expanded="false" aria-label="Mais ações em ' + escapar(t.titulo) + '">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></svg>' +
+      '</button>' +
+      '<div class="menu" role="menu">' + menu + '</div>' +
+      '</div>' +
+      '</li>'
+    );
+  }
+
+  function renderizar(tarefas) {
+    if (!listEl) return;
+    var titulo = listEl.querySelector('#tarefasTitulo');
+    listEl.innerHTML = '';
+    if (titulo) listEl.appendChild(titulo);
+    else {
+      var h2 = document.createElement('h2');
+      h2.className = 'section-title';
+      h2.id = 'tarefasTitulo';
+      h2.textContent = 'Minhas tarefas';
+      listEl.appendChild(h2);
+    }
+    tarefas
+      .slice()
+      .sort(function (a, b) { return a.ordem - b.ordem; })
+      .forEach(function (t) {
+        listEl.insertAdjacentHTML('beforeend', cardHTML(t));
+      });
+  }
+
+  /* ------------------------------------------------------------
+     Ações — o que a tela chama para gravar algo.
+     ------------------------------------------------------------ */
+  window.AtividadeAcoes = {
+    /* ATV-TAR-CRIA: sempre no fim, sempre pendente. */
+    criar: function (titulo, descricao, tipo) {
+      return chamarComRenovacao(base(), {
+        metodo: 'POST',
+        /* BOARD-ACESSO-002: sem escolha explícita, `pesquisa` —
+           toda tarefa tem um espaço de trabalho (decisão A31). */
+        corpo: { titulo: titulo, descricao: descricao, tipo: tipo || 'pesquisa' },
+      }, false).then(function (r) {
+        if (listEl) listEl.insertAdjacentHTML('beforeend', cardHTML(r.tarefa));
+        aviso('Tarefa adicionada com sucesso.');
+        return r.tarefa;
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 404) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); throw e; }
+        aviso(mensagemDeFalha(e, 'Não foi possível criar a tarefa.'));
+        throw e;
+      });
+    },
+
+    /* ATV-TAR-ORDEM: `indice` é a posição-alvo (0-based) entre as
+       tarefas da idéia — chamada já depois de o card ter andado na
+       tela (ATV-TAR-ORDEM-004); se falhar, quem desfaz é quem
+       chamou. */
+    moverOrdem: function (tarefaId, indice) {
+      return chamarComRenovacao(base() + '/' + encodeURIComponent(tarefaId) + '/ordem', {
+        metodo: 'PATCH',
+        corpo: { ordem: indice },
+      }, false).then(function (r) {
+        return r.tarefas;
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 404) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); throw e; }
+        aviso(mensagemDeFalha(e, 'Não foi possível salvar a nova ordem. A tarefa voltou para o lugar.'));
+        throw e;
+      });
+    },
+
+    /* ATV-TAR-CONCLUIR: concluir ou reabrir — só muda `status`. */
+    mudarStatus: function (tarefaId, status) {
+      return chamarComRenovacao(base() + '/' + encodeURIComponent(tarefaId) + '/status', {
+        metodo: 'PATCH',
+        corpo: { status: status },
+      }, false).then(function (r) {
+        return r.tarefa;
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 404) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); throw e; }
+        aviso(mensagemDeFalha(e, status === 'concluida'
+          ? 'Não foi possível concluir a tarefa.'
+          : 'Não foi possível reabrir a tarefa.'));
+        throw e;
+      });
+    },
+
+    /* ATV-TAR-EXCLUI: apaga a linha de verdade. Um 404 aqui não pede
+       recarregar o quadro inteiro (diferente de criar/mover/status) —
+       quem chamou já sabe remover o card que sumiu. */
+    excluir: function (tarefaId) {
+      return chamarComRenovacao(base() + '/' + encodeURIComponent(tarefaId), {
+        metodo: 'DELETE',
+      }, false).then(function () {
+        return true;
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 404) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); throw e; }
+        aviso(mensagemDeFalha(e, 'Não foi possível excluir a tarefa.'));
+        throw e;
+      });
+    },
+
+    /* "Concluir atividade" — atalho já definido em IDEIA-MOV-014/015
+       (ideias-movimentacao.md §1.4): move a IDÉIA para "Finalizado",
+       sempre pelo id, nunca pelo título, sempre pela API real. O
+       botão desta tela é um dos caminhos que chegam nisso, não uma
+       regra própria de atividade-lista.md. */
+    concluirAtividade: function () {
+      return chamarComRenovacao(
+        '/empresas/' + encodeURIComponent(empresaId) +
+        '/projetos/' + encodeURIComponent(projetoId) +
+        '/ideias/' + encodeURIComponent(ideiaId) + '/status',
+        { metodo: 'PATCH', corpo: { status: 'finalizado' } },
+        false
+      ).then(function () {
+        return VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId) + '&atividade_concluida=1';
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 404) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); throw e; }
+        aviso(mensagemDeFalha(e, 'Não foi possível concluir a atividade.'));
+        throw e;
+      });
+    },
+  };
+
+  /* ------------------------------------------------------------
+     Carga
+     ------------------------------------------------------------ */
+  function ajustarLinks() {
+    var qsEmpresa = '?empresa=' + encodeURIComponent(empresaId);
+    var qsAmbos = qsEmpresa + '&projeto=' + encodeURIComponent(projetoId);
+
+    var voltar = document.querySelector('.breadcrumb-back');
+    if (voltar) voltar.href = VISAO + qsAmbos;
+
+    var links = document.querySelectorAll('.breadcrumb-link');
+    links.forEach(function (a) {
+      if (a.getAttribute('href') === PROJETOS) a.href = PROJETOS + qsEmpresa;
+      if (a.getAttribute('href') === VISAO) a.href = VISAO + qsAmbos;
+    });
+
+    /* Os itens do menu lateral são ligados por <script> na própria
+       página, que não conhece os ids. É por aqui que o contexto
+       chega até eles — sem ele, "Sobre a empresa" abriria sem saber
+       de que empresa se trata e devolveria a pessoa para trás. */
+    window.ContextoUrl = qsAmbos;
+  }
+
+  function carregarTarefas() {
+    return chamarComRenovacao(base(), {}, false).then(
+      function (r) {
+        renderizar((r && r.tarefas) || []);
+      },
+      function (e) {
+        if (tratarErroFatal(e)) return;
+        if (e.status === 404) {
+          irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId));
+          return;
+        }
+        limparEsqueletoTarefas();
+        mostrarFalhaTarefas();
+        aviso(mensagemDeFalha(e, 'Não foi possível carregar as tarefas. Recarregue a página.'));
+      }
+    );
+  }
+
+  /* O título da página é "Empresa / Projeto" — mesma convenção de
+     visao_do_projeto.html (cabecalho()) — e não o nome da idéia:
+     a atividade é uma tela DENTRO de um projeto, e o cabeçalho
+     identifica esse projeto, não o card que trouxe a pessoa até
+     aqui (isso já aparece nos cards da lista de tarefas). */
+  function cabecalho(empresa, projeto) {
+    if (tituloEl) tituloEl.textContent = empresa.nome + ' / ' + projeto.nome;
+    document.title = empresa.nome + ' / ' + projeto.nome + ' · Plataforma de Design';
+    revelarTitulo();
+  }
+
+  function carregar() {
+    var q = new URLSearchParams(location.search);
+    empresaId = q.get('empresa');
+    projetoId = q.get('projeto');
+    ideiaId = q.get('ideia');
+
+    /* Sem os três ids esta página não sabe de qual atividade está
+       falando — mesmo raciocínio de IDEIA-ISO-002/IDEIA-QUADRO-007
+       em ideias.js: não é estado vazio, é navegação inválida. */
+    if (!empresaId) { irPara(EMPRESAS); return; }
+    if (!projetoId) { irPara(PROJETOS + '?empresa=' + encodeURIComponent(empresaId)); return; }
+    if (!ideiaId) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); return; }
+
+    ajustarLinks();
+
+    /* Mesma sequência de ideias.js: reaproveita GET /empresas e
+       GET /empresas/:id/projetos para resolver os nomes do
+       cabeçalho — sem endpoint novo, e o id não aparecer numa das
+       duas listas já significa "não existe ou você não tem
+       acesso". */
+    chamarComRenovacao('/empresas', {}, false).then(function (r) {
+      var empresas = (r && r.empresas) || [];
+      var empresa = null;
+      for (var i = 0; i < empresas.length; i++) {
+        if (empresas[i].id === empresaId) { empresa = empresas[i]; break; }
+      }
+      if (!empresa) { irPara(EMPRESAS); return; }
+
+      return chamarComRenovacao('/empresas/' + encodeURIComponent(empresaId) + '/projetos', {}, false)
+        .then(function (rp) {
+          var projetos = (rp && rp.projetos) || [];
+          var projeto = null;
+          for (var j = 0; j < projetos.length; j++) {
+            if (projetos[j].id === projetoId) { projeto = projetos[j]; break; }
+          }
+          if (!projeto) { irPara(PROJETOS + '?empresa=' + encodeURIComponent(empresaId)); return; }
+
+          cabecalho(empresa, projeto);
+
+          window.EmpresaAtual = empresa;
+          window.ProjetoAtual = projeto;
+
+          /* O painel do assistente depende de empresa e projeto
+             resolvidos — mesma dependência de ideias.js. A conversa é
+             a mesma do projeto (IA-CONV-001: pertence ao par
+             projeto/pessoa, não a esta idéia/atividade). */
+          if (window.IaAssistente) window.IaAssistente.carregar();
+
+          /* Reaproveita GET .../ideias (mesmo padrão de ideias.js):
+             não existe rota própria de "uma idéia só", e a idéia
+             não aparecer na lista já significa "não existe ou você
+             não tem acesso" — os dois casos levam para o mesmo
+             lugar. */
+          return chamarComRenovacao(
+            '/empresas/' + encodeURIComponent(empresaId) + '/projetos/' + encodeURIComponent(projetoId) + '/ideias',
+            {}, false
+          ).then(function (r2) {
+            var ideias = (r2 && r2.ideias) || [];
+            papelAtual = (r2 && r2.papel) || null;
+            var achada = null;
+            for (var k = 0; k < ideias.length; k++) {
+              if (ideias[k].id === ideiaId) { achada = ideias[k]; break; }
+            }
+            if (!achada) {
+              irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId));
+              return;
+            }
+            ideiaAtual = achada;
+
+            return carregarTarefas();
+          });
+        });
+    }, function (e) {
+      if (tratarErroFatal(e)) return;
+      /* Nem empresa nem projeto resolveram: não há título para mostrar,
+         nem atividade sobre a qual criar ou concluir tarefa. */
+      if (tituloEl) tituloEl.textContent = 'Atividade não carregada';
+      revelarTitulo();
+      limparEsqueletoTarefas();
+      mostrarFalhaTarefas();
+      ['openTaskModal', 'finishActivityBtn'].forEach(function (id) {
+        var b = document.getElementById(id);
+        if (b) {
+          b.disabled = true;
+          b.title = 'Indisponível: a atividade não foi carregada.';
+        }
+      });
+      aviso(mensagemDeFalha(e, 'Não foi possível carregar a atividade. Recarregue a página.'));
+    });
+  }
+
+  carregar();
+})();

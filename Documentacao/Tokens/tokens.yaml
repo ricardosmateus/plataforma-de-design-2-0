@@ -1,0 +1,168 @@
+$schema: https://tokens.studio/schema.json
+
+global:
+  color:
+    base:
+      palette:
+        # Neutros (cinza)
+        gray:
+          "0": { $value: "#ffffff", $type: "color", $description: "Branco puro" }
+          "50": { $value: "#fafafa", $type: "color" }
+          "100": { $value: "#f5f5f5", $type: "color" }
+          "200": { $value: "#e9eaeb", $type: "color" }
+          "300": { $value: "#d5d7da", $type: "color" }
+          "400": { $value: "#a4a7ae", $type: "color" }
+          "500": { $value: "#717680", $type: "color" }
+          "600": { $value: "#535862", $type: "color" }
+          "700": { $value: "#414651", $type: "color" }
+          "900": { $value: "#181d27", $type: "color", $description: "Preto profundo" }
+
+        # Amarelo (primary)
+        yellow:
+          "50": { $value: "#fef9e7", $type: "color" }
+          "100": { $value: "#feee95", $type: "color" }
+          "200": { $value: "#fde272", $type: "color" }
+          "300": { $value: "#fac515", $type: "color", $description: "Amarelo primário (brand)" }
+
+        # Azul (accent)
+        blue:
+          "500": { $value: "#0ba5ec", $type: "color", $description: "Azul base" }
+          "600": { $value: "#0086c9", $type: "color" }
+          "700": { $value: "#026aa2", $type: "color" }
+
+        # Sky (azul claro)
+        sky:
+          "100": { $value: "#e0f2fe", $type: "color", $description: "Azul bem claro (Sky/100)" }
+
+        # Verde (success)
+        green:
+          "50": { $value: "#ecfdf5", $type: "color" }
+          "500": { $value: "#10b981", $type: "color", $description: "Verde sucesso" }
+          "600": { $value: "#059669", $type: "color" }
+
+        # Amber (warning)
+        amber:
+          "50": { $value: "#fffbeb", $type: "color" }
+          "400": { $value: "#fbbf24", $type: "color" }
+          "500": { $value: "#f59e0b", $type: "color", $description: "Amber aviso" }
+          "600": { $value: "#d97706", $type: "color" }
+
+        # Vermelho (danger)
+        red:
+          "50": { $value: "#fef3f2", $type: "color" }
+          "500": { $value: "#d92d20", $type: "color", $description: "Vermelho perigo/erro" }
+
+        # Roxo (pro)
+        purple:
+          "50": { $value: "#f3e8ff", $type: "color" }
+          "500": { $value: "#a855f7", $type: "color", $description: "Roxo pro" }
+          "600": { $value: "#9333ea", $type: "color" }
+
+    theme:
+      # Theme ramps — neutral
+      neutral:
+        "0": { $value: "{color.base.palette.gray.0}", $type: "color" }
+        "50": { $value: "{color.base.palette.gray.50}", $type: "color" }
+        "100": { $value: "{color.base.palette.gray.100}", $type: "color" }
+        "200": { $value: "{color.base.palette.gray.200}", $type: "color" }
+        "300": { $value: "{color.base.palette.gray.300}", $type: "color" }
+        "400": { $value: "{color.base.palette.gray.400}", $type: "color" }
+        "500": { $value: "{color.base.palette.gray.500}", $type: "color" }
+        "600": { $value: "{color.base.palette.gray.600}", $type: "color" }
+        "700": { $value: "{color.base.palette.gray.700}", $type: "color" }
+        "900": { $value: "{color.base.palette.gray.900}", $type: "color" }
+
+    semantic:
+      # Text colors
+      text:
+        primary: { $value: "{color.theme.neutral.900}", $type: "color", $description: "Texto principal sobre fundo claro" }
+        secondary: { $value: "{color.theme.neutral.600}", $type: "color", $description: "Texto suportador" }
+        muted: { $value: "{color.theme.neutral.400}", $type: "color", $description: "Placeholder, captions" }
+        disabled: { $value: "rgba(24, 29, 39, 0.4)", $type: "color" }
+
+      # Surface colors
+      surface:
+        "0": { $value: "{color.theme.neutral.50}", $type: "color", $description: "Canvas da página" }
+        "1": { $value: "{color.theme.neutral.0}", $type: "color", $description: "Card" }
+        "2": { $value: "{color.theme.neutral.0}", $type: "color", $description: "Panel" }
+
+      # Border colors
+      border:
+        default: { $value: "rgba(24, 29, 39, 0.08)", $type: "color", $description: "Hairline" }
+        strong: { $value: "rgba(24, 29, 39, 0.14)", $type: "color", $description: "Ênfase" }
+
+      # Role: Primary (amarelo)
+      primary:
+        fill: { $value: "{color.base.palette.yellow.300}", $type: "color", $description: "Fundo sólido primary" }
+        fill-hover: { $value: "{color.base.palette.yellow.200}", $type: "color" }
+        bg: { $value: "{color.base.palette.yellow.50}", $type: "color", $description: "Fundo suave" }
+        text: { $value: "{color.base.palette.yellow.300}", $type: "color" }
+        text-on: { $value: "{color.theme.neutral.900}", $type: "color", $description: "Texto sobre primary" }
+
+      # Role: Accent (azul)
+      accent:
+        fill: { $value: "{color.base.palette.blue.500}", $type: "color", $description: "Fundo sólido accent" }
+        fill-hover: { $value: "{color.base.palette.blue.600}", $type: "color" }
+        bg: { $value: "{color.base.palette.blue.500}", $type: "color" }
+        text: { $value: "{color.base.palette.blue.500}", $type: "color" }
+        text-on: { $value: "{color.theme.neutral.0}", $type: "color", $description: "Texto sobre accent" }
+
+      # Role: Success (verde)
+      success:
+        fill: { $value: "{color.base.palette.green.500}", $type: "color", $description: "Fundo sólido success" }
+        fill-hover: { $value: "{color.base.palette.green.600}", $type: "color" }
+        bg: { $value: "{color.base.palette.green.50}", $type: "color" }
+        text: { $value: "{color.base.palette.green.600}", $type: "color" }
+        text-on: { $value: "{color.theme.neutral.0}", $type: "color" }
+
+      # Role: Warning (amber)
+      warning:
+        fill: { $value: "{color.base.palette.amber.500}", $type: "color", $description: "Fundo sólido warning" }
+        fill-hover: { $value: "{color.base.palette.amber.600}", $type: "color" }
+        bg: { $value: "{color.base.palette.amber.50}", $type: "color" }
+        text: { $value: "{color.base.palette.amber.600}", $type: "color" }
+        text-on: { $value: "{color.theme.neutral.900}", $type: "color" }
+
+      # Role: Danger (vermelho)
+      danger:
+        fill: { $value: "{color.base.palette.red.500}", $type: "color", $description: "Fundo sólido danger" }
+        bg: { $value: "{color.base.palette.red.50}", $type: "color" }
+        text: { $value: "{color.base.palette.red.500}", $type: "color" }
+        text-on: { $value: "{color.theme.neutral.0}", $type: "color" }
+
+      # Role: Pro (roxo/purple)
+      pro:
+        fill: { $value: "{color.base.palette.purple.500}", $type: "color", $description: "Fundo sólido pro" }
+        fill-hover: { $value: "{color.base.palette.purple.600}", $type: "color" }
+        bg: { $value: "{color.base.palette.purple.50}", $type: "color" }
+        text: { $value: "{color.base.palette.purple.600}", $type: "color" }
+        text-on: { $value: "{color.theme.neutral.0}", $type: "color" }
+
+  sizing:
+    radius:
+      sm: { $value: "6px", $type: "sizing" }
+      md: { $value: "8px", $type: "sizing", $description: "Padrão (--radius)" }
+      lg: { $value: "12px", $type: "sizing", $description: "Cards" }
+      xl: { $value: "32px", $type: "sizing", $description: "Panel (--radius-panel)" }
+
+    rail: { $value: "80px", $type: "sizing", $description: "Largura da sidebar" }
+    container: { $value: "1294px", $type: "sizing", $description: "Max-width conteúdo" }
+
+  shadow:
+    xs: { $value: "0 1px 2px rgba(10, 13, 18, 0.05)", $type: "shadow", $description: "Subtil" }
+    lg: { $value: "0 12px 16px -4px rgba(10, 13, 18, 0.08), 0 4px 6px -2px rgba(10, 13, 18, 0.03)", $type: "shadow", $description: "Elevado" }
+    menu: { $value: "0 12px 16px -4px rgba(10, 13, 18, 0.08), 0 4px 6px -2px rgba(10, 13, 18, 0.03), 0 0 0 1px rgba(10, 13, 18, 0.05)", $type: "shadow", $description: "Menus/dropdowns" }
+
+  focus:
+    ring: { $value: "2px solid {color.semantic.accent.fill}", $type: "border", $description: "Focus ring WCAG AA" }
+    offset: { $value: "2px", $type: "sizing" }
+
+  motion:
+    duration:
+      fast: { $value: "150ms", $type: "duration", $description: "Rápido" }
+      base: { $value: "300ms", $type: "duration", $description: "Padrão" }
+      slow: { $value: "500ms", $type: "duration", $description: "Lento" }
+
+    easing:
+      ease-out: { $value: "cubic-bezier(0.16, 1, 0.3, 1)", $type: "easing" }
+      ease-in-out: { $value: "cubic-bezier(0.4, 0, 0.2, 1)", $type: "easing" }

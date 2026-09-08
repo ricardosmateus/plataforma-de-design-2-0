@@ -1,0 +1,463 @@
+/* ============================================================
+   COMPONENTES — Plataforma de Design 2.0
+   ============================================================
+   Fonte única dos componentes de UI compartilhados entre páginas.
+   Depende de css/tokens.css (camadas Base/Theme/Purpose) — nenhuma
+   cor, raio ou sombra aqui é hardcoded, tudo vem de var(--token).
+
+   Uso:  <link rel="stylesheet" href="css/tokens.css">
+         <link rel="stylesheet" href="css/components.css">
+   Ver:  styleguide.html
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--neutral-100);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+input { font: inherit; color: inherit; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+a:focus-visible, button:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+
+/* ============================================================
+   CASCA DE AUTENTICAÇÃO — layout de duas colunas (login/cadastro)
+   ============================================================ */
+
+.auth {
+  min-height: 100vh;
+  display: flex; align-items: stretch;
+  background: var(--surface-1);
+  padding: 16px; gap: 16px;
+}
+
+.auth-form-col {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px 24px;
+}
+
+.auth-art {
+  flex: 0 0 688px;
+  position: relative;
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+}
+
+.auth-art::before {
+  content: ""; position: absolute; inset: 0;
+  background: var(--gradient-art);
+  filter: blur(3px);
+  transform: scale(1.05);
+}
+
+.auth-art::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10,13,18,.14) 0%, transparent 34%, transparent 62%, rgba(10,13,18,.20) 100%);
+}
+
+.auth-art-content {
+  position: relative; z-index: 1;
+  height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 56px;
+  color: var(--neutral-0);
+}
+
+.auth-art-quote {
+  font-size: var(--type-display); line-height: var(--type-display-lh); font-weight: 600;
+  letter-spacing: var(--type-display-track);
+  max-width: 22ch;
+  text-shadow: var(--shadow-text);
+}
+
+.auth-art-caption {
+  margin-top: 16px;
+  font-size: var(--type-body-lg); line-height: var(--type-body-lg-lh); font-weight: 500;
+  opacity: .92;
+  text-shadow: var(--shadow-text);
+}
+
+.auth-card { width: 100%; max-width: 400px; }
+
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+.brand-mark {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  background: var(--text-primary);
+  display: grid; place-items: center;
+}
+.brand-mark svg { width: 30px; height: auto; display: block; fill: var(--fill-primary); }
+.brand-name {
+  font-size: var(--type-body-lg); line-height: 22px; font-weight: 600;
+  letter-spacing: -.01em; color: var(--text-primary);
+}
+.brand-name span { display: block; font-weight: 500; color: var(--text-secondary); }
+
+.auth-title {
+  font-size: var(--type-display); line-height: var(--type-display-lh); font-weight: 600;
+  letter-spacing: var(--type-display-track); color: var(--text-primary);
+}
+
+.auth-subtitle {
+  margin-top: 8px;
+  font-size: var(--type-body-lg); line-height: var(--type-body-lg-lh); color: var(--text-secondary);
+}
+
+/* ============================================================
+   ALERTAS
+   ============================================================ */
+
+.alert {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-top: 24px; padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-danger);
+  background: var(--bg-danger);
+  font-size: var(--type-body); line-height: var(--type-body-lh);
+  color: var(--text-danger);
+}
+
+.alert[hidden] { display: none; }
+.alert svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.alert-title { font-weight: 600; }
+.alert-text { margin-top: 2px; font-weight: 400; }
+
+/* Link dentro de alerta herda a cor do alerta em vez de usar o azul de
+   ação: --text-accent sobre o âmbar de --bg-warning fica em torno de
+   2,7:1, abaixo do mínimo AA. Herdando, o link reaproveita o contraste
+   que a variante do alerta já garante, e o sublinhado faz o trabalho de
+   sinalizar que é clicável. */
+.alert a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.alert a:hover { text-decoration-thickness: 2px; }
+.alert--warning { border-color: var(--border-warning); background: var(--bg-warning); color: var(--text-warning); }
+.alert--success { border-color: var(--fill-success); background: var(--bg-success); color: var(--text-success); }
+
+/* ============================================================
+   FORMULÁRIO
+   ============================================================ */
+
+.form { margin-top: 32px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Formulário longo, como o de cadastro: os campos respiram um pouco
+   menos para a coluna caber sem rolagem em tela de 900px. */
+.form--signup { margin-top: 28px; gap: 18px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.label { font-size: var(--type-body); line-height: var(--type-body-lh); font-weight: 500; color: var(--text-primary); }
+
+.input-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+.input {
+  flex: 1; min-width: 0; height: var(--field-h);
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-xs);
+  font-size: var(--type-body-lg); line-height: var(--type-body-lg-lh); color: var(--text-primary);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.input::placeholder { color: var(--text-muted); }
+.input:hover { border-color: var(--border-hover); }
+.input:focus { outline: none; border-color: var(--fill-accent); box-shadow: var(--shadow-focus); }
+.input:disabled { background: var(--surface-0); color: var(--text-disabled); cursor: not-allowed; }
+.input--with-action { padding-right: 48px; }
+
+.input-action {
+  position: absolute; right: 4px;
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.input-action:hover { background: var(--surface-0); color: var(--text-secondary); }
+.input-action svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.input-action .icon-hide { display: none; }
+.input-action[aria-pressed="true"] .icon-show { display: none; }
+.input-action[aria-pressed="true"] .icon-hide { display: block; }
+
+.field-error {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--type-body); line-height: var(--type-body-lh); color: var(--text-danger);
+}
+.field-error[hidden] { display: none; }
+.field-error svg { width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.field--error .input { border-color: var(--fill-danger); }
+.field--error .input:focus { box-shadow: var(--shadow-focus-danger); }
+
+.form-options {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: -4px;
+}
+
+.checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox input {
+  width: 16px; height: 16px; flex-shrink: 0;
+  accent-color: var(--fill-accent);
+  cursor: pointer;
+}
+.checkbox span { font-size: var(--type-body); line-height: var(--type-body-lh); font-weight: 500; color: var(--text-secondary); }
+
+.link {
+  font-size: var(--type-body); line-height: var(--type-body-lh); font-weight: 600;
+  color: var(--text-accent); text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+.link:hover { text-decoration: underline; }
+
+/* ============================================================
+   SENHA — medidor de força e requisitos
+   ============================================================
+   Vieram de cadastro.html, onde viviam soltos e fora do
+   styleguide. São de sistema: servem a qualquer campo de criação
+   ou troca de senha.
+   ============================================================ */
+
+/* Quatro segmentos que acendem conforme o COMPRIMENTO da senha —
+   não conforme a variedade de caracteres (CAD-SENHA-004). O nível
+   vem em data-nivel, de 0 a 4, escrito pelo JavaScript. */
+.strength { margin-top: 8px; }
+.strength-track { display: flex; gap: 4px; }
+.strength-seg {
+  flex: 1; height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.strength[data-nivel="1"] .strength-seg:nth-child(-n+1) { background: var(--fill-danger); }
+.strength[data-nivel="2"] .strength-seg:nth-child(-n+2) { background: var(--fill-warning); }
+.strength[data-nivel="3"] .strength-seg:nth-child(-n+3) { background: var(--amber-400); }
+.strength[data-nivel="4"] .strength-seg                 { background: var(--fill-success); }
+
+.strength-label {
+  margin-top: 6px;
+  font-size: var(--type-caption); line-height: var(--type-caption-lh); font-weight: 600;
+  color: var(--text-secondary);
+}
+.strength[data-nivel="1"] .strength-label { color: var(--text-danger); }
+.strength[data-nivel="2"] .strength-label,
+.strength[data-nivel="3"] .strength-label { color: var(--text-warning); }
+.strength[data-nivel="4"] .strength-label { color: var(--text-success); }
+
+/* Lista que vai marcando conforme a pessoa digita, em vez de só
+   acusar erro depois do envio. */
+.requisitos {
+  margin-top: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+  list-style: none;
+}
+.requisito {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--type-caption); line-height: var(--type-caption-lh);
+  color: var(--text-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.requisito svg {
+  width: 14px; height: 14px; flex-shrink: 0;
+  stroke: currentColor; fill: none; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.requisito .icone-ok { display: none; }
+.requisito.is-ok { color: var(--text-success); }
+.requisito.is-ok .icone-pendente { display: none; }
+.requisito.is-ok .icone-ok { display: block; }
+
+/* Orientação de apoio abaixo de um campo. Tom de dica, não de
+   exigência — o que é obrigatório vive em .requisito. */
+.campo-dica {
+  margin-top: 8px;
+  font-size: var(--type-caption); line-height: var(--type-caption-lh);
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   ACEITE DE TERMOS
+   ============================================================
+   Caixa de seleção alinhada ao topo, porque o texto ocupa mais de
+   uma linha e centralizar deixaria a marcação flutuando no meio.
+   ============================================================ */
+
+.form-aceite { margin-top: 2px; }
+.checkbox--aceite { align-items: flex-start; }
+.checkbox--aceite input { margin-top: 2px; }
+.checkbox--aceite span { color: var(--text-secondary); }
+.field--error .checkbox span { color: var(--text-danger); }
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+
+.btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  height: var(--field-h);
+  padding: 0 18px;
+  border-radius: var(--radius);
+  font-size: var(--type-body-lg); line-height: var(--type-body-lg-lh); font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.btn:disabled { cursor: not-allowed; opacity: .6; }
+.btn--block { width: 100%; }
+
+.btn--primary { background: var(--fill-accent); color: var(--text-on-accent); box-shadow: var(--shadow-xs); }
+.btn--primary:hover:not(:disabled) { background: var(--fill-accent-hover); }
+
+.btn--google {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-xs);
+}
+.btn--google:hover:not(:disabled) { background: var(--surface-0); }
+
+.btn .btn-spinner { display: none; width: 20px; height: 20px; }
+.btn.is-loading { cursor: progress; }
+.btn.is-loading .btn-label { display: none; }
+.btn.is-loading .btn-loading-label { display: inline; }
+.btn.is-loading .btn-spinner { display: block; animation: spin 800ms linear infinite; }
+.btn-loading-label { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.divider {
+  display: flex; align-items: center; gap: 16px;
+  margin: 24px 0;
+  font-size: var(--type-body); line-height: var(--type-body-lh); color: var(--text-muted);
+}
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+.auth-foot {
+  margin-top: 32px;
+  font-size: var(--type-body); line-height: var(--type-body-lh); color: var(--text-secondary);
+  text-align: center;
+}
+
+.form.is-locked { opacity: .55; pointer-events: none; user-select: none; }
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+
+.modal {
+  position: fixed; inset: 0; margin: auto;
+  width: 480px; max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  padding: 24px;
+  border: none; border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-modal);
+  color: var(--text-primary);
+}
+.modal::backdrop { background: var(--scrim); }
+.modal[open] { animation: modal-in var(--dur-base) var(--ease-out); }
+.modal[open]::backdrop { animation: fade-in var(--dur-base) var(--ease-out); }
+@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.modal-title { display: flex; align-items: center; gap: 12px; font-size: var(--type-heading); line-height: var(--type-heading-lh); font-weight: 600; }
+.modal-title-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  display: grid; place-items: center; border-radius: 50%;
+  background: var(--fill-primary); color: var(--text-on-primary);
+}
+.modal-title-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.modal-close {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: var(--radius);
+  font-size: var(--type-body); line-height: var(--type-body-lh); font-weight: 500;
+  color: var(--text-secondary);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover { background: var(--surface-0); color: var(--text-primary); }
+.modal-close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.modal-rule { height: 1px; background: var(--border); margin: 24px 0; }
+.modal-text { font-size: var(--type-body); line-height: 22px; color: var(--text-secondary); }
+.modal-text strong { color: var(--text-primary); font-weight: 600; }
+
+.otp { display: flex; gap: 8px; margin-top: 20px; }
+.otp-input {
+  flex: 1; min-width: 0;
+  height: 56px;
+  text-align: center;
+  font-size: var(--type-title); line-height: var(--type-title-lh); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  -moz-appearance: textfield;
+}
+.otp-input::-webkit-outer-spin-button, .otp-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.otp-input:hover { border-color: var(--border-hover); }
+.otp-input:focus { outline: none; border-color: var(--fill-accent); box-shadow: var(--shadow-focus); }
+.otp-input:disabled { background: var(--surface-0); color: var(--text-disabled); cursor: not-allowed; }
+.otp.is-error .otp-input { border-color: var(--fill-danger); }
+.otp.is-error .otp-input:focus { box-shadow: var(--shadow-focus-danger); }
+
+.modal-error {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 10px;
+  font-size: var(--type-body); line-height: var(--type-body-lh); color: var(--text-danger);
+}
+.modal-error[hidden] { display: none; }
+.modal-error svg { width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.modal-resend {
+  margin-top: 16px;
+  font-size: var(--type-body); line-height: var(--type-body-lh); color: var(--text-secondary);
+}
+.modal-resend button {
+  font-weight: 600; color: var(--text-accent);
+  border-radius: var(--radius-sm); padding: 0;
+}
+.modal-resend button:hover:not(:disabled) { text-decoration: underline; }
+.modal-resend button:disabled { color: var(--text-muted); cursor: not-allowed; text-decoration: none; }
+
+.modal-footer { display: flex; align-items: center; gap: 12px; margin-top: 24px; }
+.modal-footer .btn { width: auto; }
+.btn--ghost {
+  background: var(--surface-1); color: var(--text-secondary);
+  border: 1px solid var(--border-strong); box-shadow: var(--shadow-xs);
+}
+.btn--ghost:hover:not(:disabled) { background: var(--surface-0); color: var(--text-primary); }
+
+.modal.is-verifying .otp-input, .modal.is-verifying .modal-resend { opacity: .55; pointer-events: none; }
+
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  .auth { padding: 0; gap: 0; }
+  .auth-art { display: none; }
+  .auth-form-col { padding: 32px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .btn.is-loading .btn-spinner { animation: none; }
+}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Criar conta · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- ?v= força o navegador a buscar a versão nova em vez de servir a
+     do cache. Incremente o número sempre que alterar o CSS. -->
+<link rel="stylesheet" href="css/tokens.css?v=4">
+<link rel="stylesheet" href="css/components.css?v=4">
+<style>
+/* Tokens em css/tokens.css, componentes em css/components.css.
+   Aqui embaixo, só o que esta tela deliberadamente diverge do
+   sistema — e nada mais.
+
+   Até 22/08/2026 este bloco tinha 477 linhas, das quais 49
+   seletores repetiam components.css, que a página nem carregava.
+   Foi assim que o logotipo apareceu sublinhado só aqui: a cópia
+   divergiu do original e ninguém tinha como notar. */
+:root{
+  --text-danger:var(--red-600);
+  --radius-panel:24px;
+}
+
+/* Botões e divisores desta tela ocupam a largura do container */
+.btn,
+.divider{width:100%}
+</style>
+</head>
+<body>
+
+<main class="auth">
+
+  <!-- ===================== FORMULÁRIO ===================== -->
+  <div class="auth-form-col">
+    <div class="auth-card">
+
+      <!-- ---------- Logo da marca ---------- -->
+      <a class="brand" href="login.html" aria-label="Plataforma de Design — página inicial">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 28.8 22"><use href="img/icones.svg#icon-marca"/></svg>
+        </span>
+        <span class="brand-name">Plataforma<span>de Design</span></span>
+      </a>
+
+      <h1 class="auth-title">Criar sua conta</h1>
+      <p class="auth-subtitle">Leva menos de um minuto. Depois é só cadastrar a sua empresa.</p>
+
+      <!-- E-mail já cadastrado — CAD-CONTA-003.
+           Diferente do login, aqui a existência da conta é revelada: sem
+           isso o cadastro vira um beco sem saída, a pessoa não entende por
+           que falhou e tenta de novo. O caminho útil é oferecer a entrada. -->
+      <div class="alert" id="alertDuplicado" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+        <div>
+          <p class="alert-title">Esse e-mail já tem conta</p>
+          <p class="alert-text">Já existe uma conta com esse e-mail. <a href="login.html">Entrar</a> ou usar outro endereço.</p>
+        </div>
+      </div>
+
+      <!-- Offline — estado obrigatório. Impede o envio antes de tentar. -->
+      <div class="alert alert--warning" id="alertOffline" role="alert" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-wifi-off"/></svg>
+        <div>
+          <p class="alert-title">Sem conexão</p>
+          <p class="alert-text">Verifique sua internet. Assim que a conexão voltar, você poderá criar a conta.</p>
+        </div>
+      </div>
+
+      <form class="form form--signup" id="cadastroForm" novalidate>
+
+        <!-- ---------- Nome completo ---------- -->
+        <div class="field" id="fieldNome">
+          <label class="label" for="nome">Nome completo</label>
+          <div class="input-wrap">
+            <input class="input" type="text" id="nome" name="nome"
+                   placeholder="Como consta no seu documento"
+                   autocomplete="name" required
+                   aria-describedby="nomeErro">
+          </div>
+          <p class="field-error" id="nomeErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+            <span>Informe seu nome e sobrenome.</span>
+          </p>
+        </div>
+
+        <!-- CPF removido daqui pela decisão D5 (Regras_de_negocio/modulos/
+             acesso/login.md §7). Ele passa a ser pedido só no primeiro
+             recebimento do especialista, onde tem função fiscal. A máscara
+             e a validação de dígito verificador foram preservadas em
+             js/cpf.js para reuso naquela tela. -->
+
+        <!-- ---------- E-mail ---------- -->
+        <div class="field" id="fieldEmail">
+          <label class="label" for="email">E-mail</label>
+          <div class="input-wrap">
+            <input class="input" type="email" id="email" name="email"
+                   placeholder="voce@empresa.com"
+                   autocomplete="email" required
+                   aria-describedby="emailErro">
+          </div>
+          <p class="field-error" id="emailErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+            <span>Informe um e-mail válido.</span>
+          </p>
+        </div>
+
+        <!-- ---------- Senha ---------- -->
+        <div class="field" id="fieldSenha">
+          <label class="label" for="senha">Senha</label>
+          <div class="input-wrap">
+            <input class="input input--with-action" type="password" id="senha" name="senha"
+                   placeholder="Crie uma senha"
+                   autocomplete="new-password" required
+                   aria-describedby="senhaErro senhaRequisitos">
+            <button type="button" class="input-action" id="toggleSenha"
+                    aria-pressed="false" aria-controls="senha" aria-label="Mostrar senha">
+              <svg class="icon-show" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye"/></svg>
+              <svg class="icon-hide" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-eye-off"/></svg>
+            </button>
+          </div>
+
+          <!-- Força da senha -->
+          <div class="strength" id="senhaForca" data-nivel="0">
+            <div class="strength-track" role="img" aria-hidden="true">
+              <span class="strength-seg"></span>
+              <span class="strength-seg"></span>
+              <span class="strength-seg"></span>
+              <span class="strength-seg"></span>
+            </div>
+            <p class="strength-label" id="senhaForcaLabel" role="status">Força da senha</p>
+          </div>
+
+          <!-- Requisitos — CAD-SENHA-001 e 002.
+               Duas regras, não quatro. Exigir maiúscula, número e símbolo
+               empurra as pessoas para "Senha1!" e rejeita "cavalo bateria
+               grampo correto", que é muito mais forte. O NIST SP 800-63B
+               Rev 4 proíbe exigências de composição e manda conferir contra
+               listas de vazamento — é o que está aqui. -->
+          <ul class="requisitos" id="senhaRequisitos">
+            <li class="requisito" data-regra="tamanho">
+              <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-circle"/></svg>
+              <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-check"/></svg>
+              Pelo menos 8 caracteres
+            </li>
+            <li class="requisito" data-regra="naoComum">
+              <svg class="icone-pendente" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-circle"/></svg>
+              <svg class="icone-ok" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-check"/></svg>
+              Não pode ser uma senha comum ou vazada
+            </li>
+          </ul>
+
+          <p class="campo-dica">Uma frase que só você lembraria é mais segura — e mais fácil — do que trocar letras por símbolos.</p>
+
+          <p class="field-error" id="senhaErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+            <span>A senha não atende aos requisitos.</span>
+          </p>
+        </div>
+
+        <!-- "Confirmar senha" removido: o botão de revelar a senha ao lado
+             do campo cobre o erro de digitação, e uma senha digitada errada
+             continua recuperável por redefinição. Um campo a menos numa
+             tela que já pede quatro. -->
+
+        <!-- ---------- Aceite ---------- -->
+        <div class="field form-aceite" id="fieldAceite">
+          <label class="checkbox checkbox--aceite" for="aceite">
+            <input type="checkbox" id="aceite" name="aceite" aria-describedby="aceiteErro">
+            <span>Li e concordo com os <a class="link" href="#">Termos de uso</a> e a <a class="link" href="#">Política de privacidade</a>.</span>
+          </label>
+          <p class="field-error" id="aceiteErro" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+            <span>É preciso aceitar os termos para continuar.</span>
+          </p>
+        </div>
+
+        <button type="submit" class="btn btn--primary" id="btnCriar">
+          <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-spinner"/></svg>
+          <span class="btn-label">Criar conta</span>
+          <span class="btn-loading-label">Criando conta...</span>
+        </button>
+      </form>
+
+      <div class="divider" role="presentation">ou</div>
+
+      <!-- Placeholder visual, mesmo tratamento dado ao login: cadastro
+           com Google está fora do escopo desta fase por decisão do time
+           (PLANO_BACKEND_LOGIN.md §1, Fase 4 do roadmap). -->
+      <button type="button" class="btn btn--google" id="btnGoogle"
+              disabled aria-describedby="googleIndisponivel">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="var(--google-blue)"   d="M23.5 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3.01h3.87c2.26-2.09 3.57-5.17 3.57-8.82Z"/>
+          <path fill="var(--google-green)"  d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.87-3.01c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11A12 12 0 0 0 12 24Z"/>
+          <path fill="var(--google-yellow)" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.28a12 12 0 0 0 0 10.76l3.99-3.11Z"/>
+          <path fill="var(--google-red)"    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.18 15.24 0 12 0A12 12 0 0 0 1.28 6.62l3.99 3.11C6.22 6.88 8.87 4.75 12 4.75Z"/>
+        </svg>
+        Criar conta com Google
+      </button>
+      <span class="sr-only" id="googleIndisponivel">Ainda não disponível nesta versão.</span>
+
+      <p class="auth-foot">
+        Já tem uma conta? <a class="link" href="login.html">Entrar</a>
+      </p>
+
+    </div>
+  </div>
+
+  <!-- ===================== ARTE LATERAL ===================== -->
+  <aside class="auth-art" aria-hidden="true">
+    <div class="auth-art-content">
+      <p class="auth-art-quote">Do primeiro rascunho ao projeto entregue.</p>
+      <p class="auth-art-caption">Idéias, tarefas e conhecimento da empresa em um só lugar.</p>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ===================== MODAL: VERIFICAÇÃO DE E-MAIL (NOVO CADASTRO) =====================
+     Mesma modal do login, aqui no contexto de confirmação da conta
+     recém-criada: o texto fala do cadastro e o botão conclui em vez
+     de "entrar". -->
+<dialog class="modal" id="codeModal" aria-labelledby="codeModalTitle">
+  <div class="modal-header">
+    <h2 class="modal-title" id="codeModalTitle">
+      <span class="modal-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><use href="img/icones.svg#icon-mail"/></svg>
+      </span>
+      Verifique seu e-mail
+    </h2>
+    <button type="button" class="modal-close" id="codeClose">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-x"/></svg>
+      Fechar
+    </button>
+  </div>
+
+  <div class="modal-rule" role="presentation"></div>
+
+  <p class="modal-text">
+    Sua conta foi criada. Enviamos um código de 6 dígitos para
+    <strong id="codeEmail">seu e-mail</strong>. Informe o código abaixo
+    para confirmar o cadastro.
+  </p>
+
+  <form id="codeForm" novalidate>
+    <div class="otp" id="otp" role="group" aria-labelledby="otpLabel" aria-describedby="codeErro">
+      <span class="sr-only" id="otpLabel">Código de verificação de 6 dígitos</span>
+      <input class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code"
+             maxlength="1" aria-label="Dígito 1 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5 de 6">
+      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6 de 6">
+    </div>
+
+    <p class="modal-error" id="codeErro" role="alert" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-alert-circle"/></svg>
+      <span id="codeErroTexto">Digite os 6 dígitos do código.</span>
+    </p>
+
+    <p class="modal-resend">
+      Não recebeu?
+      <button type="button" id="codeResend" disabled>Reenviar código em <span id="codeCountdown">30s</span></button>
+    </p>
+
+    <div class="modal-footer">
+      <button type="submit" class="btn btn--primary" id="codeConfirm">
+        <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-spinner"/></svg>
+        <span class="btn-label">Confirmar cadastro</span>
+        <span class="btn-loading-label">Validando...</span>
+      </button>
+      <button type="button" class="btn btn--ghost" id="codeBack">Voltar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="js/api.js?v=4"></script>
+<script src="js/cadastro.js?v=4"></script>
+</body>
+</html>

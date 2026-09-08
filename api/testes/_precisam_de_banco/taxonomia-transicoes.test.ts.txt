@@ -1,0 +1,290 @@
+/* SUPERSEDIDO — não reativar como está.
+   Este arquivo escrevia direto no Neon de produção (perigoso) e não
+   compilava (Usuario/Projeto exigem mais campos do que os passados
+   aqui). O que ele tentava cobrir está em:
+
+     testes/transicao.test.ts               — a decisão, sem banco
+     testes/transicao-integracao.test.ts    — a escrita, num Postgres
+                                                de teste à parte (opt-in
+                                                via DATABASE_URL_TESTE)
+
+   Mantido só como referência do que já foi tentado. */
+
+/* ============================================================
+   Testes de transição de status com taxonomia
+   ============================================================
+   Semana 1: Foundation — Grafo de Conhecimento
+   
+   Valida que:
+   1. Ao entrar em "finalizado": IA preencherá assunto + tags
+   2. Ao sair de "finalizado": assunto → null, tags → []
+   3. GET /empresas/:id/sobre retorna assuntos únicos + contagem
+   ============================================================ */
+
+import { test, describe, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { db } from '../src/db.js';
+
+// Mock de usuário, empresa e projeto para os testes
+let usuarioId: string;
+let empresaId: string;
+let projetoId: string;
+
+before(async () => {
+  // Criar usuário de teste
+  usuarioId = await db.usuario.create({ data: { email: `teste-${Date.now()}@test.local` } }).then(u => u.id);
+
+  // Criar empresa de teste
+  empresaId = await db.empresa
+    .create({
+      data: {
+        nome: `Empresa Teste Taxonomia ${Date.now()}`,
+        nomeBusca: `empresa-teste-taxonomia-${Date.now()}`,
+        criadoPor: usuarioId,
+      },
+    })
+    .then(e => e.id);
+
+  // Adicionar usuário como proprietário da empresa
+  await db.empresaMembro.create({
+    data: {
+      empresaId,
+      usuarioId,
+      papel: 'proprietario',
+    },
+  });
+
+  // Criar projeto de teste
+  projetoId = await db.projeto
+    .create({
+      data: {
+        empresaId,
+        tipo: 'site_institucional',
+        criadoPor: usuarioId,
+      },
+    })
+    .then(p => p.id);
+});
+
+after(async () => {
+  // Limpeza
+  await db.ideia.deleteMany({ where: { projetoId } });
+  await db.projeto.delete({ where: { id: projetoId } });
+  await db.empresaMembro.deleteMany({ where: { empresaId } });
+  await db.empresa.delete({ where: { id: empresaId } });
+  await db.usuario.delete({ where: { id: usuarioId } });
+});
+
+describe('Taxonomia — Transições de status', () => {
+  test('ideia em "ideias": assunto e tags são null/[]', async () => {
+    const ideia = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Pesquisar concorrentes',
+        descricao: 'Levantar análise competitiva',
+        status: 'ideias',
+        criadoPor: usuarioId,
+      },
+    });
+
+    assert.equal(ideia.assunto, null);
+    assert.deepEqual(ideia.tags, []);
+
+    await db.ideia.delete({ where: { id: ideia.id } });
+  });
+
+  test('ideia em "andamento": assunto e tags continuam null/[]', async () => {
+    const ideia = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Pesquisar concorrentes',
+        descricao: 'Levantar análise competitiva',
+        status: 'andamento',
+        criadoPor: usuarioId,
+      },
+    });
+
+    assert.equal(ideia.assunto, null);
+    assert.deepEqual(ideia.tags, []);
+
+    await db.ideia.delete({ where: { id: ideia.id } });
+  });
+
+  test('transição: "andamento" → "finalizado" permite preencher assunto + tags', async () => {
+    let ideia = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Pesquisar concorrentes',
+        descricao: 'Levantar análise competitiva',
+        status: 'andamento',
+        criadoPor: usuarioId,
+      },
+    });
+
+    // Simular preenchimento ao chegar em "finalizado"
+    // (na vida real, a skill faria isso automaticamente)
+    ideia = await db.ideia.update({
+      where: { id: ideia.id },
+      data: {
+        status: 'finalizado',
+        assunto: 'Concorrentes',
+        tags: ['Benchmark', 'Mercado'],
+      },
+    });
+
+    assert.equal(ideia.status, 'finalizado');
+    assert.equal(ideia.assunto, 'Concorrentes');
+    assert.deepEqual(ideia.tags, ['Benchmark', 'Mercado']);
+
+    await db.ideia.delete({ where: { id: ideia.id } });
+  });
+
+  test('transição: "finalizado" → "andamento" limpa assunto + tags', async () => {
+    let ideia = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Pesquisar concorrentes',
+        descricao: 'Levantar análise competitiva',
+        status: 'finalizado',
+        assunto: 'Concorrentes',
+        tags: ['Benchmark'],
+        criadoPor: usuarioId,
+      },
+    });
+
+    // Simular limpeza ao sair de "finalizado"
+    ideia = await db.ideia.update({
+      where: { id: ideia.id },
+      data: {
+        status: 'andamento',
+        assunto: null,
+        tags: [],
+      },
+    });
+
+    assert.equal(ideia.status, 'andamento');
+    assert.equal(ideia.assunto, null);
+    assert.deepEqual(ideia.tags, []);
+
+    await db.ideia.delete({ where: { id: ideia.id } });
+  });
+
+  test('GET /empresas/:id/sobre retorna assuntos únicos com contagem', async () => {
+    // Criar 3 ideias finalizadas com assuntos diferentes
+    const ideia1 = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Concorrente A',
+        descricao: '',
+        status: 'finalizado',
+        assunto: 'Concorrentes',
+        tags: [],
+        criadoPor: usuarioId,
+      },
+    });
+
+    const ideia2 = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Concorrente B',
+        descricao: '',
+        status: 'finalizado',
+        assunto: 'Concorrentes',
+        tags: [],
+        criadoPor: usuarioId,
+      },
+    });
+
+    const ideia3 = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Personas do mercado',
+        descricao: '',
+        status: 'finalizado',
+        assunto: 'Personas',
+        tags: [],
+        criadoPor: usuarioId,
+      },
+    });
+
+    // Query simulada (a rota faria isto)
+    const assuntos = await db.$queryRaw`
+      SELECT 
+        i.assunto,
+        COUNT(*) as quantidade
+      FROM ideias i
+      INNER JOIN projetos p ON i.projeto_id = p.id
+      WHERE p.id = ${projetoId}
+        AND i.status = 'finalizado'
+        AND i.arquivado_em IS NULL
+        AND i.assunto IS NOT NULL
+      GROUP BY i.assunto
+      ORDER BY quantidade DESC, i.assunto ASC
+    `;
+
+    const resultado = (assuntos as Array<{ assunto: string | null; quantidade: bigint }>)
+      .filter((row) => row.assunto !== null)
+      .map((row) => ({
+        categoria: row.assunto as string,
+        quantidade: Number(row.quantidade),
+      }));
+
+    assert.equal(resultado.length, 2);
+    assert.equal(resultado[0].categoria, 'Concorrentes');
+    assert.equal(resultado[0].quantidade, 2);
+    assert.equal(resultado[1].categoria, 'Personas');
+    assert.equal(resultado[1].quantidade, 1);
+
+    // Limpeza
+    await db.ideia.deleteMany({ where: { id: { in: [ideia1.id, ideia2.id, ideia3.id] } } });
+  });
+
+  test('ideias sem assunto (em "andamento") não aparecem em GET /empresas/:id/sobre', async () => {
+    // Criar 1 finalizada com assunto + 1 em andamento sem assunto
+    const ideia1 = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Finalizada com assunto',
+        descricao: '',
+        status: 'finalizado',
+        assunto: 'Concorrentes',
+        tags: [],
+        criadoPor: usuarioId,
+      },
+    });
+
+    const ideia2 = await db.ideia.create({
+      data: {
+        projetoId,
+        titulo: 'Em andamento sem assunto',
+        descricao: '',
+        status: 'andamento',
+        assunto: null,
+        tags: [],
+        criadoPor: usuarioId,
+      },
+    });
+
+    const assuntos = await db.$queryRaw`
+      SELECT 
+        i.assunto,
+        COUNT(*) as quantidade
+      FROM ideias i
+      WHERE i.projeto_id = ${projetoId}
+        AND i.status = 'finalizado'
+        AND i.arquivado_em IS NULL
+        AND i.assunto IS NOT NULL
+      GROUP BY i.assunto
+    `;
+
+    const resultado = (assuntos as Array<{ assunto: string | null; quantidade: bigint }>)
+      .filter((row) => row.assunto !== null);
+
+    assert.equal(resultado.length, 1);
+    assert.equal(resultado[0].categoria, 'Concorrentes');
+
+    // Limpeza
+    await db.ideia.deleteMany({ where: { id: { in: [ideia1.id, ideia2.id] } } });
+  });
+});

@@ -1,0 +1,218 @@
+/* ============================================================
+   Provedor de IA — atrás de uma interface
+   ============================================================
+   Regras: Regras_de_negocio/modulos/ia/ia-assistente-isolamento.md §4
+
+   Qual provedor usar é decisão de negócio AINDA ABERTA: o que
+   trafega no contexto é dado dos clientes do Ricardo, não dele, e o
+   contrato do provedor precede a publicação.
+
+   Por isso tudo o que o módulo faz de importante — montar contexto,
+   verificar procedência, gravar a conversa — está fora daqui. Este
+   arquivo é a única peça que muda quando o provedor mudar.
+
+   'none' é o padrão e recusa a pergunta com uma mensagem clara, sem
+   derrubar nada: o quadro de idéias segue funcionando sem
+   assistente.
+   ============================================================ */
+
+import { env } from '../env.js';
+import type { Troca } from './contexto.js';
+import { lerUso, type Uso } from '../creditos/precos.js';
+
+export type Pedido = {
+  sistema: string;
+  historico: Troca[];
+  pergunta: string;
+};
+
+export type RespostaBruta = {
+  resposta: string;
+  fontes: unknown;
+  /* Não confiável ainda — é o que o MODELO propôs. Só vira algo que
+     conta depois de passar por `verificarAcao` (IA-ACAO-005). */
+  acaoProposta: unknown;
+
+  /* ---- Custo da chamada (Fase 0 do módulo de créditos) ----
+     Opcionais porque `extrairJson` sozinho não os conhece, e porque
+     um provedor futuro pode não informar consumo. Ausência aqui vira
+     consumo não registrado — nunca uma resposta perdida. */
+  uso?: Uso;
+  modelo?: string;
+  requisicaoId?: string;
+};
+
+/* Erro tipado para a rota distinguir "provedor fora" (503) de
+   "configuração ausente" (503 também, mas com outra mensagem) e de
+   um erro de programação, que não deve virar 503 nenhum. */
+export class FalhaDoProvedor extends Error {
+  constructor(
+    mensagem: string,
+    readonly configuracao = false,
+  ) {
+    super(mensagem);
+    this.name = 'FalhaDoProvedor';
+  }
+}
+
+export interface Provedor {
+  responder(pedido: Pedido): Promise<RespostaBruta>;
+}
+
+/* ------------------------------------------------------------
+   O modelo devolve JSON dentro de um texto. Extrair isso com
+   tolerância é necessário — mas tolerância aqui é sobre FORMATO,
+   nunca sobre conteúdo: um JSON que não dá para ler vira falha, e
+   não uma resposta vazia que passaria adiante sem fontes (e,
+   portanto, sem verificação).
+   ------------------------------------------------------------ */
+export function extrairJson(texto: string): RespostaBruta {
+  const limpo = texto.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+
+  let dados: unknown;
+  try {
+    dados = JSON.parse(limpo);
+  } catch {
+    const inicio = limpo.indexOf('{');
+    const fim = limpo.lastIndexOf('}');
+    if (inicio === -1 || fim <= inicio) {
+      throw new FalhaDoProvedor('O assistente devolveu uma resposta em formato inesperado.');
+    }
+    try {
+      dados = JSON.parse(limpo.slice(inicio, fim + 1));
+    } catch {
+      throw new FalhaDoProvedor('O assistente devolveu uma resposta em formato inesperado.');
+    }
+  }
+
+  const obj = dados as { resposta?: unknown; fontes?: unknown; acao_proposta?: unknown };
+  const resposta = typeof obj?.resposta === 'string' ? obj.resposta.trim() : '';
+
+  if (!resposta) {
+    throw new FalhaDoProvedor('O assistente devolveu uma resposta vazia.');
+  }
+
+  return { resposta, fontes: obj?.fontes, acaoProposta: obj?.acao_proposta };
+}
+
+/* ------------------------------------------------------------
+   Anthropic — Messages API.
+   ------------------------------------------------------------
+   Chamada por fetch, sem SDK: uma dependência a menos para auditar,
+   e o contrato HTTP é estável. Trocar de provedor é escrever outra
+   classe com o mesmo `responder`.
+   ------------------------------------------------------------ */
+class ProvedorAnthropic implements Provedor {
+  constructor(
+    private readonly chave: string,
+    private readonly modelo: string,
+  ) {}
+
+  async responder(pedido: Pedido): Promise<RespostaBruta> {
+    const mensagens = [
+      ...pedido.historico.map((t) => ({
+        role: t.autor === 'pessoa' ? ('user' as const) : ('assistant' as const),
+        content: t.texto,
+      })),
+      { role: 'user' as const, content: pedido.pergunta },
+    ];
+
+    let resposta: Response;
+    try {
+      resposta = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': this.chave,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: this.modelo,
+          max_tokens: env.IA_MAX_TOKENS,
+          system: pedido.sistema,
+          messages: mensagens,
+        }),
+      });
+    } catch {
+      throw new FalhaDoProvedor('Não foi possível falar com o provedor de IA.');
+    }
+
+    if (!resposta.ok) {
+      /* O corpo do erro pode conter detalhe do provedor. Não vai
+         para o usuário: ele não tem o que fazer com isso, e pode
+         carregar informação de infraestrutura. */
+      throw new FalhaDoProvedor('O provedor de IA recusou a chamada.');
+    }
+
+    const dados = (await resposta.json()) as {
+      content?: Array<{ type?: string; text?: string }>;
+      stop_reason?: string;
+      usage?: unknown;
+    };
+    const texto = (dados.content ?? [])
+      .filter((p) => p?.type === 'text' && typeof p.text === 'string')
+      .map((p) => p.text as string)
+      .join('');
+
+    if (!texto.trim()) {
+      throw new FalhaDoProvedor('O assistente devolveu uma resposta vazia.');
+    }
+
+    /* ------------------------------------------------------------
+       Resposta cortada no teto — precisa ser dita pelo nome
+       ------------------------------------------------------------
+       `stop_reason: 'max_tokens'` significa que o modelo foi
+       interrompido no meio da frase. O JSON sai truncado, o
+       `extrairJson` falha, e a pessoa lia "formato inesperado" — uma
+       mensagem que aponta para o modelo ter errado o formato quando
+       na verdade ele estava certo e faltou espaço.
+
+       Detectar aqui, ANTES do parse, troca um mistério por uma causa
+       acionável: quem lê sabe que precisa de um teto maior ou de uma
+       pergunta mais estreita. */
+    if (dados.stop_reason === 'max_tokens') {
+      throw new FalhaDoProvedor(
+        'A resposta passou do tamanho máximo e foi cortada. Refaça a pergunta de forma ' +
+          'mais específica, ou aumente IA_MAX_TOKENS.',
+      );
+    }
+
+    /* O `usage` vinha sendo descartado — e sem ele não há como
+       cobrar, porque não há como saber o que a chamada custou.
+       Ler aqui é o pré-requisito de todo o módulo de créditos. */
+    return {
+      ...extrairJson(texto),
+      uso: lerUso(dados.usage),
+      modelo: this.modelo,
+      requisicaoId: resposta.headers.get('request-id') ?? undefined,
+    };
+  }
+}
+
+/* Recusa explícita, não silêncio: quem abrir o assistente sem
+   provedor configurado precisa entender por que ele não responde. */
+class ProvedorAusente implements Provedor {
+  async responder(): Promise<RespostaBruta> {
+    throw new FalhaDoProvedor(
+      'O assistente de IA ainda não está configurado neste ambiente.',
+      true,
+    );
+  }
+}
+
+export function provedorAtual(): Provedor {
+  if (env.IA_DRIVER === 'anthropic') {
+    if (!env.IA_API_KEY || !env.IA_MODELO) {
+      /* Driver escolhido mas incompleto é erro de configuração, e
+         precisa dizer exatamente o que falta — senão vira meia hora
+         procurando. */
+      return new ProvedorAusente();
+    }
+    return new ProvedorAnthropic(env.IA_API_KEY, env.IA_MODELO);
+  }
+  return new ProvedorAusente();
+}
+
+export function iaConfigurada(): boolean {
+  return env.IA_DRIVER === 'anthropic' && !!env.IA_API_KEY && !!env.IA_MODELO;
+}

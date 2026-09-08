@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Nike · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/esqueleto.css">
+<style>
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   ============================================================
+
+   Estrutura:
+   1. Base palette: --{hue}-{stop}  — cores literais (gray, yellow, blue, etc)
+   2. Theme ramps: --neutral-N      — escala cinza, pronta para dark mode
+   3. Purpose/Semantic: --{property}-{role} — semântica desacoplada de cores
+      - Roles: primary (yellow), accent (blue), success (green),
+               warning (amber), danger (red), pro (purple)
+      - Properties: fill, fill-hover, bg, text, text-on
+      - Uso: background:var(--fill-primary); color:var(--text-on-primary);
+
+   Cada role tem a forma:
+     --fill-{role}        → cor sólida para controls (buttons)
+     --fill-{role}-hover  → hover state
+     --bg-{role}          → fundo suave (badges, status)
+     --text-{role}        → texto com cor de rol (não sobre colored bg)
+     --text-on-{role}     → texto sobre fill/bg colored (sempre legível)
+
+   Exemplo de uso:
+     <button style="background:var(--fill-success);color:var(--text-on-success)">
+       Confirmar
+     </button>
+
+   Tokens do sistema: css/tokens.css
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+  min-width:1024px;
+}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+img{display:block;max-width:100%}
+
+/* ============================================================
+   ACESSIBILIDADE — Focus rings (WCAG AA)
+   ============================================================ */
+button:focus-visible,
+a:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:var(--focus-offset);
+}
+
+/* Focus ring alternativo para elementos sobre fundo primário (sidebar amarela) */
+.nav-item:focus-visible{
+  outline:2px solid var(--neutral-900);
+  outline-offset:var(--focus-offset);
+  border-radius:var(--radius);
+}
+
+/* Melhor visibilidade em menu */
+.menu button:focus-visible{
+  outline:var(--focus-ring);
+  outline-offset:1px;
+  border-radius:var(--radius);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:flex;min-height:100vh}
+
+/* ---------- Sidebar (rail) ---------- */
+.rail{
+  width:var(--rail-w);
+  flex:0 0 var(--rail-w);
+  background:var(--fill-primary);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 24px;
+  position:sticky;top:0;height:100vh;
+  z-index:10;
+}
+/* Símbolo da marca: mesma caixa de 44px dos itens do menu, para o
+   logo e a "bolacha" do Início ficarem alinhados e do mesmo tamanho.
+   Monograma PD geométrico — contra-formas circulares, em amarelo
+   sobre bolacha preta. */
+.logomark{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+  margin-bottom:24px;
+}
+.logomark svg{width:28px;height:auto;display:block;fill:var(--fill-primary)}
+.rail-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.rail-spacer{flex:1}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.rail-divider{width:40px;height:1px;background:rgba(24,29,39,.14)}
+
+.nav-item{
+  position:relative;
+  width:44px;height:44px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-on-primary);
+  transition:background .15s ease;
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover{background:var(--fill-primary-hover)}
+.nav-item[aria-current="page"]{background:var(--fill-primary-hover)}
+.nav-item:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+
+/* tooltip — a rail é colapsada, ícone sozinho não é acessível */
+.nav-item::after{
+  content:attr(data-label);
+  position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:12px;font-weight:500;line-height:18px;
+  padding:6px 10px;border-radius:var(--radius);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .12s ease, transform .12s ease;
+  z-index:60;
+}
+.nav-item:hover::after,.nav-item:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  overflow:hidden;background:var(--fill-primary-hover);
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Painel principal ---------- */
+.panel{
+  flex:1;min-width:0;
+  background:var(--surface-1);
+  border-radius:var(--radius-panel) 0 0 var(--radius-panel);
+  margin-top:12px;
+  min-height:calc(100vh - 12px);
+  padding:0 32px 32px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header{
+  width:100%;
+  padding:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.page-title{
+  font-size:30px;line-height:0px;font-weight:600;letter-spacing:-.02em;color:var(--text-primary);
+  /* 48px = "Respiro no rodapé do painel", mesmo token de empresas.html
+     — as duas páginas abrem com o mesmo ritmo vertical. */
+  padding:48px 0;
+}
+
+.section-head{
+  width:100%;
+}
+/* Sem margem no topo: o respiro antes da linha já é o padding-bottom
+   de 48px do .page-title (mesma lógica de empresas.html). A regra
+   ganha margem embaixo para abrir espaço até quem vem a seguir —
+   o breadcrumb na primeira, o grid/empty na segunda. */
+.rule{height:1px;background:var(--border);margin:0 0 24px}
+.section-label{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+/* margin-bottom próprio: sozinho ele resolve o respiro até a segunda
+   .rule, sem depender de a página ter ou não conteúdo entre elas. */
+.breadcrumb{display:flex;align-items:center;margin-bottom:24px}
+.breadcrumb-list{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  list-style:none;margin:0;padding:0;
+}
+.breadcrumb-item{display:flex;align-items:center;gap:4px}
+.breadcrumb-link,
+.breadcrumb-current{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 8px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;
+}
+.breadcrumb-link{
+  color:var(--text-secondary);
+  text-decoration:none;
+  transition:background .15s ease,color .15s ease;
+}
+.breadcrumb-link:hover{background:var(--surface-0);color:var(--text-primary)}
+.breadcrumb-link:focus-visible,
+.breadcrumb-current:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-current{
+  background:var(--surface-0);
+  color:var(--text-primary);
+  font-weight:600;
+}
+.breadcrumb-sep{
+  width:16px;height:16px;flex-shrink:0;
+  color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.breadcrumb-back{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:var(--radius);
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  font-size:14px;line-height:20px;font-weight:500;
+  text-decoration:none;white-space:nowrap;
+  margin-right:12px;
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.breadcrumb-back:hover{background:var(--surface-0);color:var(--text-primary);border-color:var(--text-secondary)}
+.breadcrumb-back:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,color .15s ease;
+  white-space:nowrap;
+}
+/* Sem isto, o atributo [hidden] perde para "display:inline-flex" acima
+   — mesma especificidade, e regra de autor sempre vence a folha de
+   estilo padrão do navegador. É o que esconde "Novo projeto" de quem
+   só visualiza (PROJ-CRIA-004/PROJ-EXCL-002). */
+.btn[hidden]{display:none}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--primary:active{background:var(--fill-accent-hover)}
+
+.btn--secondary{
+  width:100%;height:40px;
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  font-size:14px;line-height:20px;
+}
+.btn--secondary:hover{background:var(--sky-100);color:var(--text-primary)}
+
+/* Focus já aplicado globalmente acima */
+
+/* ============================================================
+   GRID + CARDS
+   ============================================================ */
+.grid-wrap{width:100%}
+
+/* wrap real: 3 → 2 → 1 coluna conforme a largura disponível */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
+  gap:32px;
+  align-items:start;
+}
+
+.card{
+  position:relative;
+  /* Grid items recebem stacking context implícito (z-index:auto tratado como 0),
+     então o z-index do .menu (filho) não escapa para acima dos cards vizinhos
+     sem que o próprio .card tenha um z-index explícito para subir de camada. */
+  z-index:1;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  display:flex;flex-direction:column;gap:24px;
+  transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease;
+}
+.card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-lg);transform:translateY(-2px);z-index:3}
+.card:has(.card-menu[aria-expanded="true"]){border-color:var(--border-strong);box-shadow:var(--shadow-lg);z-index:40}
+
+/* Thumb / mockup */
+.card-thumb{
+  position:relative;
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  padding:24px;
+  display:grid;place-items:center;
+  min-height:164px;
+  overflow:hidden;
+}
+.card-thumb .mock{width:190px;filter:drop-shadow(0 6px 10px rgba(10,13,18,.12))}
+.card-thumb .mock-img{width:190px;height:auto;border-radius:var(--radius)}
+
+/* Kebab */
+.card-menu{
+  position:absolute;top:8px;right:8px;
+  width:32px;height:32px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-secondary);
+  transition:background .15s ease,color .15s ease;
+  z-index:2;
+}
+.card-menu:hover,.card-menu[aria-expanded="true"]{background:rgba(255,255,255,.9);color:var(--text-primary)}
+.card-menu svg{width:20px;height:20px;fill:currentColor}
+
+.menu{
+  position:absolute;top:64px;right:32px;
+  min-width:184px;padding:4px;
+  background:var(--surface-1);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-menu);
+  z-index:30;
+  display:none;
+}
+.menu.is-open{display:block}
+.menu button{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  text-align:left;
+}
+.menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.menu button:hover{background:var(--surface-0)}
+.menu .sep{height:1px;background:var(--border);margin:4px}
+.menu .danger{color:var(--text-danger)}
+.menu .danger:hover{background:var(--bg-danger)}
+
+/* Texto do card */
+.card-body{display:flex;flex-direction:column;gap:8px;text-align:center;flex:1}
+
+/* ---------- Medidas do esqueleto nesta tela ----------
+   As peças e a animação vêm de css/esqueleto.css. O card de
+   esqueleto reusa .card para herdar fundo, borda, raio e padding do
+   card real — a silhueta acerta sozinha e não sai de sincronia. */
+.esq-barra--pagina{width:280px;height:30px}
+.esq-card .esq-thumb{height:164px;border-radius:var(--radius)}
+.esq-card .esq-body{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;width:100%}
+.esq-card .esq-body .esq-barra--titulo{height:20px;width:60%}
+.esq-card .esq-body .esq-barra--curta{width:70%}
+
+/* Falha de carga da lista. Ocupa a grade inteira: não é um projeto
+   vazio, é o motivo de não haver projeto nenhum na tela — e "falhou"
+   nunca pode ser lido como "não tem nada" (EMP-LIST-010). */
+.grid-falha{
+  grid-column:1 / -1;
+  display:flex;align-items:center;justify-content:center;
+  padding:48px 32px;text-align:center;
+  background:var(--surface-0);
+  border-radius:var(--radius-lg);
+  color:var(--text-secondary);
+  font-size:14px;line-height:22px;
+}
+
+/* Um botão que não responde precisa PARECER que não responde —
+   mesma lição de BOARD-IA-001, ausente também nesta tela. */
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card-title{font-size:18px;line-height:28px;font-weight:600;color:var(--text-primary)}
+.card-desc{
+  font-size:14px;line-height:20px;color:var(--text-secondary);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty{
+  width:100%;padding:64px 32px 96px;
+  display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  min-height:calc(100vh - 120px);
+  background:var(--neutral-50);
+  border-radius:var(--radius-lg);
+}
+.empty-art{
+  width:200px;height:auto;
+  margin-bottom:24px;
+  display:block;
+}
+.empty h2{font-size:18px;line-height:28px;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+.empty p{font-size:14px;line-height:20px;color:var(--text-secondary);max-width:380px;margin-bottom:24px}
+
+/* Estado alternado */
+body.is-empty .grid-wrap{display:none}
+body.is-empty .empty{display:flex}
+body.is-empty .page-header .btn--primary{display:none}
+body.is-empty .section-head .rule:last-child{display:none}
+
+/* ============================================================
+   MODAL — novo projeto  (dialog nativo: focus trap e Esc de graça)
+   Medidas vindas do Figma: casca 825x674, lateral 192, conteúdo 632.
+   ============================================================ */
+body.modal-open{overflow:hidden}
+
+.np-modal{
+  position:fixed;inset:0;margin:auto;
+  width:825px;max-width:calc(100vw - 48px);
+  height:674px;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.np-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.np-modal[open]{animation:np-in var(--dur-base) var(--ease-out)}
+.np-modal[open]::backdrop{animation:np-fade var(--dur-base) var(--ease-out)}
+@keyframes np-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes np-fade{from{opacity:0}to{opacity:1}}
+
+/* 192 + 1 do divisor + 632 = 825 */
+.np-shell{display:flex;height:100%}
+
+/* ---------- Lateral: categorias ---------- */
+.np-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.np-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.np-side-item:hover{background:var(--surface-0)}
+.np-side-item[aria-current="true"]{background:var(--sky-200)}
+
+.np-divider{flex:0 0 1px;background:var(--border)}
+
+/* ---------- Conteúdo ---------- */
+.np-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:32px;
+  padding:24px 32px;
+}
+
+.np-head{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  height:48px;
+}
+.np-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.np-title-icon{
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--fill-primary);
+  color:var(--text-on-primary);
+  /* halo amarelo do Figma (Yellow/50) */
+  box-shadow:0 0 0 6px var(--bg-primary);
+}
+.np-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* Igual ao .modal-close da modal "Nova empresa": mesmo padding, gap,
+   tipografia e ícone — sem o badge colorido que existia antes. */
+.np-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.np-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.np-close:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.np-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Lista de tipos de projeto ---------- */
+/* Altura fixa do Figma (433px) com rolagem: os itens excedentes
+   ficam acessíveis sem esticar a modal. */
+.np-list{
+  flex:1;min-height:0;
+  display:flex;flex-direction:column;gap:12px;
+  overflow-y:auto;
+  /* Afasta os cards da barra de rolagem, que fica colada na borda
+     direita da área de scroll — não é padding da modal inteira. */
+  padding-right:16px;
+}
+.np-list::-webkit-scrollbar{width:10px}
+.np-list::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.np-list::-webkit-scrollbar-track{background:transparent}
+
+.np-option{
+  flex-shrink:0;
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.np-option:hover{border-color:var(--border-strong)}
+.np-option[aria-checked="true"]{
+  background:var(--neutral-100);
+  border-color:var(--neutral-300);
+}
+.np-option-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.np-option-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.np-option-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+
+/* Indicador de rádio: círculo vazio; virá preenchido quando marcado. */
+.np-option-mark{
+  width:16px;height:16px;flex-shrink:0;margin-top:2px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  color:transparent;
+}
+.np-option-mark svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;display:block}
+.np-option[aria-checked="true"] .np-option-mark{
+  background:var(--fill-accent);
+  border-color:var(--fill-accent);
+  color:var(--text-on-accent);
+}
+
+/* ---------- Rodapé ---------- */
+.np-rule{flex-shrink:0;height:1px;background:var(--border)}
+.np-foot{flex-shrink:0;display:flex;align-items:center;gap:12px;height:48px}
+.np-save{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:48px;padding:0 24px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);
+  color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.np-save:hover{background:var(--fill-accent-hover)}
+.np-save svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Modal de confirmação (excluir projeto) ---------- */
+.cf-modal{
+  position:fixed;inset:0;margin:auto;
+  width:440px;max-width:calc(100vw - 48px);
+  padding:24px;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:visible;
+}
+.cf-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.cf-modal[open]{animation:np-in var(--dur-base) var(--ease-out)}
+.cf-modal[open]::backdrop{animation:np-fade var(--dur-base) var(--ease-out)}
+.cf-shell{display:flex;flex-direction:column;gap:0}
+.cf-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.cf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.cf-confirm{display:flex;flex-direction:column;align-items:flex-start;gap:24px}
+.cf-confirm-text{font-size:15px;line-height:24px;color:var(--text-primary);margin:0;margin-top:24px;max-width:360px}
+.cf-confirm-actions{display:flex;align-items:center;gap:12px;width:100%}
+.cf-confirm-actions .cf-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.cf-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cf-btn--danger{background:var(--fill-danger);color:var(--text-on-danger);box-shadow:var(--shadow-xs)}
+.cf-btn--danger:hover{filter:brightness(.92)}
+.cf-btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.cf-btn--primary:hover{background:var(--fill-accent-hover)}
+.cf-btn--secondary{background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.cf-btn--secondary:hover{background:var(--surface-0)}
+
+/* ---------- Toast de feedback ---------- */
+.toast{
+  position:fixed;
+  left:50%;bottom:32px;
+  transform:translateX(-50%) translateY(12px);
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  border-radius:var(--radius);
+  background:var(--fill-success);
+  color:var(--text-on-success);
+  box-shadow:var(--shadow-lg);
+  font-size:14px;line-height:20px;font-weight:500;
+  z-index:100;
+  opacity:0;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.toast.is-visible{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-check{width:20px;height:20px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.toast-close{
+  display:grid;place-items:center;
+  width:24px;height:24px;flex-shrink:0;
+  margin-left:12px;
+  border-radius:6px;
+  color:inherit;
+  background:transparent;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.toast-close:hover{background:rgba(255,255,255,.2)}
+.toast-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+
+/* ---------- Conteúdo expandível dentro de um card (.pf-row) ----------
+   Usado pelo "Histórico de uso" e por "Comprar créditos": vive dentro
+   do próprio card, por isso não tem borda/fundo próprios — só um
+   respiro e uma linha fina separando do cabeçalho do card. */
+.pf-row-expand{
+  width:100%;
+  margin-top:16px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+
+@keyframes expandDown{
+  from{opacity:0;transform:translateY(-8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.pf-row-expand[hidden]{
+  display:none;
+}
+
+.timeline-container{
+  display:flex;flex-direction:column;gap:0;
+}
+
+.timeline-item{
+  display:flex;gap:16px;padding:12px 0;
+  position:relative;
+  padding-left:20px;
+}
+
+.timeline-item:not(:last-child)::before{
+  content:"";
+  position:absolute;
+  left:7px;top:0;
+  width:2px;height:100%;
+  background:var(--border-strong);
+}
+
+.timeline-dot{
+  position:absolute;left:0;top:12px;
+  width:16px;height:16px;flex-shrink:0;
+  border-radius:50%;
+  background:var(--fill-accent);
+  border:3px solid var(--surface-0);
+  box-shadow:0 0 0 1px var(--border-strong);
+}
+
+.timeline-content{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:0}
+
+.timeline-date{
+  font-size:11px;line-height:16px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+
+.timeline-task{
+  font-size:13px;line-height:20px;font-weight:500;color:var(--text-primary);
+}
+
+.timeline-cost{
+  font-size:12px;line-height:18px;font-weight:500;color:var(--text-secondary);
+}
+
+.timeline-cost strong{color:var(--text-primary);font-weight:700}
+
+.timeline-item:first-child .timeline-dot{
+  background:var(--fill-success);
+  box-shadow:0 0 0 3px var(--green-100),0 0 0 4px var(--border-strong);
+}
+
+/* ---------- Compra de créditos via Pix ---------- */
+.pf-compra-form{display:flex;flex-direction:column;gap:16px}
+
+.pf-valor-wrap{
+  display:flex;align-items:center;gap:8px;
+  height:44px;padding:0 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-valor-wrap:focus-within{border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-valor-prefixo{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);flex-shrink:0}
+.pf-input--valor{
+  border:none;padding:0;height:auto;box-shadow:none;
+  font-size:16px;font-weight:600;
+}
+.pf-input--valor:focus{box-shadow:none}
+
+.pf-btn--success{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+.pf-btn--success:hover{filter:brightness(.96)}
+.pf-btn--accent{background:var(--fill-accent);color:var(--text-on-accent);border-color:transparent}
+.pf-btn--accent:hover{background:var(--fill-accent-hover)}
+.pf-btn--accent:disabled{opacity:.5;cursor:not-allowed}
+.pf-btn--accent:disabled:hover{background:var(--fill-accent)}
+
+.pf-pix{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  margin-top:4px;padding:20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  animation:expandDown var(--dur-base) var(--ease-out);
+}
+.pf-pix[hidden]{display:none}
+
+.pf-pix-qr{
+  padding:12px;
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-xs);
+  line-height:0;
+}
+.pf-pix-qr canvas{display:block;width:176px;height:176px}
+
+.pf-pix-legenda{font-size:13px;line-height:20px;font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
+
+.pf-pix-copia{display:flex;align-items:center;gap:8px;width:100%}
+.pf-pix-codigo{
+  flex:1;min-width:0;height:40px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--surface-1);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;color:var(--text-secondary);
+  text-overflow:ellipsis;
+}
+.pf-pix-copia .pf-btn{flex-shrink:0;height:40px}
+.pf-pix-copia .pf-btn.is-copiado{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
+
+
+/* ============================================================
+   MODAL — perfil do usuário
+   Mesma casca da modal "Novo projeto": 825x674, lateral de 192 e
+   conteúdo de 632. <dialog> nativo, então foco preso e Esc já vêm
+   de graça. Componente autocontido (.pf-*) para poder viver em
+   qualquer página que tenha o menu lateral.
+   ============================================================ */
+body.modal-open{overflow:hidden}
+
+.pf-modal{
+  position:fixed;inset:0;margin:auto;
+  width:825px;max-width:calc(100vw - 48px);
+  height:674px;max-height:calc(100vh - 48px);
+  padding:0;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:hidden;
+}
+.pf-modal::backdrop{background:var(--overlay);backdrop-filter:blur(8px)}
+.pf-modal[open]{animation:pf-in var(--dur-base) var(--ease-out)}
+.pf-modal[open]::backdrop{animation:pf-fade var(--dur-base) var(--ease-out)}
+@keyframes pf-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes pf-fade{from{opacity:0}to{opacity:1}}
+
+/* 192 + 1 do divisor + 632 = 825 */
+.pf-shell{display:flex;height:100%}
+
+/* ---------- Lateral: seções ---------- */
+.pf-side{
+  flex:0 0 192px;
+  display:flex;flex-direction:column;gap:4px;
+  padding:12px 16px;
+  overflow-y:auto;
+}
+.pf-side-item{
+  display:flex;align-items:center;
+  width:100%;height:40px;
+  padding:10px 16px;
+  border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-side-item:hover{background:var(--surface-0)}
+.pf-side-item[aria-current="true"]{background:var(--sky-200)}
+.pf-side-spacer{flex:1;min-height:12px}
+.pf-side-item--danger{color:var(--text-danger)}
+.pf-side-item--danger:hover{background:var(--bg-danger)}
+
+.pf-divider{flex:0 0 1px;background:var(--border)}
+
+/* ---------- Conteúdo ---------- */
+.pf-main{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:32px;
+  padding:24px 32px;
+}
+.pf-head{
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  height:48px;
+}
+.pf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.pf-title-icon{
+  width:40px;height:40px;flex-shrink:0;
+  display:grid;place-items:center;border-radius:50%;
+  background:var(--fill-primary);color:var(--text-on-primary);
+  box-shadow:0 0 0 6px var(--bg-primary);
+}
+.pf-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pf-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.pf-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Área rolável, com a barra afastada do conteúdo */
+.pf-body{flex:1;min-height:0;overflow-y:auto;padding-right:16px}
+.pf-body::-webkit-scrollbar{width:10px}
+.pf-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.pf-body::-webkit-scrollbar-track{background:transparent}
+
+.pf-panel{display:flex;flex-direction:column;gap:24px}
+/* A regra acima venceria o display:none do atributo [hidden] na
+   ordem do cascata — daí esta guarda explícita. */
+.pf-panel[hidden]{display:none}
+
+/* ---------- Foto ---------- */
+.pf-avatar-row{display:flex;align-items:center;gap:20px}
+.pf-avatar{
+  width:80px;height:80px;flex-shrink:0;
+  border-radius:50%;overflow:hidden;background:var(--surface-0);
+}
+.pf-avatar img{width:100%;height:100%;object-fit:cover}
+.pf-avatar-actions{display:flex;align-items:center;gap:8px}
+
+.pf-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:36px;padding:0 14px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.pf-btn:hover{background:var(--surface-0)}
+.pf-btn--danger{color:var(--text-danger);border-color:var(--border-strong)}
+.pf-btn--danger:hover{background:var(--bg-danger);border-color:var(--fill-danger)}
+
+/* ---------- Campos ---------- */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pf-label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.pf-input{
+  width:100%;height:44px;
+  padding:0 14px;
+  border-radius:var(--radius);
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  font:inherit;font-size:14px;line-height:20px;
+  color:var(--text-primary);
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.pf-input::placeholder{color:var(--text-muted)}
+.pf-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
+.pf-hint{font-size:12px;line-height:18px;color:var(--text-secondary)}
+
+/* Saldo e extrato reais — mesma folha de empresas.html (Fase 1/4).
+   Chegaram aqui junto com js/creditos.js, que substituiu o saldo
+   fixo de "500 créditos" e a timeline inventada. */
+.pf-saldo{margin:4px 0 0;display:flex;align-items:baseline;gap:8px}
+.pf-saldo-valor{
+  font-size:28px;line-height:34px;font-weight:600;
+  color:var(--text-primary);font-variant-numeric:tabular-nums;
+}
+/* Falha de carregamento tem cor própria: ela não pode ser lida como
+   um saldo baixo (DIN-006). */
+.pf-saldo-falha{color:var(--text-warning)}
+.pf-extrato{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.pf-extrato-item{
+  display:flex;align-items:baseline;gap:12px;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px;line-height:18px;
+}
+.pf-extrato-item:last-child{border-bottom:0}
+.pf-extrato-desc{flex:1;color:var(--text-primary)}
+/* Linha de detalhe da recarga: explica por que o crédito é menor que
+   o valor pago (taxa do PSP). Só aparece quando houve taxa. */
+.pf-extrato-detalhe{
+  display:block;margin-top:2px;
+  color:var(--text-muted);font-size:12px;line-height:16px;
+  font-variant-numeric:tabular-nums;
+}
+.pf-extrato-data{color:var(--text-muted);font-size:12px}
+.pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.pf-extrato-valor.is-entrada{color:var(--text-success)}
+.pf-extrato-valor.is-saida{color:var(--text-secondary)}
+.pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
+
+/* Barra de evolução do crédito: o trecho disponível encolhe conforme
+   o uso aumenta (a faixa restante da barra representa o usado). */
+.pf-credito-barra{
+  width:100%;height:12px;
+  border-radius:999px;
+  background:var(--border-strong);
+  overflow:hidden;
+}
+.pf-credito-uso{
+  height:100%;
+  border-radius:999px;
+  background:var(--fill-accent);
+  transition:width var(--dur-base) var(--ease-out);
+}
+.pf-credito-meta{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:12px;line-height:18px;font-weight:600;color:var(--text-secondary);
+}
+
+/* ---------- Linha com interruptor ---------- */
+.pf-row{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+/* Efeito de âncora: pisca uma vez para guiar o olhar até a sessão
+   que acabou de aparecer/expandir, sem deixar destaque permanente.
+   Em box-shadow para funcionar sobre qualquer card (.pf-row, .pf-pix
+   etc.) sem brigar com o background/borda próprios do elemento. */
+@keyframes pf-anchor-flash{
+  0%{box-shadow:0 0 0 4px var(--sky-100), 0 0 0 1px var(--fill-accent) inset}
+  100%{box-shadow:0 0 0 0 transparent, 0 0 0 0 transparent}
+}
+.pf-anchor-flash{
+  animation:pf-anchor-flash 1.1s var(--ease-out);
+}
+.pf-row--stack{flex-direction:column}
+.pf-row--stack .pf-row-actions{width:100%}
+.pf-row-actions{display:flex;align-items:flex-start}
+.pf-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pf-row-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
+.pf-row-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+
+.pf-switch{
+  appearance:none;-webkit-appearance:none;
+  position:relative;flex-shrink:0;
+  width:44px;height:24px;margin-top:2px;
+  border-radius:999px;
+  background:var(--neutral-300);
+  cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--surface-1);
+  box-shadow:var(--shadow-xs);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.pf-switch:checked{background:var(--fill-accent)}
+.pf-switch:checked::after{transform:translateX(20px)}
+.pf-switch:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* ---------- Cartões de escolha (tema) ---------- */
+.pf-option{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:left;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.pf-option:hover{border-color:var(--border-strong)}
+.pf-option[aria-checked="true"]{background:var(--neutral-100);border-color:var(--neutral-300)}
+.pf-option-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pf-option-mark{
+  width:16px;height:16px;flex-shrink:0;margin-top:2px;
+  display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--border-strong);
+  background:var(--surface-1);color:transparent;
+}
+.pf-option-mark svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;display:block}
+.pf-option[aria-checked="true"] .pf-option-mark{background:var(--fill-accent);border-color:var(--fill-accent);color:var(--text-on-accent)}
+
+/* ---------- Rodapé ---------- */
+.pf-rule{flex-shrink:0;height:1px;background:var(--border)}
+.pf-foot{flex-shrink:0;display:flex;align-items:center;gap:12px;height:48px}
+.pf-save{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:48px;padding:0 24px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.pf-save:hover{background:var(--fill-accent-hover)}
+.pf-cancel{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:48px;padding:0 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.pf-cancel:hover{background:var(--surface-0);color:var(--text-primary)}
+
+/* Avatar do menu vira o gatilho da modal */
+.avatar{padding:0;cursor:pointer;transition:box-shadow var(--dur-fast) var(--ease-out)}
+.avatar:hover{box-shadow:0 0 0 2px var(--text-primary)}
+.avatar:focus-visible{outline:2px solid var(--neutral-900);outline-offset:var(--focus-offset)}
+</style>
+</head>
+<!-- Nasce CARREGANDO, não vazio. `is-empty` na marcação inicial
+     fazia a tela abrir afirmando "nenhum projeto" antes de perguntar
+     ao banco — o quarto estado que js/projetos.js já documentava
+     ("carregando, lista, vazio, erro") e que `mostrar()` não tinha. -->
+<body class="is-carregando-lista">
+
+<div class="app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="rail">
+    <div class="logomark" role="img" aria-label="Plataforma de Design">
+      <svg viewBox="5.6 9 28.8 22" aria-hidden="true"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegação principal">
+      <button class="nav-item" data-label="Home">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button class="nav-item" data-label="Empresas">
+        <svg viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/></svg>
+      </button>
+      <button class="nav-item" aria-current="page" data-label="Projetos">
+        <svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      </button>
+      <button class="nav-item" data-label="Idéias" disabled>
+        <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+      </button>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-foot">
+      <button class="nav-item" data-label="Configurações">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="rail-divider"></div>
+      <button type="button" class="avatar" id="avatarBtn"
+              aria-haspopup="dialog" aria-label="Abrir perfil de Ricardo Mateus">
+        <img src="https://i.pravatar.cc/80?img=47" alt="">
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="panel">
+
+    <header class="page-header">
+      <h1 class="page-title is-carregando" id="tituloEmpresa" aria-busy="true">
+        <span class="esqueleto" aria-hidden="true">
+          <span class="esq-barra esq-barra--pagina"></span>
+        </span>
+        <span id="pageTitle"></span>
+      </h1>
+      <button class="btn btn--primary" type="button" data-new-project hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Novo projeto
+      </button>
+    </header>
+
+    <div class="section-head">
+      <div class="rule"></div>
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+<ol class="breadcrumb-list">
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-back" href="empresas.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              Voltar
+            </a>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" href="empresas.html">
+              <svg class="breadcrumb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/>
+              </svg>
+              Empresas
+            </a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <span class="breadcrumb-current" aria-current="page">Projetos</span>
+          </li>
+        </ol>
+      </nav>
+      <div class="rule"></div>
+    </div>
+
+    <!-- ---------- Grid de projetos ---------- -->
+    <section class="grid-wrap" aria-label="Projetos">
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- ---------- Empty state ---------- -->
+    <section class="empty" aria-label="Nenhum projeto">
+      <img class="empty-art" src="img/projetos-vazio.svg" alt="" aria-hidden="true" width="458" height="571">
+      <h2>Nenhum projeto por aqui ainda</h2>
+      <p>Crie seu primeiro projeto para começar a organizar as suas ideias em um só lugar.</p>
+      <button class="btn btn--primary" type="button" data-new-project hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Novo projeto
+      </button>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL: novo projeto ===================== -->
+<dialog class="np-modal" id="npModal" aria-labelledby="npTitle">
+  <div class="np-shell">
+
+    <!-- Conteúdo -->
+    <div class="np-main">
+
+      <header class="np-head">
+        <h2 class="np-title" id="npTitle">
+          <span class="np-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>
+          </span>
+          <span id="npTitleText">Novo projeto</span>
+        </h2>
+        <button type="button" class="np-close" id="npClose">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </header>
+
+      <div class="np-list" role="radiogroup" aria-labelledby="npTitle">
+
+        <button type="button" class="np-option" role="radio" aria-checked="true" data-tipo="startup">
+          <span class="np-option-body">
+            <span class="np-option-title">Startup</span>
+            <span class="np-option-desc">São empresas jovens e inovadoras que buscam resolver desafios específicos por meio de modelos de negócios que podem crescer rapidamente e se adaptar facilmente, caracterizando-se pela busca rápida de crescimento e dependência de financiamento externo.</span>
+          </span>
+          <span class="np-option-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></svg>
+          </span>
+        </button>
+
+      </div>
+
+      <!-- As demais opções do protótipo (Franquia, Plano de Negócios,
+           e o resto "Lorem ipsum") saíram: eram placeholder sem tela
+           por trás. Cada tipo novo entra junto do que ele abre por
+           dentro (PROJ-CRIA-006/007). -->
+
+      <div class="np-rule" aria-hidden="true"></div>
+
+      <footer class="np-foot">
+        <button type="button" class="np-save">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>
+          Salvar
+        </button>
+      </footer>
+
+    </div>
+  </div>
+</dialog>
+
+<!-- ===================== MODAL: excluir projeto ===================== -->
+<dialog class="cf-modal" id="cfModal" aria-labelledby="cfTitle">
+  <div class="cf-shell">
+
+    <header class="cf-head">
+      <h2 class="cf-title" id="cfTitle">
+        <span class="np-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+        </span>
+        Excluir projeto
+      </h2>
+      <button type="button" class="np-close" id="cfClose">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        Fechar
+      </button>
+    </header>
+
+    <div class="cf-confirm">
+      <p class="cf-confirm-text">Tem certeza que deseja excluir esse projeto? Esta ação não pode ser desfeita.</p>
+      <div class="cf-confirm-actions">
+        <button type="button" class="cf-btn cf-btn--danger" id="cfConfirm">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+          Excluir
+        </button>
+        <button type="button" class="cf-btn cf-btn--secondary" id="cfCancel">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- Mensagem de feedback (toast) -->
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <svg class="toast-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastText"></span>
+  <button type="button" class="toast-close" id="toastClose" aria-label="Fechar mensagem">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+</div>
+
+<script>
+/* ------------------------------------------------------------
+   Esta página DESENHA. js/projetos.js DECIDE o que desenhar —
+   mesma separação de empresas.html / js/empresas.js.
+   ------------------------------------------------------------ */
+const THUMBS = { startup: 'img/card-startup.svg' };
+const ICON_DOTS = `<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>`;
+
+/* Só "Excluir" por enquanto — "Editar" saiu porque, com um único
+   tipo no catálogo (PROJ-CRIA-006), reabrir a modal para "escolher"
+   Startup de novo não muda nada; e "Duplicar" saiu por decisão do
+   Ricardo (mesma tomada para empresas), PROJ-EXCL-005. */
+const MENU = `
+<div class="menu" role="menu">
+  <button role="menuitem" class="danger"><svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir</button>
+</div>`;
+
+const grid = document.getElementById('grid');
+
+/* ---------- Esqueleto da grade ----------
+   Definido UMA vez e injetado já aqui: este <script> corre durante a
+   análise do documento, antes de js/projetos.js, então a primeira
+   pintura da tela já sai com o esqueleto no lugar — sem um quadro de
+   grade vazia entre a marcação e a carga.
+
+   `mostrar('carregando')` chama de novo em toda recarga, para o
+   estado de espera ser o mesmo na primeira visita e no refresh. */
+const ESQUELETO_CARD = `
+  <article class="card esq-card" aria-hidden="true">
+    <span class="esq-barra esq-thumb"></span>
+    <span class="esq-body">
+      <span class="esq-barra esq-barra--titulo"></span>
+      <span class="esq-barra"></span>
+      <span class="esq-barra esq-barra--curta"></span>
+    </span>
+    <span class="esq-botao"></span>
+  </article>`;
+const ESQUELETO_GRID = ESQUELETO_CARD.repeat(3);
+if(grid) grid.innerHTML = ESQUELETO_GRID;
+
+/* Fim da espera do título. Um lugar só, porque os dois caminhos que
+   a encerram — a empresa chegou / a carga falhou — limpam exatamente
+   as mesmas duas coisas. */
+function revelarTitulo(){
+  const h = document.getElementById('tituloEmpresa');
+  if(!h) return;
+  h.classList.remove('is-carregando');
+  h.setAttribute('aria-busy','false');
+}
+let projetoParaExcluir = null;
+
+/* O nome/descrição de um projeto vêm do catálogo de tipo, resolvido
+   pelo servidor — mas passam por innerHTML do mesmo jeito, então
+   escapar continua obrigatório (mesmo raciocínio de empresas.html). */
+function escapar(t){
+  return String(t).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* PROJ-CRIA-004/PROJ-EXCL-002: só proprietário e membro operam.
+   O servidor é quem faz valer isto de verdade (403 se tentar burlar)
+   — aqui só decide o que mostrar. */
+function podeOperar(papel){
+  return papel === 'proprietario' || papel === 'membro';
+}
+
+/* O quadro de idéias só existe dentro de um projeto, que só existe
+   dentro de uma empresa (IDEIA-ISO-002): os dois ids viajam na URL.
+   Sem eles a página de destino não tem o que mostrar e devolve a
+   pessoa para cá — que é o mesmo motivo pelo qual o "Acessar" de
+   empresas.html carrega o ?empresa=. */
+function linkDoProjeto(p){
+  var empresa = window.EmpresaAtual;
+  if(!empresa) return 'projetos.html';
+  return 'visao_do_projeto.html?empresa=' + encodeURIComponent(empresa.id) +
+         '&projeto=' + encodeURIComponent(p.id);
+}
+
+function cardDeProjeto(p, mostrarMenu){
+  var thumb = THUMBS[p.tipo] || 'img/projetos-vazio.svg';
+  return `
+  <article class="card" data-id="${escapar(p.id)}">
+    <div class="card-thumb">
+      <img class="mock-img" src="${escapar(thumb)}" alt="">
+      ${mostrarMenu ? `<button class="card-menu" aria-haspopup="true" aria-expanded="false" aria-label="Opções de ${escapar(p.nome)}">${ICON_DOTS}</button>` : ''}
+    </div>
+    ${mostrarMenu ? MENU : ''}
+    <div class="card-body">
+      <h3 class="card-title">${escapar(p.nome)}</h3>
+      <p class="card-desc">${escapar(p.descricao || '')}</p>
+    </div>
+    <a class="btn btn--secondary" href="${escapar(linkDoProjeto(p))}">Acessar</a>
+  </article>
+`;
+}
+
+/* Quem pode criar vê os dois botões "Novo projeto" (o do cabeçalho e
+   o do estado vazio). Isto vive separado de renderProjetos porque o
+   estado vazio TAMBÉM precisa do botão — aliás, é lá que ele mais
+   importa: é o único caminho para criar o primeiro projeto da
+   empresa. Enquanto isso morava dentro do render, quem não tinha
+   nenhum projeto via a ilustração e o texto, mas nenhum botão. */
+function aplicarPermissoes(papel){
+  var pode = podeOperar(papel);
+  document.querySelectorAll('[data-new-project]').forEach(function(btn){ btn.hidden = !pode; });
+}
+
+function renderProjetos(lista, papel){
+  var pode = podeOperar(papel);
+  grid.innerHTML = lista.map(function(p){ return cardDeProjeto(p, pode); }).join('');
+  aplicarPermissoes(papel);
+}
+
+/* Acrescentar não redesenha a grade — mesmo motivo de empresas.html:
+   um innerHTML perderia menus abertos e foco de quem navega por
+   teclado. */
+function acrescentarProjeto(p, papel){
+  document.body.classList.remove('is-empty');
+  grid.insertAdjacentHTML('afterbegin', cardDeProjeto(p, podeOperar(papel)));
+}
+
+function definirCabecalho(empresa){
+  document.getElementById('pageTitle').textContent = empresa.nome;
+  revelarTitulo();
+  document.title = empresa.nome + ' · Plataforma de Design';
+}
+
+window.ProjetosView = {
+  render: renderProjetos,
+  acrescentar: acrescentarProjeto,
+  cabecalho: definirCabecalho,
+  permissoes: aplicarPermissoes,
+
+  /* Volta a grade ao estado de espera — usado pela recarga. */
+  esqueleto: function(){ if(grid) grid.innerHTML = ESQUELETO_GRID; },
+
+  /* A carga falhou. O esqueleto sai — animação eterna promete uma
+     chegada que não vem — e entra o motivo. Uma grade vazia seria
+     lida como "esta empresa não tem projetos", que é outra coisa. */
+  falha: function(){
+    revelarTitulo();
+    if(grid) grid.innerHTML =
+      '<p class="grid-falha">Não foi possível carregar os projetos. Recarregue a página.</p>';
+  },
+
+  /* A empresa não resolveu: não há nome para o título. */
+  tituloIndisponivel: function(){
+    const el = document.getElementById('pageTitle');
+    if(el) el.textContent = 'Empresa não carregada';
+    revelarTitulo();
+  },
+};
+
+/* ------------------------------------------------------------
+   Dropdown do kebab
+   ------------------------------------------------------------ */
+function closeAllMenus(){
+  document.querySelectorAll('.menu.is-open').forEach(m=>m.classList.remove('is-open'));
+  document.querySelectorAll('.card-menu[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'));
+}
+
+document.addEventListener('click', ev => {
+  const excluir = ev.target.closest('.menu [role="menuitem"]');
+  if(excluir){
+    closeAllMenus();
+    projetoParaExcluir = excluir.closest('.card');
+    cfModal.showModal();
+    document.body.classList.add('modal-open');
+    return;
+  }
+
+  const trigger = ev.target.closest('.card-menu');
+  if(trigger){
+    const card = trigger.closest('.card');
+    const menu = card.querySelector('.menu');
+    const wasOpen = menu.classList.contains('is-open');
+    closeAllMenus();
+    if(!wasOpen){
+      menu.classList.add('is-open');
+      trigger.setAttribute('aria-expanded','true');
+    }
+    ev.stopPropagation();
+    return;
+  }
+
+  if(!ev.target.closest('.menu')) closeAllMenus();
+});
+
+document.addEventListener('keydown', ev => { if(ev.key === 'Escape') closeAllMenus(); });
+
+/* ------------------------------------------------------------
+   Toast
+   ------------------------------------------------------------ */
+const toast     = document.getElementById('toast');
+const toastText = document.getElementById('toastText');
+let toastTimer = null;
+
+function ocultarMensagem(){
+  toast.classList.remove('is-visible');
+  setTimeout(function(){ toast.hidden = true; }, 200);
+}
+function mostrarMensagem(msg, permanente){
+  toastText.textContent = msg;
+  toast.hidden = false;
+  requestAnimationFrame(function(){ toast.classList.add('is-visible'); });
+  clearTimeout(toastTimer);
+  if(!permanente) toastTimer = setTimeout(ocultarMensagem, 3000);
+}
+document.getElementById('toastClose').addEventListener('click', function(){
+  clearTimeout(toastTimer);
+  ocultarMensagem();
+});
+window.avisoProjetos = mostrarMensagem;
+
+/* ------------------------------------------------------------
+   Modal "Novo projeto" — PROJ-CRIA-001 a 007.
+   ------------------------------------------------------------
+   Só existe a opção Startup por enquanto (PROJ-CRIA-006): não há o
+   que "escolher" de fato, mas o fluxo de confirmação fica igual ao
+   desenhado, pronto para quando um segundo tipo entrar.
+   ------------------------------------------------------------ */
+const npModal = document.getElementById('npModal');
+let npTrigger = null;
+
+function npOpen(trigger){
+  npTrigger = trigger || null;
+  npModal.showModal();
+  document.body.classList.add('modal-open');
+  const primeiro = npModal.querySelector('.np-option');
+  if(primeiro) primeiro.focus();
+}
+
+document.addEventListener('click', ev => {
+  if(ev.target.closest('[data-new-project]')) npOpen(ev.target.closest('button'));
+});
+
+document.getElementById('npClose').addEventListener('click', () => npModal.close());
+
+const npSaveBtn = npModal.querySelector('.np-save');
+npSaveBtn.addEventListener('click', () => {
+  const opcao = npModal.querySelector('.np-option[aria-checked="true"]');
+  const tipo = (opcao && opcao.dataset.tipo) || 'startup';
+  const empresa = window.EmpresaAtual;
+  if(!empresa) return;
+
+  npSaveBtn.disabled = true;
+  API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos', { corpo: { tipo: tipo }, metodo: 'POST' })
+    .then(function(r){
+      npModal.close();
+      window.ProjetosView.acrescentar(r.projeto, empresa.papel);
+      mostrarMensagem('Projeto criado com sucesso.');
+    })
+    .catch(function(e){
+      npModal.close();
+      mostrarMensagem(e.message || 'Não foi possível criar o projeto.');
+    })
+    .then(function(){ npSaveBtn.disabled = false; });
+});
+
+// Clique no backdrop fecha (o alvo só é o próprio dialog fora da casca).
+npModal.addEventListener('click', ev => { if(ev.target === npModal) npModal.close(); });
+
+npModal.addEventListener('close', () => {
+  document.body.classList.remove('modal-open');
+  if(npTrigger && document.contains(npTrigger)) npTrigger.focus();
+  npTrigger = null;
+});
+
+/* ------------------------------------------------------------
+   Modal de confirmação — excluir projeto (PROJ-EXCL-001 a 005)
+   ------------------------------------------------------------ */
+const cfModal = document.getElementById('cfModal');
+const cfConfirmBtn = document.getElementById('cfConfirm');
+
+function cfClose(){ cfModal.close(); }
+document.getElementById('cfClose').addEventListener('click', cfClose);
+document.getElementById('cfCancel').addEventListener('click', cfClose);
+
+cfConfirmBtn.addEventListener('click', () => {
+  if(!projetoParaExcluir){ cfClose(); return; }
+  const card = projetoParaExcluir;
+  const id = card.dataset.id;
+  const empresa = window.EmpresaAtual;
+  if(!empresa){ cfClose(); return; }
+
+  cfConfirmBtn.disabled = true;
+  API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos/' + encodeURIComponent(id), { metodo: 'DELETE' })
+    .then(function(){
+      card.remove();
+      cfClose();
+      mostrarMensagem('Projeto excluído com sucesso.');
+      if(grid.children.length === 0) document.body.classList.add('is-empty');
+    })
+    .catch(function(e){
+      cfClose();
+      mostrarMensagem(e.message || 'Não foi possível excluir o projeto.');
+    })
+    .then(function(){ cfConfirmBtn.disabled = false; });
+});
+
+cfModal.addEventListener('click', ev => { if(ev.target === cfModal) cfClose(); });
+cfModal.addEventListener('close', () => {
+  document.body.classList.remove('modal-open');
+});
+
+/* ------------------------------------------------------------
+   Navegação do rail
+   ------------------------------------------------------------ */
+document.querySelector('.rail-nav .nav-item[data-label="Home"]')
+  .addEventListener('click', () => { window.location.href = 'empresas.html'; });
+document.querySelector('.rail-nav .nav-item[data-label="Empresas"]')
+  .addEventListener('click', () => { window.location.href = 'empresas.html'; });
+</script>
+
+<!-- ===================== MODAL — PERFIL DO USUÁRIO ===================== -->
+<dialog class="pf-modal" id="perfilModal" aria-labelledby="pfTitulo">
+  <div class="pf-shell">
+
+    <nav class="pf-side" aria-label="Seções do perfil">
+      <button type="button" class="pf-side-item" data-painel="perfil" aria-current="true">Perfil</button>
+      <button type="button" class="pf-side-item" data-painel="conta">Conta</button>
+      <button type="button" class="pf-side-item" data-painel="notificacoes">Notificações</button>
+      <button type="button" class="pf-side-item" data-painel="preferencias">Preferências</button>
+      <button type="button" class="pf-side-item" data-painel="creditos">Créditos de uso</button>
+      <span class="pf-side-spacer"></span>
+      <button type="button" class="pf-side-item pf-side-item--danger" id="pfSair">Sair da conta</button>
+    </nav>
+
+    <div class="pf-divider" role="presentation"></div>
+
+    <div class="pf-main">
+      <div class="pf-head">
+        <h2 class="pf-title">
+          <span class="pf-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>
+          </span>
+          <span id="pfTitulo">Perfil</span>
+        </h2>
+        <button type="button" class="pf-close" id="pfFechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <div class="pf-body">
+
+        <!-- ---------- Perfil ---------- -->
+        <section class="pf-panel" id="pf-perfil" aria-label="Perfil">
+          <div class="pf-avatar-row">
+            <span class="pf-avatar"><img src="https://i.pravatar.cc/160?img=47" alt="Foto de Ricardo Mateus"></span>
+            <div class="pf-avatar-actions">
+              <button type="button" class="pf-btn">Trocar foto</button>
+              <button type="button" class="pf-btn pf-btn--danger">Remover</button>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfNome">Nome completo</label>
+            <input class="pf-input" type="text" id="pfNome" value="Ricardo Mateus" autocomplete="name">
+          </div>
+
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfEmail">E-mail</label>
+              <input class="pf-input" type="email" id="pfEmail" value="ricardosmateus@gmail.com" autocomplete="email">
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfCargo">Cargo</label>
+              <input class="pf-input" type="text" id="pfCargo" value="Designer de produto">
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfBio">Sobre você</label>
+            <input class="pf-input" type="text" id="pfBio" placeholder="Uma linha sobre o seu trabalho">
+            <p class="pf-hint">Aparece ao lado das suas idéias e comentários.</p>
+          </div>
+        </section>
+
+        <!-- ---------- Conta ---------- -->
+        <section class="pf-panel" id="pf-conta" aria-label="Conta" hidden>
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label class="pf-label" for="pfIdioma">Idioma</label>
+              <select class="pf-input" id="pfIdioma">
+                <option selected>Português (Brasil)</option>
+                <option>English (US)</option>
+                <option>Español</option>
+              </select>
+            </div>
+            <div class="pf-field">
+              <label class="pf-label" for="pfFuso">Fuso horário</label>
+              <select class="pf-input" id="pfFuso">
+                <option selected>(GMT-03:00) São Paulo</option>
+                <option>(GMT-05:00) Nova York</option>
+                <option>(GMT+01:00) Lisboa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pf-field">
+            <label class="pf-label" for="pfSenha">Senha</label>
+            <input class="pf-input" type="password" id="pfSenha" value="douglas123" autocomplete="current-password">
+            <p class="pf-hint">Última alteração há 3 meses.</p>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Excluir conta</span>
+              <span class="pf-row-desc">Remove seus dados e projetos em definitivo. Não dá para desfazer.</span>
+            </div>
+            <button type="button" class="pf-btn pf-btn--danger">Excluir</button>
+          </div>
+        </section>
+
+        <!-- ---------- Notificações ---------- -->
+        <section class="pf-panel" id="pf-notificacoes" aria-label="Notificações" hidden>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Novidades por e-mail</span>
+              <span class="pf-row-desc">Avisos quando alguém comentar ou mover uma idéia sua.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Novidades por e-mail">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Resumo semanal</span>
+              <span class="pf-row-desc">Um apanhado do que andou pelos seus projetos na semana.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" checked aria-label="Resumo semanal">
+          </div>
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Menções</span>
+              <span class="pf-row-desc">Quando citarem seu nome numa atividade ou tarefa.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Menções">
+          </div>
+        </section>
+
+        <!-- ---------- Preferências ---------- -->
+        <section class="pf-panel" id="pf-preferencias" aria-label="Preferências" hidden>
+          <div role="radiogroup" aria-label="Tema" style="display:flex;flex-direction:column;gap:12px">
+            <button type="button" class="pf-option" role="radio" aria-checked="true">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Claro</span>
+                <span class="pf-row-desc">O tema que a plataforma usa hoje.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Escuro</span>
+                <span class="pf-row-desc">Para trabalhar com pouca luz.</span>
+              </span>
+            </button>
+            <button type="button" class="pf-option" role="radio" aria-checked="false">
+              <span class="pf-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg></span>
+              <span class="pf-option-body">
+                <span class="pf-row-title">Seguir o sistema</span>
+                <span class="pf-row-desc">Acompanha a preferência do seu computador.</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="pf-row">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Reduzir animações</span>
+              <span class="pf-row-desc">Desliga as transições de abertura e movimento.</span>
+            </div>
+            <input class="pf-switch" type="checkbox" aria-label="Reduzir animações">
+          </div>
+        </section>
+
+        <!-- ---------- Créditos de uso ---------- -->
+        <section class="pf-panel" id="pf-creditos" aria-label="Créditos de uso" hidden>
+          <div class="pf-field">
+            <span class="pf-label">Saldo disponível</span>
+            <!-- O valor vem de GET /creditos/saldo (js/creditos.js).
+                 Antes era "500 créditos" fixo no HTML, com uma barra
+                 de progresso em 40% que também não vinha de lugar
+                 nenhum: três números inventados numa tela sobre
+                 dinheiro. -->
+            <p class="pf-saldo" id="pfSaldo" aria-live="polite">
+              <span class="pf-saldo-valor" id="pfSaldoValor">—</span>
+            </p>
+            <!-- DIN-006: falha ao carregar NUNCA pode parecer saldo
+                 zero. São mensagens diferentes, de propósito. -->
+            <p class="pf-hint pf-saldo-falha" id="pfSaldoFalha" role="status" hidden>
+              Não foi possível carregar o seu saldo agora. Isto não significa
+              que ele esteja zerado — tente novamente em instantes.
+            </p>
+            <p class="pf-hint" id="pfSaldoHint">O saldo diminui conforme a plataforma usa IA por você.</p>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="comprarRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Comprar créditos</span>
+              <span class="pf-row-desc">Adicione créditos para continuar usando as funcionalidades de IA.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn pf-btn--success" id="comprarBtn">Comprar</button>
+            </div>
+
+            <!-- Formulário de compra + Pix (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="comprarConteudo" hidden>
+              <div class="pf-compra-form">
+                <div class="pf-field">
+                  <label class="pf-label" for="pfValorCredito">Valor a adicionar</label>
+                  <div class="pf-valor-wrap">
+                    <span class="pf-valor-prefixo" aria-hidden="true">R$</span>
+                    <input class="pf-input pf-input--valor" type="text" inputmode="decimal"
+                           id="pfValorCredito" placeholder="0,00" aria-describedby="pfValorHint">
+                  </div>
+                  <p class="pf-hint" id="pfValorHint">1 crédito equivale a R$ 1,00. Valor mínimo de R$ 10,00.</p>
+                </div>
+
+                <button type="button" class="pf-btn pf-btn--accent" id="gerarQrBtn" disabled>Gerar QR Code Pix</button>
+                <p class="pf-recarga-erro" id="pfRecargaErro" hidden></p>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr" id="pfPixQrBox">
+                    <img id="pfPixImg" width="176" height="176" alt="QR Code para pagamento via Pix">
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <p class="pf-pix-status is-aguardando" id="pfPixStatus"><span class="pf-pix-ponto" aria-hidden="true"></span><span id="pfPixStatusTexto">Aguardando pagamento…</span></p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint pf-pix-hint-auto">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+
+                <div class="pf-pix" id="pfPix" hidden>
+                  <div class="pf-pix-qr">
+                    <canvas id="pfPixCanvas" width="176" height="176" role="img" aria-label="QR Code para pagamento via Pix"></canvas>
+                  </div>
+                  <p class="pf-pix-legenda">Aponte a câmera do seu celular para pagar <strong id="pfPixValor">R$ 0,00</strong> via Pix</p>
+                  <div class="pf-pix-copia">
+                    <input class="pf-pix-codigo" type="text" id="pfPixCodigo" readonly aria-label="Código Pix copia e cola">
+                    <button type="button" class="pf-btn" id="pfCopiarPix">Copiar código</button>
+                  </div>
+                  <p class="pf-hint">Os créditos são adicionados automaticamente após a confirmação do pagamento.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-row pf-row--stack" id="historicoRow">
+            <div class="pf-row-text">
+              <span class="pf-row-title">Histórico de uso</span>
+              <span class="pf-row-desc">Acompanhe quando e onde os seus créditos foram usados.</span>
+            </div>
+            <div class="pf-row-actions">
+              <button type="button" class="pf-btn" id="verHistoricoBtn">Ver histórico</button>
+            </div>
+
+            <!-- Timeline de histórico de créditos (expandível, dentro do mesmo card) -->
+            <div class="pf-row-expand" id="historicoTimeline" hidden>
+              <div class="timeline-container" id="timelineContainer">
+                <!-- Timeline será preenchida por JavaScript -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="pf-rule" role="presentation"></div>
+
+      <div class="pf-foot">
+        <button type="button" class="pf-save" id="pfSalvar">Salvar alterações</button>
+        <button type="button" class="pf-cancel" id="pfCancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+  var modal = document.getElementById('perfilModal');
+  var gatilho = document.getElementById('avatarBtn');
+  if(!modal || !gatilho) return;
+
+  var itens   = Array.prototype.slice.call(modal.querySelectorAll('.pf-side-item[data-painel]'));
+  var paineis = Array.prototype.slice.call(modal.querySelectorAll('.pf-panel'));
+  var titulo  = document.getElementById('pfTitulo');
+
+  function mostrar(id){
+    itens.forEach(function(i){ i.setAttribute('aria-current', String(i.getAttribute('data-painel') === id)); });
+    paineis.forEach(function(p){ p.hidden = p.id !== 'pf-' + id; });
+    var atual = itens.filter(function(i){ return i.getAttribute('data-painel') === id; })[0];
+    if(atual) titulo.textContent = atual.textContent.trim();
+    modal.querySelector('.pf-body').scrollTop = 0;
+  }
+  itens.forEach(function(i){
+    i.addEventListener('click', function(){ mostrar(i.getAttribute('data-painel')); });
+  });
+
+  // Cartões de tema: um só marcado por vez
+  var temas = Array.prototype.slice.call(modal.querySelectorAll('.pf-option[role="radio"]'));
+  temas.forEach(function(t){
+    t.addEventListener('click', function(){
+      temas.forEach(function(o){ o.setAttribute('aria-checked', String(o === t)); });
+    });
+  });
+
+  function abrir(){
+    mostrar('perfil');
+    modal.showModal();
+    document.body.classList.add('modal-open');
+  }
+  function fechar(){ if(modal.open) modal.close(); }
+
+  gatilho.addEventListener('click', abrir);
+  document.getElementById('pfFechar').addEventListener('click', fechar);
+  document.getElementById('pfCancelar').addEventListener('click', fechar);
+  document.getElementById('pfSalvar').addEventListener('click', fechar);
+  /* ACS-SESSAO-003 / IA-CONV-012: antes só trocava de página — a
+     sessão nunca era revogada no servidor, então "Sair" não saía de
+     verdade (o cookie continuava valendo até expirar sozinho). Sair
+     de verdade é o gatilho que também apaga a conversa do assistente
+     (IA-CONV-012). Falha de rede não pode prender a pessoa na tela de
+     projetos: sai da página de qualquer jeito. */
+  document.getElementById('pfSair').addEventListener('click', function(){
+    (window.API ? window.API.chamar('/auth/logout', { metodo: 'POST' }) : Promise.resolve())
+      .catch(function(){})
+      .then(function(){ window.location.href = 'login.html'; });
+  });
+
+  // Clique no backdrop (fora da casca) fecha
+  modal.addEventListener('click', function(e){
+    var r = modal.getBoundingClientRect();
+    var dentro = e.clientX >= r.left && e.clientX <= r.right &&
+                 e.clientY >= r.top  && e.clientY <= r.bottom;
+    if(!dentro) fechar();
+  });
+
+  // Esc já fecha sozinho no <dialog>; aqui só devolvemos o estado
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    gatilho.focus();
+  });
+})();
+</script>
+
+<script>
+/* ---------- Efeito de âncora, compartilhado entre os cards ----------
+   Rola até o card e faz o destaque piscar uma vez, sem deixar
+   estado permanente — usado por "Histórico de uso" e "Comprar
+   créditos" ao expandir seu conteúdo. */
+window.pfAncorarCard = function(row){
+  if(!row) return;
+  row.scrollIntoView({behavior:'smooth', block:'nearest'});
+  row.classList.remove('pf-anchor-flash');
+  void row.offsetWidth;                        // reflow: reinicia a animação a cada clique
+  row.classList.add('pf-anchor-flash');
+  setTimeout(function(){
+    row.classList.remove('pf-anchor-flash');
+  }, 1100);
+};
+</script>
+
+<script>
+/* ---------- Histórico de Créditos ----------
+   Expande a timeline dentro da sessão "Histórico de uso"
+   do modal de Perfil, aba "Crédito de uso".
+*/
+(function(){
+  'use strict';
+  var verHistoricoBtn = document.getElementById('verHistoricoBtn');
+  var historicoTimeline = document.getElementById('historicoTimeline');
+  var timelineContainer = document.getElementById('timelineContainer');
+  var historicoRow = document.getElementById('historicoRow');
+
+  if(!verHistoricoBtn || !historicoTimeline || !timelineContainer) return;
+
+  /* Esta seção NÃO tem mais dados próprios. O conteúdo do
+     #timelineContainer é preenchido por js/creditos.js, que busca o
+     extrato real em GET /creditos/extrato. Aqui sobrou só o
+     abre-e-fecha.
+
+     Antes existia aqui uma lista fixa com sete tarefas inventadas.
+     Um histórico falso ao lado de um saldo real é pior do que não
+     ter histórico: convida a conferir uma conta que não existe. */
+
+  function toggle(){
+    var isHidden = historicoTimeline.hidden;
+    if(isHidden){
+      historicoTimeline.hidden = false;
+      verHistoricoBtn.textContent = 'Ocultar histórico';
+      window.pfAncorarCard(historicoRow);
+    } else {
+      historicoTimeline.hidden = true;
+      verHistoricoBtn.textContent = 'Ver histórico';
+    }
+  }
+
+  verHistoricoBtn.addEventListener('click', toggle);
+})();
+</script>
+
+<script>
+/* ---------- Comprar créditos via Pix ----------
+   Expande o formulário de valor + QR Code Pix dentro do card
+   "Comprar créditos". A cobrança é real (Fase 3): o servidor cria
+   a cobrança no PSP, grava o registro e devolve o BR Code — o QR
+   também vem pronto do servidor (data URL), gerado a partir do
+   MESMO texto do "copia e cola", para os dois nunca poderem
+   divergir. A tela só chama a API, mostra o que ela devolve, e
+   consulta o status em intervalos até a confirmação — o crédito em
+   si só acontece quando o webhook confirma o pagamento no servidor
+   (SEG-PAG-002): esta tela nunca decide sozinha que "pagou".
+*/
+(function(){
+  'use strict';
+  var comprarBtn = document.getElementById('comprarBtn');
+  var comprarRow = document.getElementById('comprarRow');
+  var comprarConteudo = document.getElementById('comprarConteudo');
+  var valorInput = document.getElementById('pfValorCredito');
+  var gerarQrBtn = document.getElementById('gerarQrBtn');
+  var erroEl = document.getElementById('pfRecargaErro');
+  var pfPix = document.getElementById('pfPix');
+  var pfPixQrBox = document.getElementById('pfPixQrBox');
+  var pfPixImg = document.getElementById('pfPixImg');
+  var pfPixValor = document.getElementById('pfPixValor');
+  var pfPixCodigo = document.getElementById('pfPixCodigo');
+  var pfPixStatus = document.getElementById('pfPixStatus');
+  var pfPixStatusTexto = document.getElementById('pfPixStatusTexto');
+  var copiarPixBtn = document.getElementById('pfCopiarPix');
+
+  if(!comprarBtn || !comprarConteudo || !valorInput || !gerarQrBtn || !pfPix) return;
+
+  var VALOR_MINIMO = 10;
+  var INTERVALO_POLL_MS = 4000;
+  var TETO_POLL_MS = 20 * 60 * 1000; // 20 min — mesmo que algo dê errado no cálculo de expiração
+  var pollTimer = null;
+
+  /* ---- Máscara de moeda: usuário digita só números, formata como R$ ---- */
+  function valorNumerico(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    return digitos ? parseInt(digitos, 10) / 100 : 0;
+  }
+
+  function formatarValorInput(){
+    var digitos = valorInput.value.replace(/\D/g,'');
+    if(!digitos){ valorInput.value = ''; atualizarEstadoBotao(); return; }
+    var valor = parseInt(digitos, 10) / 100;
+    valorInput.value = valor.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    atualizarEstadoBotao();
+  }
+
+  function atualizarEstadoBotao(){
+    var valor = valorNumerico();
+    gerarQrBtn.disabled = valor < VALOR_MINIMO;
+    // Muda o valor: o QR anterior (se houver) não vale mais para o novo valor
+    esconderErro();
+    if(!pfPix.hidden) esconderPix();
+  }
+
+  function mostrarErro(msg){
+    erroEl.textContent = msg;
+    erroEl.hidden = false;
+  }
+
+  function esconderErro(){
+    erroEl.hidden = true;
+    erroEl.textContent = '';
+  }
+
+  function esconderPix(){
+    pfPix.hidden = true;
+    comprarConteudo.classList.remove('is-confirmado');
+    pararPolling();
+  }
+
+  function pararPolling(){
+    if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function definirStatus(classe, texto){
+    pfPixStatus.className = 'pf-pix-status ' + classe;
+    pfPixStatusTexto.textContent = texto;
+  }
+
+  function marcarPago(){
+    /* O valor sai da legenda, que vai ser escondida junto com o QR —
+       sem ele, a confirmação perderia a informação mais concreta que
+       tinha ("confirmado" sem dizer de quanto). */
+    var valor = pfPixValor ? pfPixValor.textContent : '';
+    definirStatus('is-pago', valor
+      ? 'Pagamento de ' + valor + ' confirmado — créditos adicionados!'
+      : 'Pagamento confirmado — créditos adicionados!');
+    /* Esconde QR, "copia e cola" e instruções: depois de pago, são
+       convite para pagar duas vezes. */
+    comprarConteudo.classList.add('is-confirmado');
+    pfPixQrBox.classList.remove('is-expirado');
+    copiarPixBtn.disabled = true;
+    /* O crédito já aconteceu no servidor, via webhook (SEG-PAG-002)
+       — isto aqui só atualiza o que a pessoa está vendo na tela. */
+    if(window.Creditos){
+      window.Creditos.recarregar();
+      window.Creditos.extrato();
+    }
+  }
+
+  function marcarExpirado(){
+    definirStatus('is-expirado', 'Este código expirou — gere um novo para continuar.');
+    pfPixQrBox.classList.add('is-expirado');
+    copiarPixBtn.disabled = true;
+  }
+
+  /* ---- Consulta o status de verdade no servidor. Nunca decide
+     "pagou" sozinha — só reflete o que a rota devolve, e a rota,
+     por sua vez, nunca inventa: quem manda é o webhook. ---- */
+  function consultarStatus(txid, expiraEm, iniciadoEm){
+    fetch('/creditos/recarga/' + encodeURIComponent(txid), { credentials: 'same-origin' })
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(d){
+        if(d.status === 'pago'){
+          pararPolling();
+          marcarPago();
+        } else if(d.status === 'expirado' || d.status === 'cancelado'){
+          pararPolling();
+          marcarExpirado();
+        }
+        // 'aguardando': segue tentando no próximo tick.
+      })
+      .catch(function(e){
+        // Falha de rede é transitória — não desiste, só tenta de novo
+        // no próximo tick. Quem para o polling é o teto de tempo.
+        console.error('[creditos] falha ao consultar status do Pix:', e);
+      });
+  }
+
+  function iniciarPolling(txid, expiraEmIso){
+    pararPolling();
+    var expiraEm = new Date(expiraEmIso).getTime();
+    var teto = Date.now() + TETO_POLL_MS;
+    var iniciadoEm = Date.now();
+
+    pollTimer = setInterval(function(){
+      var agora = Date.now();
+      if((Number.isFinite(expiraEm) && agora > expiraEm) || agora > teto){
+        pararPolling();
+        marcarExpirado();
+        return;
+      }
+      consultarStatus(txid, expiraEm, iniciadoEm);
+    }, INTERVALO_POLL_MS);
+  }
+
+  /* ---- Gera a cobrança de verdade: cria no servidor, mostra o QR
+     e o copia-e-cola que ele devolveu, e passa a consultar o
+     status. ---- */
+  function gerarQr(){
+    var valor = valorNumerico();
+    if(valor < VALOR_MINIMO) return;
+
+    esconderErro();
+    gerarQrBtn.disabled = true;
+    var textoOriginal = gerarQrBtn.textContent;
+    gerarQrBtn.textContent = 'Gerando…';
+
+    fetch('/creditos/recarga', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor: valorInput.value }),
+    })
+      .then(function(r){
+        return r.json().catch(function(){ return {}; }).then(function(dados){
+          return { ok: r.ok, dados: dados };
+        });
+      })
+      .then(function(resultado){
+        if(!resultado.ok){
+          mostrarErro(resultado.dados.erro || 'Não foi possível gerar o código Pix agora. Tente de novo.');
+          return;
+        }
+        var dados = resultado.dados;
+
+        pfPixImg.src = dados.qr_data_url;
+        pfPixCodigo.value = dados.brcode;
+        pfPixValor.textContent = dados.valor_formatado;
+        pfPixQrBox.classList.remove('is-expirado');
+        definirStatus('is-aguardando', 'Aguardando pagamento…');
+        copiarPixBtn.disabled = false;
+        /* Cobrança nova: desfaz o estado de "confirmado" de uma
+           anterior, senão o QR novo nasceria escondido. */
+        comprarConteudo.classList.remove('is-confirmado');
+        pfPix.hidden = false;
+        // Mesmo motion de âncora do "Comprar", agora guiando o olhar
+        // até o QR Code recém-gerado.
+        window.pfAncorarCard(pfPix);
+
+        iniciarPolling(dados.txid, dados.expira_em);
+      })
+      .catch(function(e){
+        console.error('[creditos] falha ao gerar cobrança Pix:', e);
+        mostrarErro('Não foi possível falar com o servidor agora. Verifique sua conexão e tente de novo.');
+      })
+      .then(function(){
+        gerarQrBtn.textContent = textoOriginal;
+        gerarQrBtn.disabled = valorNumerico() < VALOR_MINIMO;
+      });
+  }
+
+  function copiarCodigo(){
+    var restaurarTexto = copiarPixBtn.textContent;
+    function marcarCopiado(){
+      copiarPixBtn.textContent = 'Copiado!';
+      copiarPixBtn.classList.add('is-copiado');
+      setTimeout(function(){
+        copiarPixBtn.textContent = restaurarTexto;
+        copiarPixBtn.classList.remove('is-copiado');
+      }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(pfPixCodigo.value).then(marcarCopiado);
+    } else {
+      pfPixCodigo.select();
+      document.execCommand('copy');
+      marcarCopiado();
+    }
+  }
+
+  function toggle(){
+    var isHidden = comprarConteudo.hidden;
+    if(isHidden){
+      comprarConteudo.hidden = false;
+      comprarBtn.textContent = 'Fechar';
+      window.pfAncorarCard(comprarRow);
+    } else {
+      comprarConteudo.hidden = true;
+      comprarBtn.textContent = 'Comprar';
+      esconderErro();
+      esconderPix();
+    }
+  }
+
+  comprarBtn.addEventListener('click', toggle);
+  valorInput.addEventListener('input', formatarValorInput);
+  gerarQrBtn.addEventListener('click', gerarQr);
+  copiarPixBtn.addEventListener('click', copiarCodigo);
+})();
+</script>
+
+<script src="js/api.js"></script>
+<script src="js/projetos.js"></script>
+
+<script src="js/creditos.js"></script>
+
+</body>
+</html>

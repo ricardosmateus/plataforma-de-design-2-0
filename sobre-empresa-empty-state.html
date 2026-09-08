@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sobre a Empresa — Empty State</title>
+  <link rel="stylesheet" href="styleguide.html">
+  <style>
+    :root {
+      --color-text-primary: #1f2937;
+      --color-text-secondary: #6b7280;
+      --color-bg-primary: #ffffff;
+      --color-bg-secondary: #f9fafb;
+      --color-accent: #0ba5ec;
+      --color-success: #10b981;
+      --color-border: #e5e7eb;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --dur-base: 300ms;
+      --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .page-header {
+      margin-bottom: 48px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+    }
+
+    /* ========== Empty State Container ========== */
+    .empty-state-wrapper {
+      background: var(--color-bg-primary);
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 80px 40px;
+      text-align: center;
+      transition: all var(--dur-base) var(--ease-out);
+    }
+
+    .empty-state-wrapper.hidden {
+      display: none;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .empty-state-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      opacity: 0.5;
+    }
+
+    .empty-state-icon svg {
+      width: 100%;
+      height: 100%;
+      stroke: var(--color-accent);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .empty-state-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--color-text-primary);
+    }
+
+    .empty-state-description {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      max-width: 400px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+
+    .empty-state-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 420px;
+      margin: 0 auto 32px;
+      text-align: left;
+    }
+
+    .empty-state-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--color-accent);
+    }
+
+    .empty-state-step-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .empty-state-step-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .empty-state-step-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: var(--color-text-primary);
+    }
+
+    .empty-state-step-text {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+    }
+
+    .empty-state-cta {
+      display: inline-block;
+      padding: 12px 24px;
+      background: var(--color-accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--dur-base) var(--ease-out);
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .empty-state-cta:hover {
+      background: #0984b9;
+    }
+
+    /* ========== Content Container (Hidden by default) ========== */
+    .content-wrapper {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--dur-base) var(--ease-out);
+    }
+
+    .content-wrapper.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .grafo-placeholder {
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-lg);
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-secondary);
+      margin-bottom: 40px;
+      font-size: 14px;
+    }
+
+    .pastas-section {
+      background: var(--color-bg-primary);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      border: 1px solid var(--color-border);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--color-text-primary);
+    }
+
+    .pasta-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .pasta-item {
+      padding: 16px;
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius);
+      border: 1px solid var(--color-border);
+      transition: all var(--dur-base) var(--ease-out);
+    }
+
+    .pasta-item:hover {
+      border-color: var(--color-accent);
+      background: var(--color-bg-primary);
+      box-shadow: 0 2px 8px rgba(11, 165, 236, 0.1);
+    }
+
+    .pasta-name {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .pasta-count {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .container {
+        padding: 24px 16px;
+      }
+
+      .empty-state-wrapper {
+        padding: 60px 24px;
+      }
+
+      .page-title {
+        font-size: 24px;
+      }
+
+      .empty-state-icon {
+        width: 60px;
+        height: 60px;
+      }
+
+      .pasta-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Cabeçalho -->
+    <div class="page-header">
+      <h1 class="page-title">Sobre a Empresa</h1>
+      <p class="page-subtitle">Mapa do conhecimento — todas as descobertas, análises e decisões</p>
+    </div>
+
+    <!-- ========== EMPTY STATE ========== -->
+    <div class="empty-state-wrapper" id="emptyState">
+      <!-- Ícone -->
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grafo/conexões -->
+          <circle cx="16" cy="16" r="4"/>
+          <circle cx="48" cy="16" r="4"/>
+          <circle cx="32" cy="48" r="4"/>
+          <line x1="16" y1="16" x2="48" y2="16"/>
+          <line x1="16" y1="16" x2="32" y2="48"/>
+          <line x1="48" y1="16" x2="32" y2="48"/>
+        </svg>
+      </div>
+
+      <!-- Título e descrição -->
+      <h2 class="empty-state-title">Nenhuma atividade finalizada ainda</h2>
+      <p class="empty-state-description">
+        Comece a explorar finalizando suas primeiras atividades. O mapa de conhecimento aparecerá automaticamente aqui.
+      </p>
+
+      <!-- Passos -->
+      <div class="empty-state-steps">
+        <div class="empty-state-step">
+          <div class="empty-state-step-number">1</div>
+          <div class="empty-state-step-content">
+            <div class="empty-state-step-title">Crie uma atividade</div>
+            <div class="empty-state-step-text">Vá para um projeto e crie uma nova ideia</div>
+          </div>
+        </div>
+
+        <div class="empty-state-step">
+          <div class="empty-state-step-number">2</div>
+          <div class="empty-state-step-content">
+            <div class="empty-state-step-title">Trabalhe nela</div>
+            <div class="empty-state-step-text">Mude para "andamento" e execute o trabalho</div>
+          </div>
+        </div>
+
+        <div class="empty-state-step">
+          <div class="empty-state-step-number">3</div>
+          <div class="empty-state-step-content">
+            <div class="empty-state-step-title">Finalize</div>
+            <div class="empty-state-step-text">Marque como "finalizado" para validar</div>
+          </div>
+        </div>
+
+        <div class="empty-state-step">
+          <div class="empty-state-step-number">4</div>
+          <div class="empty-state-step-content">
+            <div class="empty-state-step-title">Veja aparecer aqui</div>
+            <div class="empty-state-step-text">Seu mapa de conhecimento cresce automaticamente</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <a href="empresas.html" class="empty-state-cta">Ir para projetos</a>
+    </div>
+
+    <!-- ========== CONTEÚDO NORMAL (inicialmente oculto) ========== -->
+    <div class="content-wrapper" id="contentWrapper">
+      <!-- Grafo (placeholder por enquanto) -->
+      <div class="grafo-placeholder">
+        📊 Grafo de conhecimento — Semana 4
+      </div>
+
+      <!-- Pastas -->
+      <div class="pastas-section">
+        <h2 class="section-title">Pasta de conhecimento</h2>
+        <ul class="pasta-list" id="pastaList">
+          <!-- Preenchido via API -->
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simular carregamento da API
+    // Em produção, isso viria de GET /empresas/:id/sobre
+    async function carregarSobreEmpresa() {
+      // Mock: para teste local, retorna vazio (empty state)
+      // Descomente abaixo para testar com dados
+      
+      try {
+        // const response = await fetch(`/empresas/${empresaId}/sobre`);
+        // const data = await response.json();
+        
+        // Mock com dados vazios (empty state)
+        const data = { assuntos: [] };
+        
+        // Descomente abaixo para teste com dados
+        // const data = { 
+        //   assuntos: [
+        //     { categoria: "Concorrentes", quantidade: 5 },
+        //     { categoria: "Personas", quantidade: 3 },
+        //     { categoria: "Mercado", quantidade: 2 }
+        //   ] 
+        // };
+
+        atualizarPagina(data);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        mostrarEmptyState();
+      }
+    }
+
+    function atualizarPagina(data) {
+      const emptyState = document.getElementById('emptyState');
+      const contentWrapper = document.getElementById('contentWrapper');
+      const pastaList = document.getElementById('pastaList');
+
+      if (!data.assuntos || data.assuntos.length === 0) {
+        // Mostrar empty state
+        mostrarEmptyState();
+      } else {
+        // Ocultar empty state, mostrar conteúdo
+        emptyState.classList.add('hidden');
+        contentWrapper.classList.add('visible');
+
+        // Preencher pastas
+        pastaList.innerHTML = data.assuntos
+          .map(pasta => `
+            <li class="pasta-item">
+              <div class="pasta-name">${pasta.categoria}</div>
+              <div class="pasta-count">${pasta.quantidade} ideia${pasta.quantidade !== 1 ? 's' : ''}</div>
+            </li>
+          `)
+          .join('');
+      }
+    }
+
+    function mostrarEmptyState() {
+      const emptyState = document.getElementById('emptyState');
+      const contentWrapper = document.getElementById('contentWrapper');
+      
+      emptyState.classList.remove('hidden');
+      contentWrapper.classList.remove('visible');
+    }
+
+    // Carregar ao abrir a página
+    document.addEventListener('DOMContentLoaded', carregarSobreEmpresa);
+
+    // Atualizar a cada 5 segundos (para teste — em prod seria webhook/listener)
+    setInterval(carregarSobreEmpresa, 5000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Tema · Plataforma de Design</title>
+<link rel="icon" href="img/ideia-lampada.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/esqueleto.css">
+<style>
+
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   Mesmo :root das demais páginas, para manter tudo em sincronia.
+   Tokens do sistema: css/tokens.css
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  -webkit-font-smoothing:antialiased;
+  min-width:1024px;
+}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;
+  padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+button:focus-visible,
+a:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.nav-item:focus-visible{
+  outline:2px solid var(--neutral-900);
+  outline-offset:var(--focus-offset);
+  border-radius:var(--radius);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:flex;min-height:100vh}
+
+/* ---------- Rail ---------- */
+.rail{
+  width:var(--rail-w);
+  flex:0 0 var(--rail-w);
+  background:var(--fill-primary);
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 24px;
+  position:sticky;top:0;height:100vh;
+  z-index:10;
+}
+/* Símbolo da marca: mesma caixa de 44px dos itens do menu, para o
+   logo e a "bolacha" do Início ficarem alinhados e do mesmo tamanho.
+   Monograma PD geométrico — contra-formas circulares, em amarelo
+   sobre bolacha preta. */
+.logomark{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:var(--radius-lg);
+  background:var(--text-primary);
+  display:grid;place-items:center;
+  margin-bottom:24px;
+}
+.logomark svg{width:28px;height:auto;display:block;fill:var(--fill-primary)}
+.rail-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.rail-spacer{flex:1}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%}
+.rail-divider{width:40px;height:1px;background:var(--border-strong)}
+
+.nav-item{
+  position:relative;
+  width:44px;height:44px;border-radius:var(--radius);
+  display:grid;place-items:center;
+  color:var(--text-on-primary);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-item:hover{background:var(--fill-primary-hover)}
+.nav-item[aria-current="page"]{background:var(--fill-primary-hover)}
+.nav-item::after{
+  content:attr(data-label);
+  position:absolute;left:calc(100% + 10px);top:50%;
+  transform:translateY(-50%) translateX(-4px);
+  background:var(--text-primary);color:var(--surface-1);
+  font-size:12px;font-weight:500;line-height:18px;
+  padding:6px 10px;border-radius:var(--radius);
+  white-space:nowrap;pointer-events:none;
+  opacity:0;
+  transition:opacity var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+  z-index:60;
+}
+.nav-item:hover::after,.nav-item:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+
+.avatar{
+  width:40px;height:40px;border-radius:50%;
+  overflow:hidden;background:var(--fill-primary-hover);
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Painel ---------- */
+.panel{
+  flex:1;min-width:0;
+  background:var(--surface-1);
+  border-radius:var(--radius-panel);
+  margin-top:12px;
+  min-height:calc(100vh - 12px);
+  padding:0 0 48px;
+  display:flex;flex-direction:column;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.page-header{
+  max-width:var(--container);width:100%;
+  margin:0 auto;
+  padding:36px 32px 0;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+}
+.page-title{
+  font-size:30px;line-height:38px;font-weight:600;
+  letter-spacing:-.02em;color:var(--text-primary);
+}
+/* Medida do esqueleto do título nesta tela. A aparência (cor,
+   brilho, raio) vem de css/esqueleto.css; aqui fica só o tamanho,
+   que é o do <h1> daqui — sem isto a barra nasce com a altura
+   padrão de linha de texto e ocupa a largura inteira. */
+.esq-barra--pagina{width:300px;height:26px}
+.page-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+
+.section-head{max-width:var(--container);width:100%;margin:0 auto;padding:0 32px}
+.rule{height:1px;background:var(--border);margin:24px 0}
+
+/* ---------- Breadcrumb (mesmo padrão de atividade.html) ---------- */
+.breadcrumb{display:flex;align-items:center}
+.breadcrumb-list{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  list-style:none;margin:0;padding:0;
+}
+.breadcrumb-item{display:flex;align-items:center;gap:4px}
+.breadcrumb-link,
+.breadcrumb-current{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:4px 8px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;
+}
+.breadcrumb-link{
+  color:var(--text-secondary);
+  text-decoration:none;
+  transition:background .15s ease,color .15s ease;
+}
+.breadcrumb-link:hover{background:var(--surface-0);color:var(--text-primary)}
+.breadcrumb-link:focus-visible,
+.breadcrumb-current:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-current{
+  background:var(--surface-0);
+  color:var(--text-primary);
+  font-weight:600;
+}
+.breadcrumb-sep{
+  width:16px;height:16px;flex-shrink:0;
+  color:var(--text-muted);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  display:flex;align-items:center;justify-content:center;
+}
+.breadcrumb-back{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:var(--radius);
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  font-size:14px;line-height:20px;font-weight:500;
+  text-decoration:none;white-space:nowrap;
+  margin-right:12px;
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.breadcrumb-back:hover{background:var(--surface-0);color:var(--text-primary);border-color:var(--text-secondary)}
+.breadcrumb-back:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.breadcrumb-back svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ============================================================
+   BOTÕES
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 20px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  white-space:nowrap;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--secondary{background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--secondary:hover{background:var(--surface-0)}
+
+/* ============================================================
+   PÁGINA DO TEMA — uma coluna de leitura
+   ============================================================
+   Esta tela existe para ser LIDA, e é a única do produto que é.
+   As outras são painéis: o olho varre, escolhe e clica. Aqui a
+   pessoa lê parágrafos seguidos sobre concorrentes, e é por isso
+   que o layout não é uma grade de cards — é uma coluna só, com
+   medida de linha de texto corrido.
+   ============================================================ */
+
+.tema-wrap{
+  max-width:var(--container);width:100%;
+  margin:0 auto;
+  padding:0 32px 96px;
+}
+
+/* ---------- Introdução da categoria ----------
+   Quem chega aqui pelo grafo ou por uma tag pode não saber o que
+   "Mercado" ou "Benchmark" significam NESTA taxonomia — o nome
+   sozinho é ambíguo o bastante para admitir leituras diferentes.
+   Este parágrafo situa o assunto ANTES dos trechos, para que a
+   pessoa saiba o que esperar antes de começar a ler. Fica fora do
+   card de trechos de propósito: é enquadramento da categoria, não
+   conteúdo escrito por alguém do time. */
+.tema-intro{
+  margin-top:24px;
+  padding-left:16px;
+  border-left:3px solid var(--fill-accent);
+  max-width:68ch;
+}
+.tema-intro[hidden]{display:none}
+
+/* Subtítulo: o nome da categoria, repetido do breadcrumb — de
+   propósito. O breadcrumb é rastro de navegação, pequeno e num canto;
+   aqui é o assunto da leitura que está prestes a começar, e precisa
+   de peso para ser lido como título de seção. Menor que o <h1> (que
+   é o nome da EMPRESA, não do tema) para não competir com ele pela
+   hierarquia da página. */
+.tema-intro-titulo{
+  font-size:22px;line-height:28px;font-weight:600;
+  letter-spacing:-.01em;color:var(--text-primary);
+  margin-bottom:6px;
+}
+.tema-intro-texto{
+  font-size:16px;line-height:26px;
+  color:var(--text-secondary);
+}
+
+/* ---------- Alternador de visão ----------
+   Só aparece quando a leitura guiada existe para este tema (Fase 1
+   de Documentacao/enriquecimento-tema.md). Enquanto ela ainda não
+   rodou, ou falhou, isto fica oculto e a tela é a lista bruta de
+   sempre — sem alternador para trocar com o quê. */
+
+/* ---------- Leitura guiada ----------
+   Mesmos trechos da lista bruta, reagrupados por assunto em vez de
+   por tarefa de origem (Fase 1). Cada trecho carrega o próprio link
+   de referência — "editar no quadro" não pode mais viver no fim de
+   um bloco, porque uma seção aqui mistura trechos de tarefas
+   diferentes de propósito. */
+.tema-leitura{display:flex;flex-direction:column;gap:40px;margin-top:28px}
+.tema-leitura[hidden]{display:none}
+
+/* Sem a caixa, o título do assunto passou a ser a única coisa que
+   marca onde uma seção começa — e a primeira linha de cada trecho
+   também é negrito, porque é o título do registro no quadro. Os dois
+   pesos precisam ficar a uma distância que se leia de relance, senão
+   a hierarquia some junto com a borda. */
+.tema-secao-titulo{
+  font-size:21px;line-height:28px;font-weight:600;
+  letter-spacing:-.01em;
+  color:var(--text-primary);margin-bottom:16px;
+}
+/* Sem caixa, de propósito. Uma seção da leitura guiada é um assunto,
+   não um objeto: o que separa uma da seguinte é o título e o espaço
+   em volta dele, do mesmo jeito que num texto corrido. Cartão com
+   borda e sombra faria cada assunto parecer um registro à parte —
+   exatamente a leitura fragmentada que a vista por atividade de
+   origem já oferece logo abaixo. */
+.tema-secao-corpo{
+  display:flex;flex-direction:column;gap:18px;
+}
+.tema-secao-trecho{
+  font-size:16px;line-height:26px;
+  color:var(--text-primary);
+  max-width:68ch;
+  white-space:pre-wrap;
+  overflow-wrap:break-word;
+}
+.tema-secao-trecho strong{font-weight:600}
+
+/* A referência fica junto do trecho, não num rodapé de bloco — é a
+   diferença central desta vista para a de baixo. Pequena e discreta
+   de propósito: é uma nota de rodapé, não um convite a sair. */
+.tema-secao-ref{
+  display:inline-flex;align-items:center;gap:3px;
+  margin-left:6px;
+  font-size:12px;line-height:16px;font-weight:600;
+  color:var(--text-accent);
+  white-space:nowrap;
+  vertical-align:baseline;
+}
+.tema-secao-ref:hover{text-decoration:underline}
+.tema-secao-ref svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Blocos (lista bruta, por atividade de origem) ---------- */
+.tema-blocos{display:flex;flex-direction:column;gap:32px;margin-top:28px}
+.tema-blocos[hidden]{display:none}
+
+/* Cada bloco é UMA tarefa de origem, e essa fronteira continua tendo
+   que aparecer: dois blocos de atividades diferentes correndo soltos
+   na mesma coluna se leem como um texto só, que é exatamente a
+   mistura que esta tela promete não fazer. O que muda é o peso — um
+   filete entre blocos diz onde um acaba sem transformar cada tarefa
+   num cartão. */
+.tema-bloco{padding:0}
+.tema-bloco + .tema-bloco{
+  border-top:1px solid var(--border);
+  padding-top:32px;
+}
+
+.tema-bloco-origem{
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  margin-bottom:16px;
+}
+.tema-bloco-ideia{
+  font-size:17px;line-height:24px;font-weight:600;
+  color:var(--text-primary);
+}
+.tema-bloco-projeto{
+  font-size:13px;line-height:20px;
+  color:var(--text-secondary);
+}
+
+/* A medida de linha é o ajuste que mais muda a leitura aqui:
+   parágrafo largo demais faz o olho perder a linha na volta. */
+.tema-trecho{
+  font-size:16px;line-height:26px;
+  color:var(--text-primary);
+  max-width:68ch;
+  white-space:pre-wrap;
+  overflow-wrap:break-word;
+}
+.tema-trecho + .tema-trecho{margin-top:18px}
+
+/* A primeira linha de um registro é o título dele no quadro. Sai em
+   peso maior porque no quadro ela também é: o trecho tem que ser
+   reconhecível quando a pessoa clicar em "editar" e chegar lá. */
+.tema-trecho strong{font-weight:600}
+
+/* ---------- Rodapé do bloco: a volta para o quadro ---------- */
+.tema-bloco-pe{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:20px;
+}
+.tema-voltar{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;
+  border-radius:var(--radius);
+  background:var(--surface-0);
+  border:1px solid var(--border-strong);
+  font-size:14px;line-height:20px;font-weight:600;
+  color:var(--text-primary);text-decoration:none;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.tema-voltar:hover{background:var(--bg-accent)}
+.tema-voltar svg{
+  width:16px;height:16px;
+  stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.tema-voltar-nota{
+  font-size:13px;line-height:20px;
+  color:var(--text-secondary);
+}
+
+/* ---------- Estados ---------- */
+.tema-estado{
+  margin-top:32px;
+  padding:56px 32px;
+  text-align:center;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+}
+.tema-estado svg{
+  width:40px;height:40px;margin:0 auto 16px;
+  stroke:var(--text-muted);fill:none;stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.tema-estado h2{
+  font-size:19px;line-height:26px;font-weight:600;
+  color:var(--text-primary);margin-bottom:8px;
+}
+.tema-estado p{
+  font-size:15px;line-height:22px;
+  color:var(--text-secondary);
+  max-width:52ch;margin:0 auto;
+}
+.tema-estado .btn{margin-top:24px}
+
+/* ---------- Esqueleto ---------- */
+.tema-esq{display:flex;flex-direction:column;gap:16px;margin-top:28px}
+.tema-esq[hidden]{display:none}
+/* O esqueleto promete a FORMA do que vem. Agora que o conteúdo não
+   é mais um cartão, um esqueleto emoldurado prometeria a forma
+   errada — e a troca do desenho pelo texto seria um salto. */
+.tema-esq-bloco{
+  display:flex;flex-direction:column;gap:14px;
+}
+.tema-esq-bloco + .tema-esq-bloco{margin-top:16px}
+
+
+/* ---------- Gráficos (Fase 2) ---------- */
+
+/* Mesma decisão da leitura guiada: o gráfico é uma frase do texto,
+   não um anexo. Sem moldura em volta — o próprio desenho já tem
+   forma suficiente para se distinguir do parágrafo acima. */
+.tema-graficos{margin-top:40px}
+.tema-graficos[hidden]{display:none}
+.tema-graficos-titulo{
+  font-size:21px;line-height:28px;font-weight:600;
+  letter-spacing:-.01em;
+  color:var(--text-primary);margin-bottom:20px;
+}
+.tema-grafico-container{margin:0 0 36px}
+.tema-grafico-svg{width:100%;height:auto;display:block;max-width:600px}
+
+/* Paleta de séries. Não são as roles semânticas: `--fill-danger` num
+   gráfico diria "esta fatia é um problema", e uma fatia é só uma
+   fatia. Seis passos, porque a pizza cicla de 6 em 6. */
+:root{
+  --grafico-serie-1:#0ba5ec;
+  --grafico-serie-2:#7c3aed;
+  --grafico-serie-3:#0e9f6e;
+  --grafico-serie-4:#e3a008;
+  --grafico-serie-5:#e74694;
+  --grafico-serie-6:#3f83f8;
+}
+.tema-grafico-serie-1{fill:var(--grafico-serie-1)}
+.tema-grafico-serie-2{fill:var(--grafico-serie-2)}
+.tema-grafico-serie-3{fill:var(--grafico-serie-3)}
+.tema-grafico-serie-4{fill:var(--grafico-serie-4)}
+.tema-grafico-serie-5{fill:var(--grafico-serie-5)}
+.tema-grafico-serie-6{fill:var(--grafico-serie-6)}
+
+.tema-grafico-barra{fill:var(--grafico-serie-1)}
+.tema-grafico-linha{
+  fill:none;stroke:var(--grafico-serie-2);stroke-width:2;
+  stroke-linejoin:round;stroke-linecap:round;
+}
+.tema-grafico-ponto{fill:var(--grafico-serie-2)}
+.tema-grafico-eixo-linha{stroke:var(--border-strong);stroke-width:1}
+
+.tema-grafico-titulo{
+  font-size:15px;font-weight:600;
+  fill:var(--text-primary);
+}
+.tema-grafico-label,
+.tema-grafico-valor{font-size:12px;fill:var(--text-secondary)}
+/* O nome do eixo é orientação de leitura, não dado: fica um degrau
+   abaixo dos rótulos que ele explica. */
+.tema-grafico-eixo{
+  font-size:11px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;
+  fill:var(--text-muted);
+}
+
+.tema-grafico-barra,
+.tema-grafico-ponto,
+.tema-grafico-fatia{
+  cursor:pointer;
+  transition:opacity var(--dur-fast) var(--ease-out);
+}
+.tema-grafico-barra:hover,
+.tema-grafico-ponto:hover,
+.tema-grafico-fatia:hover{opacity:.75}
+
+/* As origens dos dados. Links de verdade, na ordem em que os pontos
+   aparecem — é por aqui que se chega ao trecho sem mouse. */
+.tema-grafico-origens{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin-top:10px;max-width:600px;
+}
+.tema-grafico-origens-rotulo{
+  font-size:13px;line-height:20px;
+  color:var(--text-muted);
+}
+.tema-grafico-origem{
+  font-size:13px;line-height:20px;font-weight:600;
+  color:var(--text-accent);text-decoration:none;
+  border-radius:var(--radius);
+}
+.tema-grafico-origem:hover{text-decoration:underline}
+/* Sem divisor entre os links: a lista quebra linha quando o gráfico
+   cita três ou quatro tarefas, e um filete à esquerda vira um traço
+   solto no começo da linha de baixo. O espaço já separa. */
+.tema-grafico-origem + .tema-grafico-origem{margin-left:4px}
+
+@media (prefers-reduced-motion:reduce){
+  .tema-grafico-barra,
+  .tema-grafico-ponto,
+  .tema-grafico-fatia{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<aside class="rail">
+    <div class="logomark" role="img" aria-label="Plataforma de Design">
+      <svg viewBox="5.6 9 28.8 22" aria-hidden="true"><path fill-rule="evenodd" d="M5.6 9 H10.8 A6.4 6.4 0 0 1 10.8 21.8 L10.8 31 H5.6 Z M10.8 12.4 A3 3 0 0 1 10.8 18.4 Z M20.2 9 H25.4 A9 11 0 0 1 25.4 31 H20.2 Z M25.4 13.6 A6.4 6.4 0 0 1 25.4 26.4 Z"/></svg>
+    </div>
+
+    <nav class="rail-nav" aria-label="Navegação principal">
+      <button type="button" class="nav-item" data-label="Home">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Empresas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 7h3"/><path d="M7 11h3"/><path d="M7 15h3"/><path d="M17 13h1"/><path d="M17 17h1"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Projetos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Idéias">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.8 1 .9 1.6h5.4c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z"/></svg>
+      </button>
+      <button type="button" class="nav-item" data-label="Sobre a empresa" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5Z"/><path d="M13 3v5.5H18.5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+      </button>
+    </nav>
+
+    <div class="rail-spacer"></div>
+
+    <div class="rail-foot">
+      <button type="button" class="nav-item" data-label="Configurações">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="rail-divider"></div>
+      <button type="button" class="avatar" id="avatarBtn"
+              aria-haspopup="dialog" aria-label="Abrir perfil de Ricardo Mateus">
+        <img src="https://i.pravatar.cc/80?img=47" alt="">
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== CONTEÚDO ===================== -->
+  <main class="panel">
+
+    <header class="page-header">
+      <h1 class="page-title is-carregando" id="temaTitulo" aria-busy="true">
+        <span class="esqueleto" aria-hidden="true">
+          <span class="esq-barra esq-barra--pagina"></span>
+        </span>
+        <span id="temaTituloText">Tema</span>
+      </h1>
+    </header>
+
+    <div class="section-head">
+      <div class="rule"></div>
+      <nav class="breadcrumb" aria-label="Trilha de navegação">
+        <ol class="breadcrumb-list">
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-back" id="trilhaVoltar" href="#">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              Voltar
+            </a>
+          </li>
+          <li class="breadcrumb-item">
+            <a class="breadcrumb-link" id="trilhaSobre" href="#">Sobre a empresa</a>
+            <svg class="breadcrumb-sep" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </li>
+          <li class="breadcrumb-item">
+            <span class="breadcrumb-current" id="trilhaTema">Tema</span>
+          </li>
+        </ol>
+      </nav>
+      <div class="rule"></div>
+    </div>
+
+    <div class="tema-wrap">
+      <!-- Introdução: o nome da categoria e o que ela significa. Não
+           depende da API — vem da URL, então aparece de imediato,
+           mesmo se a carga dos trechos abaixo falhar. O <h2> segue o
+           mesmo nome canônico da taxonomia (Skills/categorizacao-
+           taxonomia.skill), não um texto solto: é o mesmo "Mercado"
+           que aparece no breadcrumb acima. -->
+      <div class="tema-intro" id="temaIntro" hidden>
+        <h2 class="tema-intro-titulo" id="temaIntroTitulo"></h2>
+        <p class="tema-intro-texto" id="temaIntroTexto"></p>
+      </div>
+
+      <!-- Esqueleto: a FORMA do que vem, nunca um exemplo -->
+      <div class="tema-esq" id="temaEsqueleto" aria-hidden="true">
+        <div class="tema-esq-bloco">
+          <span class="esq-barra esq-barra--titulo"></span>
+          <span class="esq-barra"></span>
+          <span class="esq-barra"></span>
+          <span class="esq-barra" style="width:82%"></span>
+        </div>
+        <div class="tema-esq-bloco">
+          <span class="esq-barra esq-barra--titulo"></span>
+          <span class="esq-barra"></span>
+          <span class="esq-barra" style="width:64%"></span>
+        </div>
+      </div>
+
+      <!-- Leitura guiada: os mesmos trechos, reagrupados por assunto.
+           Vista padrão quando existe (Fase 1). -->
+      <div class="tema-leitura" id="temaLeitura" hidden></div>
+
+      <!-- Gráficos: os números que os trechos deste tema citam.
+           Container à parte da leitura guiada de propósito — as duas
+           fases têm status próprio (ver SinteseTema), e um tema pode
+           ter gráfico sem ter leitura. -->
+      <div class="tema-graficos" id="temaGraficos" hidden></div>
+
+      <!-- Lista bruta: um bloco por tarefa de origem. Sempre existe —
+           é a vista padrão enquanto a leitura guiada não roda para
+           este tema, e fica disponível depois como "Ver por atividade
+           de origem". -->
+      <div class="tema-blocos" id="temaBlocos" hidden></div>
+
+      <!-- Vazio e erro sao estados distintos e dizem coisas diferentes -->
+      <div class="tema-estado" id="temaVazio" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5Z"/><path d="M13 3v5.5H18.5"/><path d="M8 13h4"/></svg>
+        <h2 id="temaVazioTitulo">Nada escrito sobre este tema ainda</h2>
+        <p id="temaVazioTexto">Quando uma atividade finalizada falar deste assunto, o trecho aparece aqui — com o caminho de volta para o quadro onde foi escrito.</p>
+        <a class="btn btn--secondary" id="temaVazioVoltar" href="#">Voltar para Sobre a empresa</a>
+      </div>
+
+      <div class="tema-estado" id="temaErro" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+        <h2>Não foi possível carregar este tema</h2>
+        <p id="temaErroTexto">Verifique sua conexão e tente de novo.</p>
+        <button type="button" class="btn btn--secondary" id="temaErroTentar">Tentar de novo</button>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<span class="sr-only" id="temaLive" role="status" aria-live="polite"></span>
+
+<script src="js/api.js"></script>
+<script src="js/graficos.js"></script>
+<script src="js/tema.js"></script>
+
+</body>
+</html>

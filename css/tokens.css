@@ -1,0 +1,346 @@
+/* ============================================================
+   DESIGN TOKENS — Plataforma de Design 2.0
+   ============================================================
+   Fonte da verdade única. Antes disto cada página repetia o seu
+   próprio :root — 10 cópias, 8 versões diferentes. Mudar uma cor
+   exigia lembrar de 10 arquivos, e a memória sempre falha antes
+   do CSS.
+
+   HIERARQUIA CDS — três camadas, cada uma só olha para a de baixo:
+
+     Camada 1  BASE      valor cru, o único lugar com hexadecimal
+               --blue-500: #0BA5EC
+                   ↓
+     Camada 2  THEME     a rampa que o tema escolhe
+               --neutral-600: var(--gray-600)
+                   ↓
+     Camada 3  PURPOSE   a intenção; é ISTO que os componentes usam
+               --fill-accent: var(--blue-500)
+
+   REGRA PRÁTICA: componente nunca consome camada 1 ou 2. Se um
+   componente precisa de `var(--blue-500)`, falta um token de
+   propósito — crie-o aqui em vez de furar a hierarquia.
+
+   Uso:  <link rel="stylesheet" href="css/tokens.css">
+   Ver:  styleguide.html
+   ============================================================ */
+
+:root{
+
+  /* ==========================================================
+     CAMADA 1 — BASE PALETTE
+     O único lugar do sistema onde hexadecimal é permitido.
+     ========================================================== */
+
+  /* ---- Cinzas (Untitled UI) ---- */
+  --gray-0:#FFFFFF;
+  --gray-50:#FAFAFA;
+  --gray-100:#F5F5F5;
+  --gray-200:#E9EAEB;
+  --gray-300:#D5D7DA;
+  --gray-400:#A4A7AE;
+  --gray-500:#717680;
+  --gray-600:#535862;
+  --gray-700:#414651;
+  --gray-900:#181D27;
+
+  /* ---- Amarelo — a cor da marca ---- */
+  --yellow-50:#FEF9E7;
+  --yellow-100:#FEEE95;
+  --yellow-200:#FDE272;
+  --yellow-300:#FAC515;
+  --yellow-400:#FACC15;
+
+  /* ---- Limão — separado do amarelo da marca de propósito:
+         é o amarelo dos post-its, não o da identidade ---- */
+  --lemon-50:#FEFCE8;
+  --lemon-100:#FEF9C3;
+
+  /* ---- Azul / Céu — a cor de ação ---- */
+  --blue-500:#0BA5EC;
+  --blue-600:#0086C9;
+  --blue-700:#026AA2;
+  --blue-800:#065986;
+  --blue-900:#0B4A6F;
+  --sky-100:#E0F2FE;
+  --sky-200:#B9E6FE;
+  --sky-300:#7CD4FD;
+
+  /* ---- Verde ---- */
+  --green-50:#ECFDF5;
+  --green-100:#DCFCE7;
+  --green-200:#BBF7D0;
+  --green-500:#10B981;
+  --green-600:#059669;
+
+  /* ---- Âmbar ----
+     O 700 existe para TEXTO. O 600 sobre --bg-warning dá 3,07:1,
+     que só passa em AA para corpo grande (18px+) — e o alerta de
+     aviso usa 14px. O 700 dá 4,84:1 e passa em AA normal. */
+  --amber-50:#FFFBEB;
+  --amber-400:#FBBF24;
+  --amber-500:#F59E0B;
+  --amber-600:#D97706;
+  --amber-700:#B45309;
+
+  /* ---- Vermelho ---- */
+  --red-50:#FEF3F2;
+  --red-100:#FEE2E2;
+  --red-200:#FECDCA;
+  --red-500:#D92D20;
+  --red-600:#B42318;
+
+  /* ---- Roxo — reservado ao plano Pro ---- */
+  --purple-50:#F3E8FF;
+  --purple-500:#A855F7;
+  --purple-600:#9333EA;
+
+  /* ---- Marca de terceiro ----
+     Cores do Google, fixas por serem propriedade da marca deles.
+     Só o botão "Entrar com Google" pode tocar nestas. */
+  --google-blue:#4285F4;
+  --google-green:#34A853;
+  --google-yellow:#FBBC05;
+  --google-red:#EA4335;
+
+
+  /* ==========================================================
+     CAMADA 2 — THEME RAMPS
+     A indireção que torna o dark mode possível: um dia
+     --neutral-0 aponta para --gray-900 e o sistema inteiro vira.
+     ========================================================== */
+  --neutral-0:var(--gray-0);
+  --neutral-50:var(--gray-50);
+  --neutral-100:var(--gray-100);
+  --neutral-200:var(--gray-200);
+  --neutral-300:var(--gray-300);
+  --neutral-400:var(--gray-400);
+  --neutral-500:var(--gray-500);
+  --neutral-600:var(--gray-600);
+  --neutral-700:var(--gray-700);
+  --neutral-900:var(--gray-900);
+
+
+  /* ==========================================================
+     CAMADA 3 — PURPOSE / SEMANTIC
+     A camada que os componentes consomem.
+     ========================================================== */
+
+  /* ---- Texto ---- */
+  --text-primary:var(--neutral-900);      /* corpo e títulos */
+  --text-secondary:var(--neutral-600);    /* apoio, descrições */
+  --text-muted:var(--neutral-400);        /* placeholder, legenda */
+  --text-disabled:rgba(24,29,39,.4);
+
+  /* ---- Superfícies ---- */
+  --surface-0:var(--neutral-50);          /* canvas, faixa de fundo */
+  --surface-1:var(--neutral-0);           /* card no fluxo */
+  --surface-2:var(--neutral-0);           /* painel, modal */
+
+  /* ---- Primary (amarelo) — identidade: rail, logo, destaque ---- */
+  --fill-primary:var(--yellow-300);
+  --fill-primary-hover:var(--yellow-200);
+  --fill-primary-strong:var(--yellow-400);
+  --bg-primary:var(--yellow-50);
+  --bg-primary-strong:var(--yellow-100);
+  --text-on-primary:var(--neutral-900);
+  /* Camadas de contraste para uso SOBRE o amarelo, onde uma
+     superfície branca destoaria da faixa da marca */
+  --bg-on-primary:rgba(24,29,39,.08);
+  --bg-on-primary-hover:rgba(24,29,39,.14);
+
+  /* ---- Accent (azul) — ação: botão primário, foco, link ---- */
+  --fill-accent:var(--blue-500);
+  --fill-accent-hover:var(--blue-600);
+  --bg-accent:var(--blue-500);
+  --text-accent:var(--blue-500);
+  --text-on-accent:var(--neutral-0);
+
+  /* ---- Success (verde) ---- */
+  --fill-success:var(--green-500);
+  --fill-success-hover:var(--green-600);
+  --bg-success:var(--green-50);
+  --text-success:var(--green-600);
+  --text-on-success:var(--neutral-0);
+
+  /* ---- Warning (âmbar) ---- */
+  --fill-warning:var(--amber-500);
+  --fill-warning-hover:var(--amber-600);
+  --bg-warning:var(--amber-50);
+  --text-warning:var(--amber-700);   /* D9 — 4,84:1 sobre --bg-warning */
+  --text-on-warning:var(--neutral-900);
+
+  /* ---- Danger (vermelho) ----
+     NOTA: login.html e cadastro.html sobrescrevem --text-danger
+     para --red-600, que tem contraste maior sobre branco. A
+     unificação está pendente de decisão — ver styleguide.html. */
+  --fill-danger:var(--red-500);
+  --bg-danger:var(--red-50);
+  --text-danger:var(--red-500);
+  --text-on-danger:var(--neutral-0);
+  --border-danger:var(--red-200);
+
+  /* ---- Pro (roxo) — plano pago ---- */
+  --fill-pro:var(--purple-500);
+  --fill-pro-hover:var(--purple-600);
+  --bg-pro:var(--purple-50);
+  --text-pro:var(--purple-600);
+  --text-on-pro:var(--neutral-0);
+
+  /* ---- Bordas e divisores ----
+     Em rgba, não em cinza sólido: assim a mesma borda funciona
+     sobre branco, sobre a faixa cinza e sobre o amarelo do rail. */
+  --border:rgba(24,29,39,.08);
+  --border-strong:rgba(24,29,39,.14);
+  --border-hover:rgba(24,29,39,.16);      /* estado hover de borda */
+  --border-warning:var(--amber-400);      /* borda de destaque/aviso */
+
+  /* ---- Foco ---- */
+  --focus-ring:2px solid var(--fill-accent);
+  --focus-offset:2px;
+  --shadow-focus:0 0 0 4px var(--sky-100);
+  --shadow-focus-danger:0 0 0 4px var(--red-50);
+
+  /* ---- Sobreposição ---- */
+  --overlay:rgba(10,10,10,.7);
+  --scrim:var(--overlay);                 /* sinônimo de overlay */
+
+  /* ---- Elevação ----
+     Duas sombras empilhadas em cada nível: uma difusa para a massa
+     do objeto, uma curta para o contato com a superfície. */
+  --shadow-xs:0 1px 2px rgba(10,13,18,.05);
+  --shadow-lg:0 12px 16px -4px rgba(10,13,18,.08), 0 4px 6px -2px rgba(10,13,18,.03);
+  --shadow-menu:0 12px 16px -4px rgba(10,13,18,.08), 0 4px 6px -2px rgba(10,13,18,.03), 0 0 0 1px rgba(10,13,18,.05);
+  --shadow-modal:0 24px 48px -12px rgba(10,13,18,.18);
+  --shadow-text:0 2px 4px rgba(10,13,18,.08);  /* sombra sutil para texto em overlay */
+
+
+  /* ==========================================================
+     LAYOUT & SIZING
+     ========================================================== */
+  --rail-w:80px;              /* menu lateral fixo */
+  --container:1294px;         /* largura máxima do conteúdo */
+  --field-h:48px;             /* altura de campo nas telas de acesso */
+  --postit:240px;             /* lado do post-it na matriz CSD */
+
+  --radius-sm:4px;            /* token, ícone pequeno */
+  --radius:8px;               /* padrão: botão, input, chip */
+  --radius-lg:12px;           /* card */
+  --radius-panel:32px;        /* painel do app (24px em login/cadastro) */
+
+
+  /* ==========================================================
+     TIPOGRAFIA
+     ==========================================================
+     ⚠ DEFINIDOS, AINDA NÃO ADOTADOS.
+     As telas continuam escrevendo font-size/line-height à mão.
+     Estes tokens existem para documentar a escala e servir de
+     alvo na migração — declarar uma custom property não muda
+     nada até alguém usá-la, então nada aqui altera o produto.
+
+     A escala foi medida nos 10 arquivos, não arbitrada: cada
+     degrau abaixo é um par que já aparece dezenas de vezes.
+
+     NOMENCLATURA: prefixo --type-, e não --text-, porque
+     --text-* já é a família de tokens de COR do texto
+     (--text-primary, --text-secondary). Misturar os dois seria
+     pedir para alguém escrever color:var(--type-body).
+
+     USO:  font-size:var(--type-body);
+           line-height:var(--type-body-lh);
+     ========================================================== */
+
+  /* ---- Família ---- */
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+
+  /* ---- Pesos ----
+     Ortogonais à escala: 14/20 aparece em 400, 500 e 600 sem
+     deixar de ser o mesmo degrau. */
+  --font-regular:400;
+  --font-medium:500;         /* rótulo de campo, item de menu */
+  --font-semibold:600;       /* botão, título, ênfase */
+  --font-bold:700;           /* número em destaque */
+
+  /* ---- Escala ----
+     size / line-height / tracking. O tracking negativo nos dois
+     maiores compensa o afastamento óptico que a Inter ganha em
+     corpo grande; do 18px para baixo ele atrapalharia a leitura. */
+
+  --type-display:30px;       /* título de página */
+  --type-display-lh:38px;
+  --type-display-track:-.02em;
+
+  --type-title:24px;         /* título de seção */
+  --type-title-lh:32px;
+  --type-title-track:-.01em;
+
+  --type-heading:18px;       /* modal, painel, assistente */
+  --type-heading-lh:28px;
+
+  --type-body-lg:16px;       /* leitura confortável, nome de item */
+  --type-body-lg-lh:24px;
+
+  --type-body:14px;          /* ← o tamanho padrão do produto */
+  --type-body-lh:20px;
+
+  --type-body-sm:13px;       /* legenda de apoio */
+  --type-body-sm-lh:20px;
+
+  --type-caption:12px;       /* dica de campo, metadados */
+  --type-caption-lh:18px;
+
+  --type-overline:11px;      /* rótulo em caixa alta */
+  --type-overline-lh:16px;
+  --type-overline-track:.06em;
+
+
+  /* ==========================================================
+     MOTION
+     Curva de saída bem pronunciada: o elemento chega rápido e
+     assenta devagar, que é como o olho espera que massa se mova.
+     ========================================================== */
+  --dur-fast:150ms;           /* hover, troca de cor */
+  --dur-base:300ms;           /* expandir, abrir modal */
+  --dur-slow:500ms;           /* transição de página */
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-in-out:cubic-bezier(.4,0,.2,1);
+
+
+  /* ==========================================================
+     TOKENS DE DOMÍNIO
+     Presos a um contexto específico do produto. Ficam aqui para
+     não virarem hexadecimal solto na página, mas não são de uso
+     geral — não puxe estes para um componente novo.
+     ========================================================== */
+
+  /* ---- Grafo de conhecimento (Sobre a empresa) ----
+     Do nó mais central (1) ao mais periférico (5). */
+  --kg-1:var(--gray-900);
+  --kg-2:var(--blue-900);
+  --kg-3:var(--blue-700);
+  --kg-4:var(--blue-500);
+  --kg-5:var(--sky-300);
+  --kg-edge:var(--blue-700);
+  --kg-edge-faint:var(--sky-200);
+  --kg-spark:var(--sky-100);
+
+  /* ---- Matriz CSD — o post-it e o seu ícone ----
+     Certeza / Suposição / Dúvida. O par fundo + ícone mantém o
+     ícone sempre um degrau mais claro que o papel. */
+  --postit-certeza:var(--green-200);
+  --postit-certeza-icon:var(--green-100);
+  --postit-suposicao:var(--lemon-100);
+  --postit-suposicao-icon:var(--lemon-50);
+  --postit-duvida:var(--red-200);
+  --postit-duvida-icon:var(--red-100);
+  --bg-column-head:var(--lemon-100);
+  --bg-card-icon:var(--lemon-100);
+
+  /* ---- Selo de pasta (Sobre a empresa) ---- */
+  --bg-folder:var(--green-100);
+  --ring-folder:var(--green-50);
+
+  /* ---- Arte lateral do login ----
+     Gradiente radial: branco → sky → accent → pro → warning → primary */
+  --gradient-art:radial-gradient(110% 100% at 50% -25%, var(--gray-0) 0%, var(--sky-300) 34%, var(--blue-500) 56%, var(--purple-500) 78%, var(--amber-500) 100%);
+}

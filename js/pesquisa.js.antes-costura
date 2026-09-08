@@ -1,0 +1,1206 @@
+/* ============================================================
+   Painel de pesquisa de concorrentes — board.html
+   ============================================================
+   Planejamento: planejamento-pesquisa-concorrentes.md
+
+   Vive no painel lateral, ao lado do assistente, e NUNCA desenha nada
+   dentro de `#canvasStage`. O motivo é BOARD-SALVA-002: o `lerDaTela()`
+   do board serializa o canvas e o PUT grava o que está na tela. Um
+   resultado de pesquisa — que chega assíncrono, segundos ou minutos
+   depois — desenhado ali dentro viraria estado do quadro sem ninguém
+   ter pedido, e o quadro passaria a ser um segundo dono de dados que
+   `pesquisa_entidades` já guarda. Dois donos do mesmo fato divergem em
+   silêncio.
+
+   A ponte entre painel e canvas é um GESTO: "Virar card" chama
+   `window.BoardCanvas.adicionarCard`, que passa pelo mesmo caminho do
+   modal de novo registro. A partir daí o card é do quadro, e a sessão
+   de pesquisa guarda o registro como procedência.
+
+   ------------------------------------------------------------
+   PERGUNTAR É DOIS PASSOS, DE PROPÓSITO
+   ------------------------------------------------------------
+   Toda pergunta passa primeiro por `planejar`, que roteia sem gastar
+   nada, e só vira `consultar` depois que a pessoa confirma. É PES-007:
+   a diferença de custo entre o nível mais barato e o mais caro é de
+   cerca de cem vezes, e ninguém deve descobrir isso pela fatura.
+
+   Efeito prático hoje: o painel funciona inteiro mesmo sem provedor de
+   busca configurado. A classificação, a resolução de "concorrente 01"
+   e de "ele" já acontecem — só a execução fica recusada, com o motivo
+   dito na tela em vez de um erro genérico.
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------
+     Por que um plano não é executável
+     ------------------------------------------------------------
+     São três causas distintas, e a tela dizia "a busca externa não
+     está ligada" para todas — inclusive quando ela está ligada e
+     funcionando. Errado de um jeito caro: manda a pessoa conferir uma
+     configuração que já está certa, quando o que resolveria é mexer
+     na descrição da tarefa.
+
+     `conhecimento` é o caso mais comum e o menos óbvio: a pergunta é
+     respondível por raciocínio, e PES-006 proíbe responder de memória
+     sem fonte. Não é provedor faltando — é recusa deliberada, e dizer
+     isso é o que permite à pessoa reformular. */
+  function motivoNaoExecutavel(nivel) {
+    if (nivel === 'navegacao') {
+      return 'Ainda não entro em sites específicos como LinkedIn ou Instagram. ' +
+             'Peça o fato em si e eu busco em fontes públicas.';
+    }
+    if (nivel === 'conhecimento') {
+      return 'Esta descrição pede raciocínio, não um fato para verificar em fonte externa — ' +
+             'e responder de memória, sem fonte, é justamente o que não fazemos. ' +
+             'Reescreva a tarefa como uma pergunta verificável (com número, data, nome ou ' +
+             'fonte) e a busca executa.';
+    }
+    if (nivel === 'lugares') {
+      return 'Buscas com recorte geográfico ainda não estão ligadas nesta instalação. ' +
+             'A mesma pergunta sem o recorte de bairro ou cidade eu consigo buscar.';
+    }
+    return 'A busca externa não está ligada nesta instalação.';
+  }
+
+  var corpo = document.getElementById('pesquisaCorpo');
+  var entrada = document.getElementById('pesquisaInput');
+  var botao = document.getElementById('pesquisaEnviar');
+  var aviso = document.getElementById('pesquisaAviso');
+  var abaAssistente = document.getElementById('tabAssistente');
+  var abaPesquisa = document.getElementById('tabPesquisa');
+  var paneAssistente = document.getElementById('paneAssistente');
+  var panePesquisa = document.getElementById('panePesquisa');
+
+  if (!corpo || !entrada || !botao || !abaPesquisa) return;
+
+  var q = new URLSearchParams(location.search);
+  var empresaId = q.get('empresa');
+  var projetoId = q.get('projeto');
+  var tarefaId = q.get('tarefa');
+
+  var sessaoId = null;
+  var ocupado = false;
+
+  /* ---------- Abas ---------- */
+  function mostrarAba(qual) {
+    var ehPesquisa = qual === 'pesquisa';
+    abaPesquisa.setAttribute('aria-selected', ehPesquisa ? 'true' : 'false');
+    abaAssistente.setAttribute('aria-selected', ehPesquisa ? 'false' : 'true');
+    panePesquisa.hidden = !ehPesquisa;
+    paneAssistente.hidden = ehPesquisa;
+    if (ehPesquisa) entrada.focus();
+  }
+
+  abaPesquisa.addEventListener('click', function () { mostrarAba('pesquisa'); });
+  abaAssistente.addEventListener('click', function () { mostrarAba('assistente'); });
+
+  /* ---------- Rede ---------- */
+  function chamar(caminho, opcoes) {
+    return window.API.chamar(caminho, opcoes).catch(function (e) {
+      /* Mesma renovação de sessão que board.js faz: um 401 aqui
+         costuma ser o token de acesso vencido, não a pessoa
+         deslogada. */
+      if (e.status === 401) {
+        return window.API.chamar('/auth/sessao').then(function () {
+          return window.API.chamar(caminho, opcoes);
+        });
+      }
+      throw e;
+    });
+  }
+
+  /* A sessão é criada NA PRIMEIRA PERGUNTA, não ao abrir a aba: quem
+     só clicou para ver o que é não deve deixar uma investigação vazia
+     no banco. E ela é reencontrada pela tarefa a cada visita — sem
+     isso, o "concorrente 01" da semana passada não significaria mais
+     nada hoje. */
+  function garantirSessao() {
+    if (sessaoId) return Promise.resolve(sessaoId);
+    if (!tarefaId) return Promise.reject(new Error('sem tarefa'));
+
+    return chamar('/pesquisa/sessoes?tarefaId=' + encodeURIComponent(tarefaId))
+      .then(function (r) {
+        var existente = (r && r.sessoes && r.sessoes[0]) || null;
+        if (existente) return existente.id;
+
+        return chamar('/pesquisa/sessoes', {
+          metodo: 'POST',
+          corpo: {
+            titulo: 'Concorrentes',
+            empresaId: empresaId || undefined,
+            projetoId: projetoId || undefined,
+            tarefaId: tarefaId,
+          },
+        }).then(function (nova) { return nova.id; });
+      })
+      .then(function (id) { sessaoId = id; return id; });
+  }
+
+  /* ---------- Desenho ---------- */
+  function elemento(tag, classe, texto) {
+    var el = document.createElement(tag);
+    if (classe) el.className = classe;
+    if (texto != null) el.textContent = texto;
+    return el;
+  }
+
+  function limparAjuda() {
+    var ajuda = document.getElementById('pesquisaAjuda');
+    if (ajuda) ajuda.remove();
+  }
+
+  function rolarParaOFim() {
+    corpo.scrollTop = corpo.scrollHeight;
+  }
+
+  var ROTULO_NIVEL = {
+    conhecimento: 'resposta direta',
+    busca: 'busca com fontes',
+    lugares: 'unidades e endereços',
+    navegacao: 'entrar num site',
+  };
+
+  function desenharPergunta(texto) {
+    var bloco = elemento('div', 'pesquisa-plano');
+    var linha = elemento('div', 'pesquisa-plano-linha');
+    linha.appendChild(elemento('span', 'pesquisa-rotulo', 'Você perguntou'));
+    bloco.appendChild(linha);
+    bloco.appendChild(elemento('p', null, texto));
+    corpo.appendChild(bloco);
+    return bloco;
+  }
+
+  function desenharPlano(plano) {
+    var bloco = elemento('div', 'pesquisa-plano');
+
+    var linhaNivel = elemento('div', 'pesquisa-plano-linha');
+    linhaNivel.appendChild(elemento('span', 'pesquisa-rotulo', 'Tipo'));
+    linhaNivel.appendChild(
+      elemento('span', 'pesquisa-nivel pesquisa-nivel--' + plano.nivel,
+               ROTULO_NIVEL[plano.nivel] || plano.nivel)
+    );
+    bloco.appendChild(linhaNivel);
+
+    /* Mostrar a pergunta RESOLVIDA é o que torna a resolução de
+       referência auditável: a pessoa vê que "ele" virou o nome da
+       empresa certa antes de qualquer coisa sair daqui. */
+    if (plano.pergunta_resolvida && plano.citadas && plano.citadas.length) {
+      var linhaRes = elemento('div', 'pesquisa-plano-linha');
+      linhaRes.appendChild(elemento('span', 'pesquisa-rotulo', 'Entendi'));
+      bloco.appendChild(linhaRes);
+      bloco.appendChild(elemento('p', null, plano.pergunta_resolvida));
+    }
+
+    corpo.appendChild(bloco);
+    return bloco;
+  }
+
+  function desenharAlerta(texto) {
+    corpo.appendChild(elemento('div', 'pesquisa-alerta', texto));
+  }
+
+  /* PES-004 na tela: referência sem dono vira uma pergunta à pessoa,
+     nunca uma consulta chutada. */
+  function desenharNaoResolvida(plano) {
+    desenharAlerta(
+      'Não sei a quem "' + plano.nao_resolvidas[0] + '" se refere nesta ' +
+      'investigação. Escreva o nome da empresa e eu sigo daí.'
+    );
+  }
+
+  /* Um achado do painel pode render mais de um card: se o texto traz
+     perguntas, cada uma vira post-it com o convite a responder, igual
+     ao caminho do botão "Pesquisar". Devolve true se algum card entrou
+     no quadro — é o que o botão usa para virar "Está no quadro". */
+  function promoverParaOQuadro(titulo, descricao, fonte) {
+    var texto = descricao || fonte || '';
+    if (!texto) return window.BoardCanvas.adicionarCard(semMarcacao(titulo), '');
+
+    var itens = cardsDaResposta(texto);
+    var entrou = false;
+    itens.forEach(function (c) {
+      if (window.BoardCanvas.adicionarCard(c.titulo, c.descricao)) entrou = true;
+    });
+    return entrou;
+  }
+
+  function desenharAchado(titulo, descricao, fonte) {
+    var bloco = elemento('div', 'pesquisa-achado');
+    bloco.appendChild(elemento('h3', 'pesquisa-achado-titulo', titulo));
+    if (descricao) bloco.appendChild(elemento('p', null, semMarcacao(descricao)));
+    if (fonte) bloco.appendChild(elemento('p', 'pesquisa-achado-fonte', fonte));
+
+    var botaoCard = elemento('button', 'pesquisa-promover', 'Virar card');
+    botaoCard.type = 'button';
+    botaoCard.addEventListener('click', function () {
+      if (!window.BoardCanvas) return;
+
+      /* Este é o SEGUNDO caminho que transforma resposta em card — o
+         painel lateral, separado do botão "Pesquisar" do cabeçalho.
+         Ele criava um único card "Resposta" com o texto inteiro e o
+         markdown à mostra, porque a correção de formato tinha sido
+         feita só no outro caminho.
+
+         Dois caminhos para a mesma ação são duas chances de
+         divergirem: agora os dois passam por `cardsDaResposta`, e um
+         achado com perguntas vira um post-it por pergunta aqui
+         também. */
+      var ok = promoverParaOQuadro(titulo, descricao, fonte);
+      if (ok) {
+        botaoCard.disabled = true;
+        botaoCard.textContent = 'Está no quadro';
+      }
+    });
+    bloco.appendChild(botaoCard);
+
+    corpo.appendChild(bloco);
+  }
+
+  /* ---------- O fluxo ---------- */
+  /* ---- A espera longa ----
+     Uma pergunta ampla ("quem são meus concorrentes") encadeia várias
+     buscas e leva perto de vinte segundos. Um "Pesquisando..." parado
+     esse tempo todo não parece demorado: parece travado — e a pessoa
+     recarrega a página no meio, perdendo a consulta que ela já pagou.
+
+     O contador não é barra de progresso, de propósito: não sabemos
+     quanto falta, e uma barra que enche sozinha seria invenção. Mostrar
+     o tempo correndo é honesto — diz que está vivo sem prometer prazo.
+
+     Depois de oito segundos o texto explica POR QUE está demorando, que
+     é a informação que a pessoa realmente quer nesse momento. */
+  var LIMIAR_DEMORA = 8;
+  var ticker = null;
+
+  function trabalhando(ligado, texto) {
+    ocupado = ligado;
+    botao.disabled = ligado;
+    entrada.disabled = ligado;
+
+    clearInterval(ticker);
+    ticker = null;
+
+    if (!ligado) {
+      aviso.textContent = '';
+      return;
+    }
+
+    var base = texto || 'Pensando...';
+    var inicio = Date.now();
+
+    function pintar() {
+      var s = Math.floor((Date.now() - inicio) / 1000);
+      if (s < LIMIAR_DEMORA) {
+        aviso.textContent = base + (s >= 2 ? ' ' + s + 's' : '');
+        return;
+      }
+      /* Perguntas amplas consultam várias fontes; dizer isso vale mais
+         que repetir "aguarde". */
+      aviso.textContent = 'Consultando várias fontes... ' + s + 's';
+    }
+
+    pintar();
+    ticker = setInterval(pintar, 1000);
+  }
+
+  function perguntar() {
+    var texto = entrada.value.trim();
+    if (!texto || ocupado) return;
+
+    limparAjuda();
+    desenharPergunta(texto);
+    entrada.value = '';
+    rolarParaOFim();
+    trabalhando(true, 'Analisando...');
+
+    garantirSessao()
+      .then(function (id) {
+        /* Passo 1: planejar. Não gasta nada. */
+        return chamar('/pesquisa/sessoes/' + id + '/planejar', {
+          metodo: 'POST',
+          corpo: { pergunta: texto },
+        });
+      })
+      .then(function (plano) {
+        desenharPlano(plano);
+
+        if (plano.nao_resolvidas && plano.nao_resolvidas.length) {
+          desenharNaoResolvida(plano);
+          return null;
+        }
+
+        /* PES-007: a heurística não teve certeza de que tipo de
+           pergunta é esta, e os candidatos custam ordens diferentes.
+           Escolher por conta própria aqui seria escolher o custo por
+           conta própria.
+
+           Não ofereço botões de nível: "entrar no site deles e ver as
+           unidades perto de mim" são duas perguntas de verdade, e
+           pedir para separar resolve melhor do que fazer a pessoa
+           escolher entre rótulos técnicos que não são dela. */
+        if (!plano.decidido) {
+          desenharAlerta(
+            'Essa pergunta dá para ler de mais de um jeito, e cada um custa ' +
+            'diferente. Pode separar em duas perguntas mais diretas?'
+          );
+          return null;
+        }
+
+        if (!plano.executavel) {
+          /* Honesto sobre o que falta, em vez de um erro genérico —
+             e diz de quem é a próxima ação. */
+          desenharAlerta(motivoNaoExecutavel(plano.nivel));
+          return null;
+        }
+
+        /* Passo 2: executar. Só chega aqui o que é executável. */
+        trabalhando(true, 'Pesquisando...');
+        return chamar('/pesquisa/sessoes/' + sessaoId + '/consultar', {
+          metodo: 'POST',
+          corpo: { pergunta: texto },
+        });
+      })
+      .then(function (r) {
+        if (!r) return;
+
+        /* PES-008 chegando na tela: "não achei" e "falhou" são textos
+           diferentes. Um disfarce aqui faria o concorrente parecer
+           inexistente quando a busca é que caiu. */
+        if (r.resultado === 'falhou') {
+          desenharAlerta('A busca não completou. Nada foi cobrado — tente de novo.');
+          return;
+        }
+        if (r.resultado === 'vazio') {
+          desenharAlerta('Procurei e não encontrei nada sobre isso.');
+          return;
+        }
+
+        if (r.resposta) {
+          var fonteTexto = (r.fontes || [])
+            .map(function (f) { return f.titulo || f.url; })
+            .join(' · ');
+          desenharAchado('Resposta', r.resposta, fonteTexto);
+        }
+
+        (r.lugares || []).forEach(function (l) {
+          desenharAchado(l.nome, l.endereco || '', l.avaliacao ? ('nota ' + l.avaliacao) : '');
+        });
+      })
+      .catch(function (e) {
+        /* `js/api.js` lança um Error com a mensagem do servidor em
+           `.message` e o corpo inteiro em `.dados` — não em `.corpo`. */
+        if (e && e.status === 402) {
+          desenharAlerta('Sem crédito suficiente para esta pesquisa.');
+        } else if (e && e.rede) {
+          desenharAlerta('Não consegui falar com o servidor agora.');
+        } else if (e && e.message) {
+          desenharAlerta(e.message);
+        } else {
+          desenharAlerta('Não consegui falar com o servidor agora.');
+        }
+      })
+      .then(function () {
+        trabalhando(false);
+        rolarParaOFim();
+      });
+  }
+
+  /* ---------- Os limites do quadro ----------
+     `api/src/rotas/board.ts` recusa registro com titulo acima de 260
+     ou descricao acima de 280 caracteres, e o PUT do board grava
+     TUDO de uma vez: um unico card fora do limite derruba a gravacao
+     inteira, com 400. Era o que acontecia — a resposta da IA passa
+     dos 280 com folga, o quadro nao era gravado, e como o "Voltar"
+     navega logo depois o toast de erro morria junto com a pagina.
+     A impressao era de que tinha salvo.
+
+     Dividir e melhor do que cortar: o quadro fica com a resposta
+     INTEIRA, repartida em cards, em vez de um pedaco dela. */
+  /* Marcador de versão. Serve para responder, em um olhar no console,
+     a pergunta que custou várias rodadas: "o navegador está rodando o
+     arquivo novo ou um em cache?" */
+  var PESQUISA_VERSAO = 'v2 — post-it por pergunta, markdown limpo';
+  console.log('[Pesquisa] ' + PESQUISA_VERSAO + ' | MAX_TITULO=260');
+
+  var MAX_TITULO = 260;
+  var MAX_DESCRICAO = 280;
+
+  function cortar(texto, limite) {
+    var t = String(texto == null ? '' : texto).trim();
+    return t.length <= limite ? t : t.slice(0, limite - 1).trim() + '…';
+  }
+
+  /* Quebra sempre num espaco: cortar no meio da palavra faz o card
+     seguinte comecar com meia silaba. Palavra maior que o limite
+     inteiro (uma URL comprida) corta seco, que e o unico jeito. */
+  function emPedacos(texto) {
+    var t = String(texto == null ? '' : texto).trim();
+    var partes = [];
+    while (t.length > MAX_DESCRICAO) {
+      var corte = t.lastIndexOf(' ', MAX_DESCRICAO);
+      if (corte < MAX_DESCRICAO * 0.6) corte = MAX_DESCRICAO;
+      partes.push(t.slice(0, corte).trim());
+      t = t.slice(corte).trim();
+    }
+    if (t) partes.push(t);
+    return partes;
+  }
+
+
+  /* ------------------------------------------------------------
+     Resposta que faz perguntas vira um post-it por pergunta
+     ------------------------------------------------------------
+     Quando a busca devolve um pedido de esclarecimento, o conteúdo
+     útil são as perguntas — e num quadro elas não são texto para ler,
+     são trabalho a fazer. Fatiadas a cada 280 caracteres viravam
+     "Resposta (1/2)" com duas perguntas e meia dentro, que ninguém
+     responde porque não há onde.
+
+     Uma pergunta por card, com a descrição já convidando a resposta,
+     transforma o quadro no lugar onde ela é respondida — que é o que
+     um post-it é.
+
+     O texto que não é pergunta continua virando card comum: descartá-lo
+     perderia o achado quando a resposta traz conteúdo E uma dúvida no
+     fim, que é o caso mais comum de uma busca parcial. */
+  var CONVITE = 'Responda aqui...';
+
+  function emSentencas(normal) {
+    /* Sem lookbehind de propósito — Safari só passou a suportar em
+       2023, e um quadro que não abre é pior que um regex mais longo.
+       Recebe o texto JÁ normalizado para que cada sentença seja
+       substring exata dele: é isso que permite remover as perguntas
+       depois sem reconstruir o resto emendando pedaços, que trocava
+       "etc.)" por "etc. )". */
+    return (normal.match(/[^.!?]+[.!?]*/g) || [])
+      .map(function (f) { return f.trim(); })
+      .filter(Boolean);
+  }
+
+  function ehPergunta(f) { return /\?$/.test(f); }
+
+  /* O provedor responde em markdown, e o card usa textContent — então
+     `**negrito**` chegava ao post-it com os asteriscos à mostra. Tirar
+     a marcação aqui é melhor que renderizá-la: um post-it é uma
+     anotação curta, não um documento formatado. */
+  function semMarcacao(t) {
+    return String(t == null ? '' : t)
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/(^|\s)_(.+?)_(?=\s|$)/g, '$1$2')
+      .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /* Uma pergunta longa costuma ser núcleo + qualificação: "Qual modal
+     a iHouseLog deve contratar" + "para entregas entre condomínios
+     (courier, transportadora)". O núcleo sozinho já é a pergunta; o
+     resto é detalhe.
+
+     Cortar no conectivo preserva uma pergunta legível dentro dos 60
+     caracteres que o servidor aceita (board.ts, regra IDEIA-CRIA-001),
+     em vez de truncar no meio de uma palavra. Devolve null quando não
+     há corte que sirva — aí quem chama decide. */
+  function nucleoDaPergunta(q, limite) {
+    var corpo = q.replace(/\?+\s*$/, '').trim();
+    var marcas = [' para ', ' entre ', ' considerando ', ' quando ', ' com ', ' (', ', '];
+    var melhor = '';
+
+    marcas.forEach(function (m) {
+      var i = corpo.indexOf(m);
+      while (i > 0) {
+        var cand = corpo.slice(0, i).trim().replace(/[,;:]$/, '');
+        if (cand.length + 1 <= limite && cand.length > melhor.length) melhor = cand;
+        i = corpo.indexOf(m, i + 1);
+      }
+    });
+
+    return melhor ? melhor + '?' : null;
+  }
+
+  function cardsDePerguntas(perguntas) {
+    return perguntas.map(function (bruta) {
+      var q = semMarcacao(bruta);
+
+      /* O caso bom: a pergunta inteira é o título e a descrição só
+         convida a resposta. */
+      if (q.length <= MAX_TITULO) {
+        return { titulo: q, descricao: CONVITE };
+      }
+
+      /* Longa demais para o título. A pergunta completa NÃO é jogada
+         fora nem repetida inteira: o título leva o núcleo, a descrição
+         leva a qualificação que não coube — o que ficaria perdido se
+         só truncássemos. */
+      var nucleo = nucleoDaPergunta(q, MAX_TITULO);
+      if (nucleo) {
+        var sobra = q.slice(nucleo.length - 1).replace(/^[\s,;:]+/, '').trim();
+        return {
+          titulo: nucleo,
+          descricao: cortar(sobra ? sobra + '\n\n' + CONVITE : CONVITE, MAX_DESCRICAO)
+        };
+      }
+
+      return {
+        titulo: cortar(q, MAX_TITULO),
+        descricao: cortar(q + '\n\n' + CONVITE, MAX_DESCRICAO)
+      };
+    });
+  }
+
+
+  /* ============================================================
+     De uma resposta para um ou mais quadros
+     ============================================================
+     Duas decisões vivem aqui, e as duas nasceram de defeitos reais.
+
+     PRIMEIRA — um assunto por quadro. Uma pergunta como "mudanças de
+     preço, novos entrantes, mudanças de regulação e as fontes de cada
+     um" traz quatro investigações diferentes. Empilhadas no mesmo
+     quadro, viram uma pilha em que nada se acha: o quadro é o lugar
+     onde um assunto é trabalhado, e misturar quatro nele é o mesmo
+     que não ter quadro nenhum. Quando a resposta vem em seções, cada
+     seção vira um quadro com o nome do assunto.
+
+     SEGUNDA — texto longo não é post-it. Um post-it é uma anotação
+     que se lê de relance; uma resposta de pesquisa densa é um texto
+     que se lê do começo ao fim, com as referências no fim. Fatiada em
+     cartões de 280 caracteres ela virava "Resposta (1/4)" — deixava
+     de ser texto sem virar anotação. Acima do limite abaixo, o
+     resultado vai para um quadro-documento.
+
+     O que continua em post-it, sempre: pergunta que a busca devolveu.
+     Ela não é conteúdo para ler, é trabalho a fazer — e um quadro de
+     perguntas com "Responda aqui..." é onde esse trabalho acontece.
+     ============================================================ */
+
+  /* A fronteira é o próprio post-it: o que não cabe em um cartão não
+     é anotação. Fatiar 400 caracteres em dois cartões não devolve a
+     legibilidade que o texto corrido tem — só reparte o problema.
+     Por isso o limite é MAX_DESCRICAO, e não um número escolhido à
+     parte que precisaria ser mantido em sincronia com ele. */
+  var LIMITE_DOCUMENTO = MAX_DESCRICAO;
+
+  /* Cabeçalhos que o provedor usa para separar assuntos: markdown
+     (`## Preços`), negrito em linha própria (`**Preços**`) ou rótulo
+     seguido de dois-pontos. Procurados no texto CRU, antes de
+     `semMarcacao` — que é justamente o que apaga essas marcas. */
+  function secoesDaResposta(bruto) {
+    var texto = String(bruto == null ? '' : bruto);
+
+    /* As linhas vem com o deslocamento em que cada uma comeca. E isso
+       que permite dizer que uma citacao no caractere 812 pertence a
+       secao "Novos competidores": o provedor manda a posicao, nao a
+       URL dentro do texto. Um split() comum jogaria fora o que
+       importa — e o separador pode ser \n ou \r\n, entao a conta tem
+       de vir do proprio scan, nao de somar tamanhos. */
+    var linhas = [];
+    var re = /\r?\n/g, m, ini = 0;
+    while ((m = re.exec(texto))) {
+      linhas.push({ txt: texto.slice(ini, m.index), ini: ini });
+      ini = m.index + m[0].length;
+    }
+    linhas.push({ txt: texto.slice(ini), ini: ini });
+
+    var secoes = [];
+    var atual = null;
+
+    function titulo(linha) {
+      var t = linha.trim();
+      if (!t) return null;
+      var m = t.match(/^#{1,6}\s+(.{2,80})$/);
+      if (m) return semMarcacao(m[1]);
+      m = t.match(/^\*\*(.{2,80}?)\*\*:?$/);
+      if (m) return semMarcacao(m[1]);
+      m = t.match(/^([A-ZÁÉÍÓÚÂÊÔÃÕÇ][^.!?]{2,60}):$/);
+      if (m) return semMarcacao(m[1]);
+      return null;
+    }
+
+    linhas.forEach(function (reg) {
+      var linha = reg.txt;
+      var t = titulo(linha);
+      if (t) {
+        atual = { titulo: t, corpo: [], inicio: reg.ini };
+        secoes.push(atual);
+        return;
+      }
+      if (!atual) {
+        atual = { titulo: '', corpo: [], inicio: reg.ini };
+        secoes.push(atual);
+      }
+      atual.corpo.push(linha);
+    });
+
+    /* Cada secao vai ate onde a proxima comeca; a ultima, ate o fim.
+       Sao faixas contiguas que cobrem o texto inteiro, entao toda
+       posicao de citacao cai em exatamente uma delas. */
+    secoes.forEach(function (sec, i) {
+      sec.fim = i + 1 < secoes.length ? secoes[i + 1].inicio : texto.length;
+    });
+
+    return secoes
+      .map(function (sec) {
+        var cru = sec.corpo.join('\n');
+        /* inicio/fim seguem junto ate planejarQuadros. */
+        /* `bruto` acompanha a secao porque a associacao de referencias
+           precisa do texto ANTES da limpeza: semMarcacao transforma
+           [Tabela](https://fedex.com/x) em "Tabela" e apaga justamente
+           a evidencia de qual assunto cita qual fonte. */
+        return {
+          titulo: sec.titulo,
+          corpo: semMarcacao(cru),
+          bruto: cru,
+          inicio: sec.inicio,
+          fim: sec.fim,
+        };
+      })
+      .filter(function (sec) { return sec.corpo || sec.titulo; });
+  }
+
+  /* Separa, dentro de uma seção, o que é texto do que é pergunta.
+     A pergunta sai do corpo sempre — mesmo no meio de um parágrafo
+     denso — porque ela não pertence ao mesmo lugar que o conteúdo:
+     texto vai para onde se lê, pergunta vai para onde se responde. */
+  function partirSecao(corpo) {
+    var sentencas = emSentencas(corpo);
+    var perguntas = sentencas.filter(ehPergunta);
+    if (!perguntas.length) return { texto: corpo, perguntas: [] };
+
+    var texto = corpo;
+    perguntas.forEach(function (q) { texto = texto.split(q).join(' '); });
+    return {
+      texto: texto.replace(/\s+/g, ' ').trim(),
+      perguntas: cardsDePerguntas(perguntas),
+    };
+  }
+
+  /* Chaves pelas quais uma fonte pode ser reconhecida dentro do
+     texto de uma secao, da mais forte para a mais fraca:
+
+       - a URL inteira, sem protocolo e sem www;
+       - o host sozinho (fedex.com), que pega tanto o link markdown
+         quanto a mencao solta no meio da frase;
+       - o titulo, e so quando tem 8 caracteres ou mais. Titulo curto
+         ("FedEx", "Tabela") casa por acaso com prosa e espalharia a
+         referencia por quadros que nao a citam. */
+  function chavesDaFonte(f) {
+    var chaves = [];
+    var url = String(f.url == null ? '' : f.url).trim();
+
+    if (url) {
+      var limpa = url
+        .replace(/^https?:\/\//i, '')
+        .replace(/^www\./i, '')
+        .replace(/[\/#?]+$/, '')
+        .toLowerCase();
+      if (limpa) chaves.push(limpa);
+      var host = limpa.split('/')[0];
+      if (host && host.indexOf('.') > 0 && host !== limpa) chaves.push(host);
+    }
+
+    var titulo = String(f.titulo == null ? '' : f.titulo).trim();
+    if (titulo.length >= 8) chaves.push(titulo.toLowerCase());
+
+    return chaves;
+  }
+
+  function citaFonte(bruto, f) {
+    var t = String(bruto == null ? '' : bruto).toLowerCase();
+    if (!t) return false;
+    return chavesDaFonte(f).some(function (k) { return t.indexOf(k) !== -1; });
+  }
+
+  /* Aceita tanto {url, titulo} quanto a string ja rotulada, porque
+     quem chama variou com o tempo. Sem url nao ha o que casar — essa
+     fonte cai no primeiro quadro, como caia antes. */
+  function normalizarFontes(fontes) {
+    return (fontes || [])
+      .map(function (f) {
+        if (!f) return null;
+        return typeof f === 'string' ? { url: '', titulo: f } : f;
+      })
+      .filter(function (f) { return f && (f.url || f.titulo); });
+  }
+
+  /* Titulo E url na mesma linha. So o titulo deixava a referencia sem
+     como ser conferida — um nome de pagina que nao leva a lugar
+     nenhum, justamente quando alguem foi checar a afirmacao.
+
+     O separador ' — ' e contrato com o board: e por ele que o
+     `criarQuadroDocumento` remonta o link ao desenhar. Precisa ser
+     texto porque a fonte atravessa o banco como uma string so, dentro
+     do registro "Referencias". */
+  function rotuloDaFonte(f) {
+    var t = String(f.titulo == null ? '' : f.titulo).trim();
+    var u = String(f.url == null ? '' : f.url).trim();
+    if (t && u) return t + ' — ' + u;
+    return u || t;
+  }
+
+  /* Devolve a lista de quadros a criar, na ordem em que devem
+     aparecer. Cada item: { tipo, titulo, texto, fontes, itens }. */
+  function planejarQuadros(bruto, fontes, pergunta) {
+    var secoes = secoesDaResposta(bruto);
+    var nomeadas = secoes.filter(function (s) { return s.titulo; });
+    if (nomeadas.length < 2) {
+      secoes = [{
+        titulo: '',
+        corpo: semMarcacao(bruto),
+        bruto: bruto,
+        inicio: 0,
+        fim: String(bruto == null ? '' : bruto).length,
+      }];
+    }
+
+    var perguntasSoltas = [];
+    var conteudo = [];
+
+    secoes.forEach(function (sec) {
+      if (!sec.corpo) return;
+      var parte = partirSecao(sec.corpo);
+      perguntasSoltas = perguntasSoltas.concat(parte.perguntas);
+
+      /* Sobra curta depois de tirar as perguntas é andaime — "Preciso
+         de mais informações para ajudar você" anuncia a pergunta, não
+         acrescenta nada a ela, e vira um quadro que ninguém usa. Só
+         entra como conteúdo o que se sustenta sem a pergunta ao lado. */
+      /* Seção que alguém nomeou é conteúdo por definição, por mais
+         curta que fique depois de tirar a pergunta: "Mudanças de
+         regulação" com uma frase é um achado, não sobra. O andaime é
+         o texto SEM título que só existe para anunciar a pergunta. */
+      var soAndaime = !sec.titulo && parte.perguntas.length && parte.texto.length < 80;
+      if (parte.texto && !soAndaime) {
+        conteudo.push({
+          titulo: sec.titulo,
+          texto: parte.texto,
+          bruto: sec.bruto,
+          inicio: sec.inicio,
+          fim: sec.fim,
+        });
+      }
+    });
+
+    /* Formato decidido UMA vez, para a resposta inteira. Seções irmãs
+       do mesmo resultado com formatos diferentes — uma em documento,
+       a vizinha em cartões — não é adaptação ao conteúdo, é board
+       incoerente: quem lê não tem como saber por que "Preços" virou
+       texto e "Novos entrantes" virou post-it, já que ambos são o
+       mesmo tipo de achado. Se um assunto pede documento, todos vão
+       de documento. */
+    /* Duas portas para o formato documento, e a segunda importa tanto
+       quanto a primeira:
+
+       — algum assunto não cabe num post-it; ou
+       — a resposta veio dividida em assuntos nomeados. Uma resposta
+         que o provedor organizou em seções É um texto de leitura, por
+         mais que cada seção isolada caiba num cartão. Sem esta
+         segunda porta, três parágrafos de 270 caracteres viravam
+         três cartões "Resposta" — exatamente o resultado ilegível que
+         o quadro-documento existe para evitar. */
+    var comoDocumento =
+      conteudo.some(function (c) { return c.texto.length >= LIMITE_DOCUMENTO; }) ||
+      conteudo.filter(function (c) { return c.titulo; }).length >= 2;
+
+    var planos = conteudo.map(function (c) {
+      if (comoDocumento) {
+        return {
+          tipo: 'documento',
+          titulo: c.titulo || tituloDoDocumento(pergunta),
+          texto: c.texto,
+          fontes: [],
+        };
+      }
+      return {
+        tipo: 'postits',
+        titulo: c.titulo || 'Resultado da pesquisa',
+        itens: cardsDaResposta(c.texto),
+      };
+    });
+
+    /* Cada referência fica no quadro que a cita. Antes todas caíam no
+       primeiro, e num board dividido por assunto isso é errado de um
+       jeito que atrapalha: quem lê "Tabela de preços em vigor" quer a
+       fonte daquela tabela ao lado dela, não amontoada num quadro
+       anterior junto com as fontes de outros dois assuntos.
+
+       `conteudo` e `planos` são o mesmo índice (planos veio de um map
+       sobre conteudo), então o bruto da seção i responde pelo plano i.
+
+       Uma fonte citada por dois assuntos entra nos dois: cada quadro
+       precisa se sustentar sozinho, e repetir a referência custa uma
+       linha. Uma fonte que nenhum assunto cita não some — vai para o
+       primeiro quadro, exatamente onde ela estava antes. */
+    var lista = normalizarFontes(fontes);
+
+    if (lista.length && planos.length) {
+      var porPlano = planos.map(function () { return []; });
+      var orfas = [];
+
+      lista.forEach(function (f) {
+        var achou = false;
+        var posicoes = (f.inicios || []).filter(function (n) {
+          return typeof n === 'number' && n >= 0;
+        });
+
+        /* 1. Posicao — o sinal exato. A citacao vem presa ao trecho da
+              resposta que ela sustenta, entao a faixa da secao decide
+              sozinha, sem depender de a URL aparecer no texto (ela
+              nao aparece: a resposta e prosa, as citacoes sao
+              metadados). */
+        if (posicoes.length) {
+          conteudo.forEach(function (c, i) {
+            var dentro = posicoes.some(function (n) {
+              return n >= c.inicio && n < c.fim;
+            });
+            if (dentro) { porPlano[i].push(rotuloDaFonte(f)); achou = true; }
+          });
+
+          /* 2. A posicao caiu numa secao que nao virou quadro (sobra
+                curta, so-pergunta). Vai para a secao mantida mais
+                proxima antes dela — o vizinho de cima e de quem
+                aquele trecho estava falando. */
+          if (!achou) {
+            var melhor = -1, dist = Infinity;
+            conteudo.forEach(function (c, i) {
+              posicoes.forEach(function (n) {
+                if (c.inicio <= n && n - c.inicio < dist) { dist = n - c.inicio; melhor = i; }
+              });
+            });
+            if (melhor >= 0) { porPlano[melhor].push(rotuloDaFonte(f)); achou = true; }
+          }
+        }
+
+        /* 3. Sem posicao: provedor antigo, ou resposta que traz o link
+              escrito no texto. Reconhece pela URL/host/titulo. */
+        if (!achou) {
+          conteudo.forEach(function (c, i) {
+            if (citaFonte(c.bruto, f)) { porPlano[i].push(rotuloDaFonte(f)); achou = true; }
+          });
+        }
+
+        if (!achou) orfas.push(rotuloDaFonte(f));
+      });
+
+      orfas.forEach(function (r) { porPlano[0].push(r); });
+
+      planos.forEach(function (p, i) {
+        var fs = porPlano[i];
+        if (!fs.length) return;
+        if (p.tipo === 'documento') p.fontes = fs;
+        else p.itens = p.itens.concat(cardsDeTexto('Fontes', fs.join(' · ')));
+      });
+    } else if (lista.length) {
+      planos.push({
+        tipo: 'postits',
+        titulo: 'Fontes',
+        itens: cardsDeTexto('Fontes', lista.map(rotuloDaFonte).join(' · ')),
+      });
+    }
+
+    if (perguntasSoltas.length) {
+      planos.push({
+        tipo: 'postits',
+        titulo: 'Perguntas em aberto',
+        itens: perguntasSoltas,
+      });
+    }
+
+    return planos;
+  }
+
+  function tituloDoDocumento(pergunta) {
+    var t = semMarcacao(pergunta || '').replace(/\?+\s*$/, '').trim();
+    return t ? cortar(t, MAX_TITULO) : 'Resultado da pesquisa';
+  }
+
+  function cardsDaResposta(texto) {
+    /* A marcação sai ANTES de segmentar, não depois. Segmentar
+       primeiro parte o par `**...**` entre duas sentenças, e aí cada
+       metade fica com um `**` órfão que nenhum regex de negrito casa
+       — o asterisco chegava ao post-it mesmo com a limpeza ligada.
+       `semMarcacao` também normaliza os espaços, então faz o trabalho
+       que era feito aqui. */
+    var normal = semMarcacao(texto);
+    var sentencas = emSentencas(normal);
+    var perguntas = sentencas.filter(ehPergunta);
+
+    if (!perguntas.length) return cardsDeTexto('Resposta', normal);
+
+    /* Perguntas dominando a resposta = pedido de esclarecimento. Aí o
+       que sobra é andaime — "Preciso de mais informações para ajudar
+       você" anuncia a pergunta, não acrescenta nada a ela, e num quadro
+       vira um post-it que ninguém usa. Só as perguntas viram cards.
+
+       Uma resposta longa com uma dúvida no fim não cai nesta regra, e
+       o conteúdo dela é preservado abaixo — é a diferença entre a busca
+       não ter entendido a pergunta e ter respondido com uma ressalva. */
+    /* Conta só o que tem substância: o segmentador quebra em
+       abreviação ("etc.") e produz fragmentos como ")." que não são
+       sentença nenhuma. Contá-los inflava o denominador e fazia o
+       andaime escapar da regra justamente no caso mais comum. */
+    var densas = sentencas.filter(function (f) { return f.length > 15; });
+    var perguntasDensas = densas.filter(ehPergunta);
+
+    if (perguntasDensas.length * 2 >= densas.length) {
+      return cardsDePerguntas(perguntas);
+    }
+
+    var resto = normal;
+    perguntas.forEach(function (q) { resto = resto.split(q).join(' '); });
+    resto = resto.replace(/\s+/g, ' ').trim();
+
+    var itens = cardsDePerguntas(perguntas);
+    if (resto.length > 40) itens = cardsDeTexto('Resposta', resto).concat(itens);
+    return itens;
+  }
+
+  function cardsDeTexto(titulo, texto) {
+    var partes = emPedacos(texto);
+    return partes.map(function (parte, i) {
+      var rotulo = partes.length > 1
+        ? titulo + ' (' + (i + 1) + '/' + partes.length + ')'
+        : titulo;
+      return { titulo: cortar(rotulo, MAX_TITULO), descricao: parte };
+    });
+  }
+
+  /* O board tem toast proprio (`window.mostrarMensagem`); o painel so
+     e visivel se a pessoa o tiver aberto. Toast primeiro, alerta no
+     painel como reserva. */
+  function avisarNaTela(msg) {
+    if (typeof window.mostrarMensagem === 'function') window.mostrarMensagem(msg);
+    else desenharAlerta(msg);
+  }
+
+  /* ---------- A porta para quem está fora ----------
+     O botão "Pesquisar" do cabeçalho da tarefa (board.html) abre este
+     painel já com a descrição da tarefa na caixa — é o "a tarefa chega
+     com conteúdo" de board-lista.md §5.
+
+     Não dispara a pergunta sozinho: deixa o texto pronto para a pessoa
+     ler, ajustar e enviar. Perguntar por conta própria seria gastar
+     por ela, que é o oposto de PES-007. */
+  /* Exposto para o board poder normalizar cards que já estão
+     gravados: o formato dos post-its foi corrigido depois que muitos
+     quadros já tinham sido salvos, e o que está no banco não se
+     conserta sozinho. */
+  window.PesquisaFormato = {
+    semMarcacao: semMarcacao,
+    cardsDaResposta: cardsDaResposta,
+    CONVITE: CONVITE
+  };
+
+  window.PesquisaPainel = {
+    abrir: function (perguntaInicial) {
+      mostrarAba('pesquisa');
+      if (perguntaInicial && !entrada.value.trim()) {
+        entrada.value = perguntaInicial;
+      }
+      entrada.focus();
+    },
+
+    /* ---------- Busca sem painel ----------
+       O botao "Pesquisar" do cabecalho da tarefa nao abre mais o
+       painel lateral: ele roda a busca ali mesmo e devolve o
+       resultado como um quadro novo no board.
+
+       Isto substitui a espera de PES-007 (deixar a pessoa revisar a
+       pergunta antes de gastar) por um gesto so. A pergunta e a
+       descricao da tarefa, que a pessoa mesma escreveu — o consenso
+       existe, so nao passa mais por uma segunda tela.
+
+       Nunca rejeita: devolve `true` se virou quadro e `false` em
+       qualquer outro caso, sempre depois de avisar na tela. Quem
+       chama so precisa saber quando parar o indicador. */
+    pesquisarNoQuadro: function (pergunta) {
+      var texto = (pergunta || '').trim();
+
+      if (!texto) {
+        avisarNaTela('Esta tarefa nao tem descricao para pesquisar.');
+        return Promise.resolve(false);
+      }
+      if (ocupado) return Promise.resolve(false);
+      if (!tarefaId) {
+        avisarNaTela('Abra a tarefa pela tela de atividades para pesquisar.');
+        return Promise.resolve(false);
+      }
+
+      trabalhando(true, 'Analisando...');
+
+      return garantirSessao()
+        .then(function (id) {
+          /* Passo 1: planejar. Nao gasta nada. */
+          return chamar('/pesquisa/sessoes/' + id + '/planejar', {
+            metodo: 'POST',
+            corpo: { pergunta: texto },
+          });
+        })
+        .then(function (plano) {
+          if (plano.nao_resolvidas && plano.nao_resolvidas.length) {
+            avisarNaTela(
+              'Nao sei a quem "' + plano.nao_resolvidas[0] + '" se refere. ' +
+              'Escreva o nome da empresa na descricao da tarefa.'
+            );
+            return null;
+          }
+
+          /* PES-007 continua valendo para a AMBIGUIDADE: os candidatos
+             custam ordens diferentes, e escolher por conta propria
+             seria escolher o custo por conta propria. */
+          if (!plano.decidido) {
+            avisarNaTela(
+              'Essa descricao da para ler de mais de um jeito, e cada um ' +
+              'custa diferente. Deixe a tarefa mais direta e tente de novo.'
+            );
+            return null;
+          }
+
+          if (!plano.executavel) {
+            avisarNaTela(motivoNaoExecutavel(plano.nivel));
+            return null;
+          }
+
+          /* Passo 2: executar. So chega aqui o que e executavel. */
+          trabalhando(true, 'Pesquisando...');
+          return chamar('/pesquisa/sessoes/' + sessaoId + '/consultar', {
+            metodo: 'POST',
+            corpo: { pergunta: texto },
+          });
+        })
+        .then(function (r) {
+          if (!r) return false;
+
+          /* PES-008: "nao achei" e "falhou" sao coisas diferentes. */
+          if (r.resultado === 'falhou') {
+            avisarNaTela('A busca nao completou. Nada foi cobrado — tente de novo.');
+            return false;
+          }
+          if (r.resultado === 'vazio') {
+            avisarNaTela('Procurei e nao encontrei nada sobre isso.');
+            return false;
+          }
+
+          /* A fonte inteira, nao so o rotulo: a associacao por assunto
+             casa pela URL, e `f.titulo || f.url` joga a URL fora
+             sempre que ha titulo — que e o caso comum. */
+          var fontes = (r.fontes || []).filter(function (f) {
+            return f && (f.url || f.titulo);
+          });
+
+          console.log('[Pesquisa] resposta bruta do provedor:\n' + (r.resposta || '(vazia)'));
+
+          var planos = planejarQuadros(r.resposta || '', fontes, texto);
+
+          /* Lugares continuam sendo cartões: cada um é um achado
+             independente, com endereço e nota — é exatamente o que um
+             post-it guarda bem. */
+          var cardsLugares = (r.lugares || []).map(function (l) {
+            return {
+              titulo: cortar(l.nome || 'Sem nome', MAX_TITULO),
+              descricao: cortar(
+                [l.endereco, l.avaliacao ? 'nota ' + l.avaliacao : '']
+                  .filter(Boolean)
+                  .join(' — '),
+                MAX_DESCRICAO
+              ),
+            };
+          });
+          if (cardsLugares.length) {
+            planos.push({ tipo: 'postits', titulo: 'Lugares', itens: cardsLugares });
+          }
+
+          console.log('[Pesquisa] quadros planejados:', planos.map(function (p) {
+            return p.tipo + ' — "' + p.titulo + '"' +
+              (p.tipo === 'documento'
+                ? ' (' + p.texto.length + ' caracteres)'
+                : ' (' + p.itens.length + ' cards)') +
+              ' [' + ((p.fontes || []).length) + ' fontes]';
+          }));
+
+          if (!planos.length) {
+            avisarNaTela('A busca voltou sem nada que desse um quadro.');
+            return false;
+          }
+
+          if (typeof window.criarQuadroResultado !== 'function' ||
+              typeof window.criarQuadroDocumento !== 'function') {
+            avisarNaTela('Nao consegui montar o quadro com o resultado.');
+            return false;
+          }
+
+          /* Um quadro por assunto. O primeiro que voltar `null` diz que
+             a tarefa esta concluida (BOARD-LEITURA-003) — nesse caso
+             nenhum quadro entra, e dizer isso e melhor que sumir. */
+          var criados = 0;
+          for (var i = 0; i < planos.length; i++) {
+            var plano = planos[i];
+            var quadro = plano.tipo === 'documento'
+              ? window.criarQuadroDocumento(plano.titulo, plano.texto, plano.fontes)
+              : window.criarQuadroResultado(plano.titulo, plano.itens);
+            if (!quadro) {
+              if (!criados) {
+                avisarNaTela('Tarefa concluida nao recebe resultado novo. Reabra para pesquisar.');
+                return false;
+              }
+              break;
+            }
+            criados++;
+          }
+
+          /* Uma gravacao com o board inteiro na tela. Cada
+             criarQuadro* ja pede autosave sozinho, mas aquele pedido
+             sai no meio do lote: quando o primeiro quadro disparou, o
+             ultimo ainda nao existia. O autosave em voo marca os
+             seguintes como pendentes e regrava ao terminar, entao o
+             estado final chega — este disparo e o que garante que ele
+             chegue mesmo se o lote tiver um quadro so, ou se o
+             primeiro pedido tiver saido antes de BoardAcoes ficar
+             pronto. */
+          if (window.dispararAutosave) window.dispararAutosave();
+
+          avisarNaTela(criados > 1
+            ? 'Pesquisa concluida — ' + criados + ' quadros no board.'
+            : 'Pesquisa concluida — resultado no quadro.');
+          return true;
+        })
+        .catch(function (e) {
+          if (e && e.status === 402) {
+            avisarNaTela('Sem credito suficiente para esta pesquisa.');
+          } else if (e && e.rede) {
+            avisarNaTela('Nao consegui falar com o servidor agora.');
+          } else if (e && e.message === 'sem tarefa') {
+            avisarNaTela('Abra a tarefa pela tela de atividades para pesquisar.');
+          } else if (e && e.message) {
+            avisarNaTela(e.message);
+          } else {
+            avisarNaTela('Nao consegui falar com o servidor agora.');
+          }
+          return false;
+        })
+        .then(function (ok) {
+          trabalhando(false);
+          return ok;
+        });
+    },
+  };
+
+  botao.addEventListener('click', perguntar);
+  entrada.addEventListener('keydown', function (e) {
+    /* Enter envia, Shift+Enter quebra linha — mesma convenção do
+       composer do assistente. */
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      perguntar();
+    }
+  });
+})();

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Criar empresa · Plataforma de Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Anton&family=Italianno&family=Limelight&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+/* ============================================================
+   TOKENS — Hierarquia CDS (Base → Theme → Purpose)
+   Espelha o :root de meus-projetos.html, acrescido da camada
+   de Motion (--dur-*, --ease-*) exigida pela skill de tokens.
+   Tokens do sistema: css/tokens.css
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--fill-primary);
+  color:var(--text-primary);
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  -webkit-font-smoothing:antialiased;
+}
+body.modal-open{overflow:hidden}
+
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+
+/* ============================================================
+   GATILHO (página de demonstração)
+   ============================================================ */
+.trigger{
+  display:inline-flex;align-items:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:16px;line-height:24px;font-weight:600;
+  box-shadow:var(--shadow-xs);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.trigger:hover{background:var(--fill-accent-hover)}
+.trigger:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.trigger svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============================================================
+   MODAL — dialog nativo (focus trap + Esc de graça)
+   ============================================================ */
+.modal{
+  position:fixed;
+  inset:0;
+  margin:auto;
+  width:1110px;max-width:calc(100vw - 48px);
+  height:724px;max-height:calc(100vh - 48px);
+  padding:24px;
+  border:none;border-radius:var(--radius-lg);
+  background:var(--surface-1);
+  box-shadow:var(--shadow-modal);
+  color:var(--text-primary);
+  overflow:visible;
+}
+.modal::backdrop{background:var(--overlay)}
+
+.modal[open]{animation:modal-in var(--dur-base) var(--ease-out)}
+.modal[open]::backdrop{animation:fade-in var(--dur-base) var(--ease-out)}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+
+.modal-shell{display:flex;flex-direction:column;height:100%;gap:0}
+
+/* ---------- Header ---------- */
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  flex-shrink:0;
+}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title-icon{
+  width:36px;height:36px;flex-shrink:0;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:var(--fill-primary);
+  color:var(--text-on-primary);
+}
+.modal-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal-close{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover{background:var(--surface-0);color:var(--text-primary)}
+.modal-close:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- Abas ----------
+   Sumário de navegação, NÃO um tab widget ARIA: as três seções
+   coexistem num scroll contínuo, nenhuma fica escondida.
+   ------------------------------------------------------------ */
+.modal-tabs{
+  position:relative;flex-shrink:0;
+  margin-top:20px;
+  border-bottom:1px solid var(--border);
+}
+.modal-tabs-list{display:flex;align-items:center;gap:4px;list-style:none}
+.tab{
+  display:inline-flex;align-items:center;
+  padding:8px 12px 12px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  text-decoration:none;
+  border-radius:var(--radius) var(--radius) 0 0;
+  transition:color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.tab:hover{color:var(--text-primary);background:var(--surface-0)}
+.tab:focus-visible{outline:var(--focus-ring);outline-offset:-2px}
+.tab[aria-current="true"]{color:var(--text-accent);font-weight:600}
+.tab-underline{
+  position:absolute;bottom:-1px;left:0;
+  height:2px;width:0;
+  background:var(--fill-accent);
+  border-radius:2px 2px 0 0;
+  transform:translateX(0);
+  transition:transform var(--dur-base) var(--ease-out),width var(--dur-base) var(--ease-out);
+  will-change:transform,width;
+}
+
+/* ---------- Corpo scrollável ---------- */
+.modal-body{
+  position:relative;
+  flex:1;min-height:0;
+  overflow-y:auto;
+  scroll-behavior:auto;
+  padding:0;
+  display:flex;flex-direction:column;gap:0;
+}
+.modal-body::-webkit-scrollbar{width:10px}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:999px;border:3px solid var(--surface-1)}
+.modal-body::-webkit-scrollbar-track{background:transparent}
+
+/* Cada seção ocupa a altura inteira da área de scroll e centraliza o
+   conteúdo — é isso que impede uma seção de encostar na seguinte.
+   scroll-margin-top garante que o título fica visível no topo do container. */
+.section{
+  min-height:100%;flex-shrink:0;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:32px 0;
+}
+.section-title{font-size:18px;line-height:28px;font-weight:600;text-align:center}
+.section-sub{font-size:14px;line-height:22px;color:var(--text-secondary);text-align:center;margin-top:8px}
+
+/* ---------- Seção 1: Sobre a empresa ---------- */
+.form{width:404px;max-width:100%;margin:32px auto 0;display:flex;flex-direction:column;gap:32px}
+.field{display:flex;flex-direction:column;gap:6px}
+.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.input,.textarea{
+  width:100%;
+  padding:10px 14px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  font-size:16px;line-height:24px;
+  transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
+}
+.input::placeholder,.textarea::placeholder{color:var(--text-muted)}
+.input:focus,.textarea:focus{
+  outline:none;
+  border-color:var(--fill-accent);
+  box-shadow:0 0 0 4px var(--sky-100);
+}
+.textarea{min-height:96px;resize:vertical}
+
+.segmented{display:inline-flex;padding:2px;gap:2px;border-radius:var(--radius);background:var(--surface-0);border:1px solid var(--border)}
+.segmented button{
+  padding:6px 16px;border-radius:6px;
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.segmented button:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.segmented button[aria-pressed="true"]{background:var(--surface-1);color:var(--text-primary);font-weight:600;box-shadow:var(--shadow-xs)}
+
+/* ---------- Upload do logotipo ---------- */
+.upload{margin-top:12px}
+.upload[hidden]{display:none}
+.dropzone{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  width:100%;padding:20px 16px;
+  border:1px dashed var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:center;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.dropzone:hover{background:var(--surface-0)}
+.dropzone:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.dropzone.is-over{border-color:var(--fill-accent);background:var(--sky-100)}
+.dropzone-icon{
+  width:36px;height:36px;margin-bottom:4px;
+  display:grid;place-items:center;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  color:var(--text-secondary);
+}
+.dropzone-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dropzone-text{font-size:14px;line-height:20px;color:var(--text-secondary)}
+.dropzone-text b{color:var(--text-accent);font-weight:600}
+.dropzone-hint{font-size:12px;line-height:18px;color:var(--text-muted)}
+
+.upload-preview{
+  display:flex;align-items:center;gap:12px;
+  padding:12px;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+}
+.upload-preview[hidden]{display:none}
+.upload-thumb{
+  width:48px;height:48px;flex-shrink:0;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--surface-0);
+  object-fit:contain;
+}
+.upload-meta{flex:1;min-width:0}
+.upload-name{
+  font-size:14px;line-height:20px;font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.upload-size{font-size:12px;line-height:18px;color:var(--text-secondary)}
+.upload-remove{
+  flex-shrink:0;padding:6px;border-radius:var(--radius);
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.upload-remove:hover{background:var(--bg-danger);color:var(--text-danger)}
+.upload-remove:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.upload-remove svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+
+.upload-error{
+  margin-top:8px;
+  font-size:12px;line-height:18px;color:var(--text-danger);
+}
+.upload-error[hidden]{display:none}
+
+/* ---------- Seção 2: Fonte ---------- */
+.font-list{margin:27px auto 0;display:flex;flex-direction:column;gap:27px}
+.font-option{
+  display:grid;place-items:center;width:100%;height:100px;
+  padding:0 20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface-1);
+  text-align:center;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+}
+.font-option:hover{background:var(--surface-0)}
+.font-option:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.font-option[aria-pressed="true"]{border-color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--text-primary)}
+.font-sample{font-size:56px;line-height:1.1;color:var(--text-primary)}
+.font-sample--inter{font-family:'Inter',sans-serif;font-weight:700}
+.font-sample--anton{font-family:'Anton',sans-serif}
+.font-sample--italianno{font-family:'Italianno',cursive;font-size:76px}
+.font-sample--limelight{font-family:'Limelight',cursive}
+.font-sample--arial{font-family:Arial,Helvetica,sans-serif;font-weight:700}
+
+/* ---------- Seção 3: Cor ---------- */
+.color-grid{
+  margin:32px auto 0;
+  display:grid;grid-template-columns:repeat(6,100px);gap:16px;
+  justify-content:center;
+}
+.swatch{
+  display:flex;flex-direction:column;
+  border-radius:var(--radius-lg);
+  border:1px solid var(--border);
+  background:var(--surface-1);
+  overflow:hidden;
+  transition:box-shadow var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out);
+}
+.swatch:hover{transform:translateY(-2px);box-shadow:var(--shadow-xs)}
+.swatch:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--text-primary)}
+.swatch-chip{height:56px;width:100%}
+.swatch-hex{
+  padding:9px 4px;
+  font-size:13px;line-height:18px;font-weight:500;
+  color:var(--text-secondary);
+  text-align:center;
+}
+
+/* ---------- Footer ---------- */
+.modal-divider{height:1px;background:var(--border);flex-shrink:0;margin:32px 0}
+.modal-footer{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  height:44px;padding:0 18px;
+  border-radius:var(--radius);
+  font-size:16px;line-height:24px;font-weight:600;
+  transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.btn:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn--primary{background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--fill-accent-hover)}
+.btn--secondary{background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--secondary:hover{background:var(--surface-0)}
+
+/* ---------- Motion reduzido ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  .tab-underline{transition:none}
+}
+</style>
+</head>
+<body class="modal-open">
+
+<button class="trigger" id="openBtn">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Criar empresa
+</button>
+
+<dialog class="modal" id="modal" aria-labelledby="modalTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="modalTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>
+        </span>
+        Criar empresa
+      </h2>
+      <button class="modal-close" id="closeBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        Fechar
+      </button>
+    </header>
+
+    <nav class="modal-tabs" aria-label="Seções do formulário">
+      <ul class="modal-tabs-list" id="tabsList">
+        <li><a class="tab" href="#sec-sobre" data-target="sec-sobre" aria-current="true">Sobre a empresa</a></li>
+        <li><a class="tab" href="#sec-fonte" data-target="sec-fonte">Fonte</a></li>
+        <li><a class="tab" href="#sec-cor" data-target="sec-cor">Cor</a></li>
+      </ul>
+      <span class="tab-underline" id="tabUnderline" aria-hidden="true"></span>
+    </nav>
+
+    <div class="modal-body" id="modalBody">
+
+      <section class="section" id="sec-sobre" aria-labelledby="sec-sobre-title">
+        <h3 class="section-title" id="sec-sobre-title">Sobre a empresa</h3>
+        <div class="form">
+          <div class="field">
+            <label class="label" for="nome">Nome da empresa</label>
+            <input class="input" id="nome" type="text" placeholder="Informe o nome da empresa">
+          </div>
+          <div class="field">
+            <label class="label" for="descricao">Descrição da empresa</label>
+            <textarea class="textarea" id="descricao" placeholder="Conte em poucas linhas o que a empresa faz"></textarea>
+          </div>
+          <div class="field">
+            <span class="label" id="logo-label">Você já possui Logotipo?</span>
+            <div class="segmented" id="logoToggle" role="group" aria-labelledby="logo-label">
+              <button type="button" data-logo="sim" aria-pressed="true" aria-controls="logoUpload" aria-expanded="true">Sim</button>
+              <button type="button" data-logo="nao" aria-pressed="false" aria-controls="logoUpload" aria-expanded="false">Não</button>
+            </div>
+
+            <div class="upload" id="logoUpload">
+              <input type="file" id="logoInput" accept="image/png,image/jpeg,image/svg+xml" hidden>
+
+              <button type="button" class="dropzone" id="dropzone">
+                <span class="dropzone-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                </span>
+                <span class="dropzone-text"><b>Clique para enviar</b> ou arraste o arquivo</span>
+                <span class="dropzone-hint">SVG, PNG ou JPG · até 2 MB</span>
+              </button>
+
+              <div class="upload-preview" id="logoPreview" hidden>
+                <img class="upload-thumb" id="logoThumb" alt="Pré-visualização do logotipo">
+                <span class="upload-meta">
+                  <span class="upload-name" id="logoName"></span>
+                  <span class="upload-size" id="logoSize"></span>
+                </span>
+                <button type="button" class="upload-remove" id="logoRemove" aria-label="Remover logotipo">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <p class="upload-error" id="logoError" role="alert" hidden></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="sec-fonte" aria-labelledby="sec-fonte-title">
+        <h3 class="section-title" id="sec-fonte-title">Fonte</h3>
+        <p class="section-sub">Defina uma fonte principal para a sua empresa.<br>Fique tranquilo! Você pode alterar a fonte a qualquer momento.</p>
+        <div class="font-list" role="group" aria-labelledby="sec-fonte-title">
+          <button type="button" class="font-option" aria-pressed="true"><span class="font-sample font-sample--inter">Inter</span></button>
+          <button type="button" class="font-option" aria-pressed="false"><span class="font-sample font-sample--anton">Anton</span></button>
+          <button type="button" class="font-option" aria-pressed="false"><span class="font-sample font-sample--italianno">Italianno</span></button>
+          <button type="button" class="font-option" aria-pressed="false"><span class="font-sample font-sample--limelight">Limelight</span></button>
+          <button type="button" class="font-option" aria-pressed="false"><span class="font-sample font-sample--arial">Arial</span></button>
+        </div>
+      </section>
+
+      <section class="section" id="sec-cor" aria-labelledby="sec-cor-title">
+        <h3 class="section-title" id="sec-cor-title">Cor</h3>
+        <p class="section-sub">Defina uma cor principal para a sua empresa.<br>Fique tranquilo! Você pode alterar a cor a qualquer momento.</p>
+        <div class="color-grid" id="colorGrid" role="group" aria-labelledby="sec-cor-title"></div>
+      </section>
+
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <footer class="modal-footer">
+      <button class="btn btn--primary" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Criar empresa
+      </button>
+      <button class="btn btn--secondary" type="button">Preencher depois</button>
+    </footer>
+
+  </div>
+</dialog>
+
+<script>
+(function(){
+  'use strict';
+
+  var modal      = document.getElementById('modal');
+  var openBtn    = document.getElementById('openBtn');
+  var closeBtn   = document.getElementById('closeBtn');
+  var body       = document.getElementById('modalBody');
+  var tabs       = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var underline  = document.getElementById('tabUnderline');
+  var sections   = tabs.map(function(t){ return document.getElementById(t.dataset.target); });
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Paleta (dado do usuário, não token do sistema) ---------- */
+  var PALETTE = [
+    '#EF4444','#F97316','#EAB308','#22C55E','#0EA5E9','#3B82F6',
+    '#6366F1','#A855F7','#EC4899','#F43F5E','#64748B','#737373'
+  ];
+
+  var grid = document.getElementById('colorGrid');
+  PALETTE.forEach(function(hex, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch';
+    b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+    b.setAttribute('aria-label', 'Cor ' + hex);
+    b.innerHTML = '<span class="swatch-chip" style="background:' + hex + '"></span>' +
+                  '<span class="swatch-hex">' + hex + '</span>';
+    grid.appendChild(b);
+  });
+
+  /* ---------- Grupos de seleção única ---------- */
+  function singleSelect(container, selector){
+    container.addEventListener('click', function(e){
+      var btn = e.target.closest(selector);
+      if(!btn || !container.contains(btn)) return;
+      container.querySelectorAll(selector).forEach(function(el){
+        el.setAttribute('aria-pressed', String(el === btn));
+      });
+    });
+  }
+  singleSelect(grid, '.swatch');
+  singleSelect(document.querySelector('.font-list'), '.font-option');
+
+  /* ---------- Logotipo: toggle + upload ---------- */
+  var logoToggle  = document.getElementById('logoToggle');
+  var logoUpload  = document.getElementById('logoUpload');
+  var logoInput   = document.getElementById('logoInput');
+  var dropzone    = document.getElementById('dropzone');
+  var preview     = document.getElementById('logoPreview');
+  var thumb       = document.getElementById('logoThumb');
+  var nameEl      = document.getElementById('logoName');
+  var sizeEl      = document.getElementById('logoSize');
+  var removeBtn   = document.getElementById('logoRemove');
+  var errorEl     = document.getElementById('logoError');
+
+  var MAX_BYTES = 2 * 1024 * 1024;
+  var ACCEPTED  = ['image/png','image/jpeg','image/svg+xml'];
+  var objectUrl = null;
+
+  function showError(msg){
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+  }
+  function clearError(){
+    errorEl.textContent = '';
+    errorEl.hidden = true;
+  }
+  function formatSize(bytes){
+    return bytes < 1024 * 1024
+      ? Math.round(bytes / 1024) + ' KB'
+      : (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB';
+  }
+
+  function clearFile(){
+    if(objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
+    logoInput.value = '';
+    thumb.removeAttribute('src');
+    preview.hidden = true;
+    dropzone.hidden = false;
+    clearError();
+  }
+
+  function acceptFile(file){
+    if(!file) return;
+    if(ACCEPTED.indexOf(file.type) === -1){
+      showError('Formato não suportado. Envie um SVG, PNG ou JPG.');
+      return;
+    }
+    if(file.size > MAX_BYTES){
+      showError('Arquivo muito grande. O limite é 2 MB.');
+      return;
+    }
+    clearError();
+    if(objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    thumb.src = objectUrl;
+    nameEl.textContent = file.name;
+    sizeEl.textContent = formatSize(file.size);
+    dropzone.hidden = true;
+    preview.hidden = false;
+    removeBtn.focus();
+  }
+
+  logoToggle.addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(!btn) return;
+    var hasLogo = btn.dataset.logo === 'sim';
+    logoToggle.querySelectorAll('button').forEach(function(el){
+      var on = el === btn;
+      el.setAttribute('aria-pressed', String(on));
+      el.setAttribute('aria-expanded', String(hasLogo));
+    });
+    logoUpload.hidden = !hasLogo;
+    if(!hasLogo) clearFile();
+  });
+
+  dropzone.addEventListener('click', function(){ logoInput.click(); });
+  logoInput.addEventListener('change', function(){ acceptFile(logoInput.files[0]); });
+  removeBtn.addEventListener('click', function(){ clearFile(); dropzone.focus(); });
+
+  ['dragenter','dragover'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){
+      e.preventDefault();
+      dropzone.classList.add('is-over');
+    });
+  });
+  ['dragleave','drop'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){
+      e.preventDefault();
+      dropzone.classList.remove('is-over');
+    });
+  });
+  dropzone.addEventListener('drop', function(e){
+    if(e.dataTransfer && e.dataTransfer.files.length) acceptFile(e.dataTransfer.files[0]);
+  });
+
+  /* ---------- Sublinho da aba ativa ---------- */
+  function moveUnderline(tab){
+    underline.style.width = tab.offsetWidth + 'px';
+    underline.style.transform = 'translateX(' + tab.offsetLeft + 'px)';
+  }
+
+  function setActive(id){
+    tabs.forEach(function(t){
+      var on = t.dataset.target === id;
+      if(on) t.setAttribute('aria-current','true');
+      else t.removeAttribute('aria-current');
+      if(on) moveUnderline(t);
+    });
+  }
+
+  /* ---------- Scroll-spy ----------
+     root é o container do modal, não o viewport. A faixa central
+     (-45%/-45%) evita o flicker de duas seções visíveis ao mesmo tempo.
+     ------------------------------------------------------------ */
+  var isAnimating = false;
+
+  var observer = new IntersectionObserver(function(entries){
+    if(isAnimating) return;
+    entries.forEach(function(entry){
+      if(entry.isIntersecting) setActive(entry.target.id);
+    });
+  }, { root: body, rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+
+  sections.forEach(function(s){ observer.observe(s); });
+
+  /* ---------- Âncora suave ----------
+     Durante o scroll programático o observer atravessa as seções
+     intermediárias e a aba pisca. isAnimating suspende o spy até
+     scrollend — com fallback por timeout para navegadores sem o evento.
+     ------------------------------------------------------------ */
+  var unlockTimer;
+  function unlock(){
+    clearTimeout(unlockTimer);
+    unlockTimer = setTimeout(function(){ isAnimating = false; }, 120);
+  }
+  body.addEventListener('scrollend', function(){ if(isAnimating) unlock(); });
+
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(e){
+      e.preventDefault();
+      var target = document.getElementById(tab.dataset.target);
+      if(!target) return;
+
+      isAnimating = true;
+      setActive(tab.dataset.target);
+
+      /* offsetTop é relativo ao offsetParent, que aqui é o <dialog> —
+         incluiria header e abas e passaria do alvo. Medir pela diferença
+         entre os rects dá a distância real dentro do container. */
+      var delta = target.getBoundingClientRect().top - body.getBoundingClientRect().top;
+
+      body.scrollTo({
+        top: body.scrollTop + delta,
+        behavior: reduceMotion ? 'auto' : 'smooth'
+      });
+
+      if(reduceMotion){ isAnimating = false; }
+      else { clearTimeout(unlockTimer); unlockTimer = setTimeout(function(){ isAnimating = false; }, 800); }
+    });
+  });
+
+  /* ---------- Abertura e fechamento ---------- */
+  function open(){
+    modal.showModal();
+    document.body.classList.add('modal-open');
+    requestAnimationFrame(function(){ moveUnderline(tabs[0]); });
+  }
+  function close(){
+    modal.close();
+  }
+
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+
+  modal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    openBtn.focus();
+  });
+
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) close();
+  });
+
+  window.addEventListener('resize', function(){
+    var current = document.querySelector('.tab[aria-current="true"]');
+    if(current) moveUnderline(current);
+  });
+
+  open();
+})();
+</script>
+</body>
+</html>
