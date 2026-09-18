@@ -159,6 +159,38 @@ a:focus-visible{
   box-shadow:var(--shadow-xs);
 }
 .btn--success:hover{background:var(--fill-success-hover)}
+/* Ghost, do sistema de design (`css/components.css`). Copiado e não
+   importado porque board.html não carrega `components.css` — ela
+   redeclara as variantes de botão aqui em cima. Duas cópias é dívida
+   conhecida desta página inteira; criar uma terceira definição com
+   outro nome seria pior. `width:100%` acompanha as outras variantes
+   do painel, que empilham em coluna. */
+.btn--ghost{
+  width:100%;
+  background:var(--surface-1);color:var(--text-secondary);
+  border:1px solid var(--border-strong);
+  box-shadow:var(--shadow-xs);
+}
+.btn--ghost:hover:not(:disabled){background:var(--surface-0);color:var(--text-primary)}
+
+/* ---------- Link (sistema de design) ----------
+   Cópia de `css/components.css`, pelo mesmo motivo do `.btn--ghost`
+   logo acima: nenhuma página do produto carrega aquele arquivo — cada
+   uma redeclara os componentes aqui dentro. `.link--sublinhado` é a
+   variante criada em 16/09/2026, quando a conversa do assistente
+   trocou seus botões por texto: dentro de texto corrido a cor sozinha
+   não diz que é clicável, e some para quem não distingue azul. */
+.link{
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;
+  color:var(--text-accent);text-decoration:none;
+  border-radius:var(--radius-sm,4px);
+}
+.link:hover{text-decoration:underline}
+.link--sublinhado{text-decoration:underline;text-underline-offset:2px}
+.link--sublinhado:hover{color:var(--fill-accent-hover)}
+.link--apoio{color:var(--text-secondary);font-weight:500}
+.link--apoio:hover{color:var(--text-primary)}
+.link:disabled{opacity:.5;cursor:not-allowed;text-decoration:none}
 
 /* ============================================================
    MIOLO — Dashboard infinito (estilo Miro/Figma)
@@ -604,8 +636,14 @@ body.is-dragging-card *{cursor:grabbing !important}
   color:var(--text-on-primary);
 }
 .idea-icon svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.idea-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary);white-space:pre-line}
-.idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary);white-space:pre-line}
+/* `overflow-wrap:anywhere` junto do `pre-line`: um continua honrando
+   as quebras que a pessoa escreveu, o outro deixa quebrar a palavra
+   que não tem onde quebrar — URL colada, id, token. Sem isso o texto
+   fura o card, que tem largura fixa aqui. Mesma correção que
+   `visao_do_projeto.html` levou em 16/09/2026, quando uma URL de 130
+   caracteres desmontou o board de idéias. */
+.idea-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary);white-space:pre-line;overflow-wrap:anywhere}
+.idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary);white-space:pre-line;overflow-wrap:anywhere}
 .idea-title.is-editing,.idea-desc.is-editing{
   cursor:text;
   border-radius:4px;
@@ -862,13 +900,15 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
 .pesquisa-ajuda{
   font-size:14px;line-height:20px;
 }
+/* Mesma mudança de 16/09/2026 que tirou o cartão branco da narração e
+   da ação proposta: no painel amarelo, bloco branco só o compositor,
+   que é campo. Esta aba está `hidden` hoje — mudar junto é o que
+   impede o drawer de voltar com dois vocabulários. */
 .pesquisa-plano{
   display:flex;flex-direction:column;gap:8px;
-  padding:16px;
-  background:var(--surface-1);
+  padding-left:12px;
   color:var(--text-primary);
-  border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-xs);
+  border-left:2px solid var(--border);
 }
 .pesquisa-plano-linha{
   display:flex;gap:8px;align-items:baseline;
@@ -900,13 +940,33 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
   background:var(--bg-warning);
   color:var(--text-warning);
 }
+
+/* ---------- Saídas de uma recusa (BOARD-PESQUISA-012) ----------
+   Vêm logo abaixo do alerta. Cada botão traz a explicação por baixo
+   porque o custo e o que vai acontecer precisam estar à vista ANTES
+   do clique (PES-007) — um botão "Buscar assim mesmo" sem dizer que
+   gasta crédito seria uma armadilha educada. */
+.pesquisa-saidas{display:flex;flex-direction:column;gap:4px;margin-top:-4px}
+.pesquisa-saida{
+  align-self:flex-start;
+  height:32px;padding:0 14px;
+  border-radius:var(--radius);
+  background:var(--fill-accent);color:var(--text-on-accent);
+  font-size:var(--type-body-sm);line-height:16px;font-weight:600;
+  transition:background var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+}
+.pesquisa-saida:hover:not(:disabled){background:var(--fill-accent-hover)}
+.pesquisa-saida:disabled{opacity:.5;cursor:not-allowed}
+.pesquisa-saida-exp{
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);
+  color:var(--text-secondary);
+  margin-bottom:6px;
+}
 .pesquisa-achado{
   display:flex;flex-direction:column;gap:8px;
-  padding:16px;
-  background:var(--surface-1);
+  padding-left:12px;
   color:var(--text-primary);
-  border-radius:var(--radius-lg);
-  box-shadow:var(--shadow-xs);
+  border-left:2px solid var(--border);
 }
 .pesquisa-achado-titulo{font-size:14px;line-height:20px;font-weight:600}
 .pesquisa-achado-fonte{
@@ -963,6 +1023,41 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
   color:var(--text-secondary);
 }
 .msg--user .msg-bubble{text-align:right}
+
+/* O caderno (Fase 3a). A resposta que leu só as fontes de uma
+   investigação diz isso de si mesma: quem rolar a conversa amanhã
+   precisa saber que ela NÃO leu o conhecimento da empresa. */
+.msg-origem{
+  display:block;
+  font-size:var(--type-overline);line-height:var(--type-overline-lh);
+  color:var(--text-secondary);
+  margin-bottom:4px;
+}
+.msg--caderno .msg-bubble{
+  border-left:2px solid var(--border);
+  padding-left:10px;
+}
+
+/* A marca do modo, entre a conversa e o campo — onde o olho passa
+   antes de digitar. Um modo que muda para onde a pergunta vai não
+   pode ser invisível, e sair dele custa um clique, não uma
+   descoberta. */
+.ia-marca-caderno{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;margin-bottom:8px;
+  border-radius:var(--radius);
+  background:var(--bg-accent);
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);
+}
+.ia-marca-caderno-txt{flex:1;color:var(--text-secondary);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ia-marca-caderno-txt b{color:var(--text-primary);font-weight:600}
+.ia-marca-caderno-sair{
+  flex-shrink:0;
+  width:22px;height:22px;border-radius:var(--radius-sm,4px);
+  color:var(--text-muted);font-size:12px;line-height:1;
+}
+.ia-marca-caderno-sair:hover{background:var(--bg-primary);color:var(--text-primary)}
 
 .composer{
   flex-shrink:0;
@@ -1096,17 +1191,20 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
 }
 
 /* ---------- Ação proposta (IA-ACAO) ----------
-   O balão do assistente assenta direto sobre o amarelo do painel
-   (comentário acima), mas uma proposta pendente é a única parte da
-   conversa que pede uma DECISÃO — por isso ela ganha superfície
-   própria (surface-1, a mesma do compositor), destacada do texto
-   solto ao redor em vez de se misturar a ele. */
+   O balão do assistente assenta direto sobre o amarelo do painel, e
+   uma proposta pendente é a única parte da conversa que pede uma
+   DECISÃO — então ela precisa se destacar do texto solto ao redor.
+
+   Até 16/09/2026 esse destaque era um CARTÃO BRANCO (surface-1 mais
+   sombra), e ele destoava de tudo: no painel amarelo, a única coisa
+   com fundo branco era o compositor, que é um campo. Por decisão do
+   Ricardo o destaque passou a ser a RÉGUA À ESQUERDA — o mesmo recurso
+   que `.msg--caderno` já usava aqui para dizer "esta mensagem tem
+   outra origem". Mesma distinção, vocabulário que o painel já falava. */
 .ia-acao{
   display:flex;flex-direction:column;gap:10px;
-  margin-top:8px;padding:10px 12px;
-  border-radius:var(--radius);
-  background:var(--surface-1);
-  box-shadow:var(--shadow-xs);
+  margin-top:8px;padding-left:10px;
+  border-left:2px solid var(--border);
 }
 .ia-acao-corpo{
   display:flex;align-items:flex-start;gap:8px;
@@ -1117,18 +1215,25 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
   width:14px;height:14px;flex-shrink:0;margin-top:2px;
   stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
 }
-.ia-acao-botoes{display:flex;gap:8px}
-.ia-acao-btn{
-  flex:1;height:30px;padding:0 12px;
-  border-radius:var(--radius);
-  font-size:12px;line-height:16px;font-weight:600;
-  transition:background var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+/* `gap:20px` e não 8: dois links lado a lado com 8px de respiro
+   viram uma frase só. O botão sólido não tinha esse problema porque a
+   própria caixa separava um do outro. */
+.ia-acao-botoes{display:flex;gap:20px;align-items:baseline}
+/* Aviso de duplicidade dentro do cartão de ação (IDEIA-DUPL na porta
+   da IA, 16/09/2026). Mesma cor de atenção do `.dup-alerta` da tela
+   do quadro, sem a caixa: aqui ele já está dentro do cartão da
+   sugestão, e uma segunda moldura dentro da conversa seria uma
+   caixa dentro de outra. */
+.ia-acao-duplicata{
+  margin:0;
+  font-size:var(--type-body);
+  line-height:var(--type-body-lh);
+  color:var(--text-warning);
 }
-.ia-acao-btn:disabled{opacity:.5;cursor:not-allowed}
-.ia-acao-btn--confirmar{background:var(--fill-accent);color:var(--text-on-accent)}
-.ia-acao-btn--confirmar:hover:not(:disabled){background:var(--fill-accent-hover)}
-.ia-acao-btn--descartar{background:var(--surface-2);color:var(--text-secondary)}
-.ia-acao-btn--descartar:hover:not(:disabled){background:var(--border)}
+/* Desenho: `.link--sublinhado` (e `.link--apoio` no "Descartar"). */
+.ia-acao-btn{
+  transition:color var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+}
 
 /* Estado final — sem botão nenhum, só o registro do que aconteceu.
    Um segundo clique não existe mais para existir (IA-ACAO-006). */
@@ -1140,7 +1245,123 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
 }
 .ia-acao--feita{background:var(--bg-success);color:var(--text-success)}
 .ia-acao--feita svg{width:14px;height:14px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.ia-acao--descartada{background:var(--surface-2);color:var(--text-muted)}
+.ia-acao--descartada{background:var(--bg-on-primary);color:var(--text-secondary)}
+
+/* ---------- Narração da investigação (IA-CONV-NARRA) ----------
+   A pesquisa escreve aqui enquanto roda. Fica no MESMO lugar da
+   conversa, e isso é o ponto: a espera deixa de ser uma linha morta
+   no rodapé do compositor ("Pesquisando... 8s") e passa a ser o
+   relato do que está acontecendo, no painel que a pessoa já olha.
+
+   Ela não é fala de ninguém — é a máquina se explicando —, e
+   misturá-la aos balões faria parecer que o assistente disse aquilo.
+   A distinção é a RÉGUA À ESQUERDA, a mesma de `.ia-acao` e de
+   `.msg--caderno`. Era um cartão branco (surface-1 mais sombra) até
+   16/09/2026; no painel amarelo aquilo virava a coisa mais pesada da
+   tela, e a narração é o que menos deve gritar: ela relata, não pede.
+
+   O CSS mora só aqui porque só o board investiga. As outras telas
+   que carregam js/ia.js (visao_do_projeto, atividade) nunca abrem
+   uma narração; se um dia abrirem, o bloco cai para o estilo
+   padrão do painel — sem estilo, mas legível. */
+/* 16/09/2026, segunda volta: a narração passou a ser UMA MENSAGEM.
+   Sem cartão, sem régua, sem recuo — o mesmo corpo de 14/20 em
+   `--text-secondary` das outras falas do painel. A distinção que ela
+   precisa já está no conteúdo: o ícone de estado, o título e o tempo,
+   na primeira linha. Moldura em volta disso era repetir com desenho o
+   que o texto já diz. */
+.ia-narracao{
+  display:flex;flex-direction:column;gap:8px;
+}
+.ia-narracao-topo{display:flex;align-items:center;gap:8px}
+.ia-narracao-icone{font-size:var(--type-body);line-height:1}
+.ia-narracao-titulo{
+  flex:1;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;
+  color:var(--text-primary);
+}
+/* Tempo correndo, nunca barra de progresso: não sabemos quanto
+   falta, e uma barra que enche sozinha seria invenção
+   (IA-CONV-NARRA-006). Tabular para o número não dançar a cada
+   segundo. */
+/* `--text-secondary`, e não `--text-muted`: sem o cartão branco estes
+   textos passaram a assentar no AMARELO, e `--text-muted` (neutral-400)
+   é legenda sobre branco — ali some. O sistema tem camadas próprias
+   para uso sobre o amarelo (`--bg-on-primary`) e reconhece o problema
+   no comentário delas; para texto, o degrau que sobra e ainda lê é o
+   secundário. Vale para o tempo, para a explicação do botão, para a
+   bolinha dos passos e para a proposta descartada. */
+.ia-narracao-tempo{
+  font-size:var(--type-overline);line-height:var(--type-overline-lh);
+  font-variant-numeric:tabular-nums;
+  color:var(--text-secondary);
+}
+.ia-narracao-tarefa{
+  font-size:var(--type-body);line-height:var(--type-body-lh);
+  color:var(--text-secondary);
+  font-style:italic;
+}
+.ia-narracao-passos{
+  display:flex;flex-direction:column;gap:4px;
+  margin:0;padding:0;list-style:none;
+}
+.ia-narracao-passos li{
+  position:relative;padding-left:14px;
+  font-size:var(--type-body);line-height:var(--type-body-lh);
+  color:var(--text-secondary);
+  /* O plano chega como um passo só, com uma pergunta por linha. Sem
+     isto o `\n` viraria espaço e as quatro perguntas sairiam
+     grudadas numa frase só. */
+  white-space:pre-line;
+}
+.ia-narracao-passos li::before{
+  content:"";position:absolute;left:2px;top:8px;
+  width:4px;height:4px;border-radius:50%;
+  background:var(--text-secondary);
+}
+.ia-narracao-fecho{
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
+  color:var(--text-primary);
+}
+.ia-narracao--falha .ia-narracao-fecho{color:var(--text-danger)}
+
+/* O portão (BOARD-PESQUISA-037). A pergunta "Posso buscar?" é a
+   frase mais importante do painel inteiro nesse momento — é sobre ela
+   que a pessoa vai clicar — então ela fica em cima do botão e com
+   peso de texto, não de legenda.
+   O PREÇO saiu daqui em 15/09/2026: valor mora em Créditos de uso. */
+.ia-narracao--aguardando .ia-narracao-fecho{font-weight:600}
+
+/* "Agora não" não pode competir com "Buscar agora": duas ações com o
+   mesmo peso deixam a escolha sem recomendação, e a recomendação
+   aqui é que ninguém gaste por inércia. O botão secundário existe,
+   está legível e à mão — só não grita. */
+.ia-narracao-btn[data-narracao-saida="cancelar"]{
+  background:transparent;color:var(--text-secondary);
+  box-shadow:inset 0 0 0 1px var(--border);
+}
+.ia-narracao-btn[data-narracao-saida="cancelar"]:hover:not(:disabled){
+  background:var(--bg-primary);box-shadow:inset 0 0 0 1px var(--border-hover);
+}
+
+/* As saídas de BOARD-PESQUISA-012. Empilhadas e com a explicação
+   embaixo de cada uma: o custo e o que vai acontecer precisam estar
+   à vista ANTES do clique (PES-007), não depois. */
+.ia-narracao-saidas{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+/* O DESENHO vem de `.link--sublinhado`, do sistema; aqui sobra só o
+   que é layout desta lista. A saída era um botão azul sólido até
+   16/09/2026 — dentro da conversa ele lia como um objeto colado no
+   texto, e eram três ou quatro empilhados. */
+.ia-narracao-btn{
+  align-self:flex-start;
+  text-align:left;
+  transition:color var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+}
+.ia-narracao-exp{
+  font-size:var(--type-overline);line-height:var(--type-overline-lh);
+  color:var(--text-secondary);
+  margin-bottom:4px;
+}
 
 /* ============================================================
    MODAL — novo registro
@@ -1222,6 +1443,89 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
 .textarea:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
 
 .modal-footer{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:auto;padding-top:16px}
+
+/* ---------- Cabeçalho e lista do modal das fontes ----------
+   Estas regras nasceram com o rascunho da Fase 2 e se chamavam
+   `.rascunho-*`. O rascunho saiu em 15/09/2026; o nome ficou, mentindo
+   sobre quem usava. Renomeadas em 16/09/2026 para o dono de verdade:
+   "Ver as fontes". */
+.caderno-tarefa{
+  margin-top:4px;
+  font-size:var(--type-body-sm);line-height:var(--type-body-sm-lh);
+  color:var(--text-secondary);font-style:italic;
+}
+.caderno-resumo{
+  margin-top:8px;
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);
+  color:var(--text-secondary);
+}
+.caderno-lista{
+  flex:1 1 auto;overflow-y:auto;
+  margin-top:16px;padding-right:4px;
+  display:flex;flex-direction:column;gap:2px;
+}
+/* A régua do cabeçalho, do sistema (`css/components.css`). Faltava
+   nesta página porque o modal de "novo registro" desenha o próprio
+   cabeçalho; o das fontes segue o do styleguide. */
+.modal-rule{height:1px;background:var(--border);margin:24px 0}
+
+/* O caderno visível (Fase 3b). "De onde saiu isso?" é a pergunta que
+   o produto existe para responder; aqui ela tem uma tela. Larga, porque
+   cada bloco carrega fonte, trecho e as frases que dependem dela. */
+/* 24px de respiro, como todo modal do sistema (`css/components.css`
+   define `padding:24px` no `.modal`). A cópia local desta página zera
+   o padding porque o modal de "novo registro" tem casca própria
+   (`.np-main`) — quem não tem casca precisa pedir o respiro de volta. */
+.fontes-caderno{
+  width:min(760px, 92vw);max-height:86vh;
+  display:flex;flex-direction:column;
+  padding:24px;
+}
+/* O botão do rodapé do modal tem altura de 44 e largura de conteúdo,
+   como os irmãos logo abaixo. Sem esta linha o "Fechar" herdava a
+   largura de 100% das variantes do painel da tarefa. */
+.modal .btn--ghost{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px}
+.fonte-bloco{
+  padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.fonte-bloco:last-child{border-bottom:0}
+.fonte-titulo{
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;
+  color:var(--text-primary);
+}
+/* O <a> aqui leva `.link.link--sublinhado` do sistema — nada a dizer. */
+.fonte-url{
+  font-size:var(--type-overline);line-height:var(--type-overline-lh);
+  color:var(--text-muted);
+  word-break:break-all;margin-top:2px;
+}
+.fonte-trecho{
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);
+  color:var(--text-secondary);
+  margin-top:6px;padding-left:10px;
+  border-left:2px solid var(--border);
+}
+.fonte-nota{
+  font-size:var(--type-overline);line-height:var(--type-overline-lh);
+  color:var(--text-muted);
+  margin-top:8px;
+}
+.fonte-itens{margin-top:4px;padding-left:16px;list-style:disc}
+.fonte-item{
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);
+  color:var(--text-secondary);
+  margin-top:4px;
+}
+/* Afirmação que a pessoa tirou do quadro continua listada: ela
+   explica por que aquela fonte foi lida e paga. Apagada da vista
+   seria a metade da história. */
+.fonte-item--fora{opacity:.5;text-decoration:line-through}
+.fonte-item--fora .fonte-marca{text-decoration:none;font-style:italic}
+.fonte-marca{color:var(--text-muted)}
+/* Fonte que não sustenta mais nada: dita, e no fim da lista. */
+.fonte-bloco--orfa .fonte-titulo{color:var(--text-muted)}
+.fonte-bloco--sem{background:var(--bg-warning);border-radius:var(--radius);padding:12px}
 .modal .btn--primary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px;background:var(--fill-accent);color:var(--text-on-accent);box-shadow:var(--shadow-xs)}
 .modal .btn--primary:hover{background:var(--fill-accent-hover)}
 .modal .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
@@ -1571,6 +1875,24 @@ body.modal-open{overflow:hidden}
 .pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .pf-extrato-valor.is-entrada{color:var(--text-success)}
 .pf-extrato-valor.is-saida{color:var(--text-secondary)}
+/* DIN-014 — consumo medido que não virou lançamento (CREDITOS_COBRAR=nao).
+   Sem sinal e em cor de apoio: ele não mexeu no saldo, e um "− R$ 0,43"
+   igual aos outros faria a pessoa procurar a diferença no saldo. */
+.pf-extrato-valor.is-neutro{color:var(--text-secondary);font-weight:500}
+.pf-extrato-item.is-nao-cobrado{opacity:.85}
+.pf-extrato-etiqueta{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 6px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  font-size:11px;
+  line-height:16px;
+  font-weight:500;
+  color:var(--text-secondary);
+  white-space:nowrap;
+  vertical-align:1px;
+}
 .pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
 
 /* Barra de evolução do crédito: o trecho disponível encolhe conforme
@@ -1936,7 +2258,7 @@ body.modal-open{overflow:hidden}
              BOARD-LEITURA-003 continua valendo por cima disto —
              tarefa concluída segue sem pesquisar. -->
         <button type="button" class="btn btn--primary" id="btnGerarIA"
-                title="Pesquisar concorrentes e mercado para esta tarefa.">
+                title="Pesquisar esta tarefa: ler o que a empresa já sabe, planejar as perguntas e buscar com fonte.">
           <svg class="icon-busca" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
           <svg class="icon-girando" viewBox="0 0 24 24" aria-hidden="true" fill="none">
             <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
@@ -1950,6 +2272,21 @@ body.modal-open{overflow:hidden}
         </button>
 
         <div class="explainer-divider" role="presentation"></div>
+
+        <!-- O relatório da investigação (Fase 3c). Morava numa saída da
+             narração, no assistente; veio para cá em 16/09/2026 por
+             decisão do Ricardo.
+
+             `hidden` até existir relatório, e é por isso que ele não
+             aparece numa tarefa que nunca foi pesquisada: um "Download"
+             que baixa nada é o mesmo defeito que tirou daqui o
+             "Solicitar ajuda do Designer", logo abaixo. Quem tira o
+             `hidden` é o evento `pesquisa:relatorio`, de js/pesquisa.js. -->
+        <button type="button" class="btn btn--ghost" id="btnBaixarRelatorio" hidden
+                title="Baixa a investigação inteira num arquivo, com as fontes e o que não foi mantido.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg>
+          <span>Download</span>
+        </button>
 
         <!-- "Solicitar ajuda do Designer" saiu: era um botão sem
              nenhum ouvinte de clique. Mesmo critério da decisão A13
@@ -3540,11 +3877,20 @@ body.modal-open{overflow:hidden}
       }
     }
 
-    return window.BoardAcoes.salvar().then(terminou, function(){
-      /* Erro já avisado por BoardAcoes.salvar — aqui só devolve o
-         botão ao normal, para não ficar "Salvando..." para sempre. */
-      terminou();
-    });
+    /* Resolve com true/false em vez de engolir a falha. O erro
+       continua sendo avisado por `BoardAcoes.salvar` (toast), e quem
+       chama continua podendo ignorar o valor — "Voltar" faz isso, de
+       propósito: falhar em gravar não pode prender a pessoa na tela.
+
+       Quem NÃO pode ignorar é a pesquisa: ela acabou de dizer "Montei
+       3 quadros no board", e se a gravação falhou essa frase vira uma
+       meia-verdade que custa o resultado de uma busca paga. Rejeitar
+       em vez de resolver criaria rejeição não tratada em todos os
+       outros pontos de chamada, que são muitos. */
+    return window.BoardAcoes.salvar().then(
+      function(){ terminou(); return true; },
+      function(){ terminou(); return false; }
+    );
   }
 
   /* Exposto porque quem grava nem sempre mora neste arquivo: a
@@ -4115,6 +4461,18 @@ body.modal-open{overflow:hidden}
   }
 
   function criarQuadroDocumento(titulo, texto, fontes){
+    /* BOARD-LEITURA-003, a mesma guarda de `criarQuadroResultado`.
+       Faltava aqui, e o preço foi o defeito de 16/09/2026: numa tarefa
+       concluída esta função montava os quadros na tela, a narração
+       dizia "Montei 3 quadros no board", e `dispararAutosave` recusava
+       em silêncio — porque ELE checa `modoLeitura` na primeira linha.
+       A pessoa via o resultado, voltava, e não havia nada gravado.
+
+       Duas portas para a mesma regra, e só uma a cumpria. Devolver
+       `null` põe esta no mesmo caminho da irmã: quem chama já sabe
+       dizer "Tarefa concluída não recebe resultado novo". */
+    if(modoLeitura) return null;
+
     var q = criarQuadro(titulo || 'Documento', 1, ['']);
     q.classList.add('ideas-panel--doc');
     q.dataset.tipo = 'documento';
@@ -4895,6 +5253,12 @@ body.modal-open{overflow:hidden}
     botao.disabled = ligado;
     botao.classList.toggle('is-pesquisando', ligado);   // lupa vira o indicador girando
     botao.setAttribute('aria-busy', ligado ? 'true' : 'false');
+    /* D6, revisto em 15/09/2026: o rótulo volta a ser "Pesquisar".
+       A troca de 14/09 para "Investigar" descrevia o mecanismo (um
+       processo em etapas) e não o que a pessoa quer fazer; "Pesquisar"
+       é a palavra que ela já usa, e o resto do plano nunca deixou de
+       chamar assim. O rótulo em curso diz "Pesquisando..." pelo mesmo
+       motivo. */
     if(rotulo) rotulo.textContent = ligado ? 'Pesquisando...' : 'Pesquisar';
   }
 
@@ -4916,6 +5280,44 @@ body.modal-open{overflow:hidden}
       .catch(function(){ return false; })   // rede morta nao pode deixar o botao girando para sempre
       .then(function(){ carregando(false); });
   });
+
+  /* ---------- Download do relatório ----------
+     Veio da narração para cá em 16/09/2026. O painel não rola; o
+     histórico do assistente rola — e uma ação que a pessoa refaz dias
+     depois não podia morar num lugar que ela precisa procurar.
+
+     O botão nasce `hidden` e só aparece quando existe investigação
+     entregue nesta tarefa. Duas portas para isso, e as duas são
+     necessárias: o EVENTO, para o caso normal (a pesquisa termina com
+     a página aberta), e a PERGUNTA no carregamento, porque a
+     recuperação de uma investigação anterior pode acontecer antes
+     deste script rodar — e aí o evento já teria passado. */
+  var btnRelatorio = document.getElementById('btnBaixarRelatorio');
+  if(btnRelatorio){
+    function mostrarRelatorio(tem){
+      btnRelatorio.hidden = !tem;
+    }
+
+    document.addEventListener('pesquisa:relatorio', function(ev){
+      mostrarRelatorio(!!(ev.detail && ev.detail.disponivel));
+    });
+
+    if(window.PesquisaPainel && typeof window.PesquisaPainel.temRelatorio === 'function'){
+      mostrarRelatorio(window.PesquisaPainel.temRelatorio());
+    }
+
+    btnRelatorio.addEventListener('click', function(){
+      var painel = window.PesquisaPainel;
+      if(!painel || typeof painel.baixarRelatorio !== 'function') return;
+      var nome = painel.baixarRelatorio();
+      /* Só falamos quando FALHA. O download bem-sucedido já se anuncia
+         sozinho — o navegador mostra o arquivo chegando —, e um toast
+         confirmando o que a pessoa acabou de ver seria ruído. */
+      if(!nome && typeof window.mostrarMensagem === 'function'){
+        window.mostrarMensagem('Nao consegui gerar o arquivo neste navegador.');
+      }
+    });
+  }
 })();
 </script>
 

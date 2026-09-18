@@ -1,6 +1,7 @@
 # Regras de Negócio — Assistente de IA: fronteira e segurança
 
-> **Versão:** 1.0.0 · **Status:** Regras definidas; implementação não iniciada
+> **Versão:** 1.0.1 · **Status:** Parcialmente implementado
+> **Conferido em:** 13/09/2026 — `IA-ISO-003` e `IA-ISO-004` são citadas e aplicadas em `api/src/` (9 ocorrências); as demais regras de `IA-ISO`, e `IA-INJ`, não foram conferidas
 > **Módulo:** Assistente de IA · **Página:** `visao_do_projeto.html` (painel lateral)
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`ia-assistente-conhecimento.md`](ia-assistente-conhecimento.md) · [`ia-assistente-conversa.md`](ia-assistente-conversa.md) · [`../ideias/ideias-quadro.md`](../ideias/ideias-quadro.md) — de onde vem a corrente de isolamento
@@ -101,4 +102,5 @@ O `:projetoId` está na rota porque a pergunta acontece dentro de um projeto, e 
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.0.1 | 2026-09-13 | Sem mudança de regra. Cabeçalho corrigido: dizia "implementação não iniciada", mas IA-ISO-003 e IA-ISO-004 já são aplicadas no backend. O restante segue por conferir — o status agora diz isso em vez de negar a implementação inteira. |
 | 1.0.0 | 2026-08-25 | Documento criado. Fronteira da empresa aplicada à montagem do contexto (IA-ISO), herança de acesso do especialista, e tratamento de conteúdo de idéia como dado e nunca instrução (IA-INJ). Decisões A6 a A9. |

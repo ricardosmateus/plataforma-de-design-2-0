@@ -1,6 +1,7 @@
 # Regras de Negócio — Exclusão de Idéias
 
-> **Versão:** 1.0.0 · **Status:** Regras definidas; implementação não iniciada
+> **Versão:** 1.0.1 · **Status:** Implementado · conferência parcial
+> **Conferido em:** 13/09/2026, na conferência de `visao_do_projeto.html` contra o código: contrato de `DELETE` e a restrição do especialista conferidos; regras do menu (IDEIA-MENU) ainda não
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`ideias-quadro.md`](ideias-quadro.md) · [`ideias-movimentacao.md`](ideias-movimentacao.md) · [`ideias-criacao.md`](ideias-criacao.md)
@@ -93,4 +94,5 @@ Excluir uma idéia **já arquivada** devolve `404`, não `200`. Um segundo `DELE
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.0.1 | 2026-09-13 | Sem mudança de regra. Cabeçalho corrigido: dizia "implementação não iniciada" com o `DELETE` no ar. Conferidos o arquivamento e o `podeExcluir` que barra o especialista. |
 | 1.0.0 | 2026-08-24 | Documento criado. Regras de exclusão (IDEIA-EXCL) com arquivamento, restrição do especialista, regras do menu do card e remoção do "Duplicar". Decisões I12 e I13. |

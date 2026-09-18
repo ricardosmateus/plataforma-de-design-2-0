@@ -151,3 +151,109 @@ export function tetoUsdMicros(modelo: string, textoEntrada: string, maxTokensSai
     cacheLeitura: 0,
   });
 }
+
+/* ============================================================
+   O preço da busca encadeada — 14/09/2026
+   ============================================================
+   A Anthropic cobra por BUSCA, além dos tokens: US$ 10 por mil
+   buscas, ou US$ 0,01 cada. Isso ficou fora da razão desde que a
+   pesquisa existe: `consumos_pesquisa.buscas` guardava a contagem,
+   e a contagem nunca virava dinheiro.
+
+   Não era desprezível — era a MAIOR parte. Na investigação sobre a
+   Loggi (14/09/2026): 4 buscas = US$ 0,04, contra US$ 0,036 de
+   tokens. A plataforma cobrou metade do que pagou, e a comissão de
+   30% incidia sobre essa metade.
+
+   Preço de tabela, não estimativa: é o mesmo tipo de número que
+   `TABELA` guarda para os modelos, e por isso pode entrar na razão
+   sem ferir "estimar seria pôr número inventado".
+   ============================================================ */
+export const PRECO_BUSCA_USD_MICROS = 10_000; // US$ 0,01
+
+export function custoBuscasUsdMicros(buscas: number | undefined | null): number {
+  if (!Number.isFinite(buscas ?? NaN) || (buscas as number) <= 0) return 0;
+  return Math.round(buscas as number) * PRECO_BUSCA_USD_MICROS;
+}
+
+/* ------------------------------------------------------------
+   Quanto uma busca encadeada consome de ENTRADA, no pior caso
+   ------------------------------------------------------------
+   O teto acima serve para uma chamada simples: o que entra é o
+   texto do prompt. Numa busca com ferramenta, não: o resultado da
+   web volta para o contexto, e o contexto INTEIRO é reenviado a
+   cada rodada. A entrada cresce quadraticamente com o número de
+   buscas, não linearmente.
+
+   Medido em 14/09/2026, na investigação da Loggi: 4 buscas,
+   **31.196 tokens de entrada**. A estimativa em uso na época
+   contava só o prompt — uns 400. Errava por quase 80 vezes, o que
+   fazia a reserva não reservar nada e o teto de R$ 3 não segurar
+   coisa alguma. Pior: era esse número que aparecia para a pessoa
+   como "custo estimado", e PES-007 existe justamente para esse
+   número ser verdade.
+
+   O modelo abaixo é (k+1) rodadas reenviando o prompt, mais o
+   acúmulo dos resultados:
+
+     entrada ≈ (k+1)·P + R·k·(k+1)/2
+
+   Com P ≈ 1.000 e k = 4, dá ~30 mil — que é o que se mediu. `R` é
+   o único número calibrado a partir de UMA observação; se a conta
+   começar a divergir do que a razão registra, é ele que se ajusta
+   primeiro. */
+export const TOKENS_POR_RODADA_DE_BUSCA = 2_500;
+
+/* Entrada acumulada de uma chamada com ferramenta.
+
+   `rodadas` é quantas vezes a ferramenta pode ser usada — busca e
+   leitura de página contam igual, porque as duas fazem o modelo
+   responder de novo com o contexto inteiro atrás.
+
+   `tokensPorRodada` é o que cada uso acrescenta. Quando os dois
+   tipos convivem, passa-se o MAIOR: a reserva deve errar para cima
+   (o troco volta em `liberar`), e errar para baixo deixa passar
+   chamada que a pessoa não tinha saldo para cobrir. */
+export function entradaEstimadaComFerramentas(
+  textoEntrada: string,
+  rodadas: number,
+  tokensPorRodada: number,
+): number {
+  const p = tokensEstimados(textoEntrada);
+  const k = Math.max(0, Math.floor(rodadas));
+  return (k + 1) * p + Math.max(0, tokensPorRodada) * ((k * (k + 1)) / 2);
+}
+
+export function entradaEstimadaComBusca(textoEntrada: string, maxBuscas: number): number {
+  return entradaEstimadaComFerramentas(textoEntrada, maxBuscas, TOKENS_POR_RODADA_DE_BUSCA);
+}
+
+/** Teto de uma consulta que USA busca: tokens (com o acúmulo das
+ *  rodadas) mais o preço das buscas em si. É este que a reserva e a
+ *  estimativa mostrada à pessoa devem usar — nunca `tetoUsdMicros`,
+ *  que só conhece o prompt. */
+export function tetoBuscaUsdMicros(
+  modelo: string,
+  textoEntrada: string,
+  maxTokensSaida: number,
+  maxBuscas: number,
+  /* Fase 1b: páginas abertas com `web_fetch`. A ferramenta não cobra
+     por uso, mas cada página entra no contexto e volta a cada rodada
+     — e uma página é bem mais pesada que um punhado de trechos. */
+  maxLeituras = 0,
+  tokensPorPagina = 0,
+): number | null {
+  const rodadas = Math.max(0, maxBuscas) + Math.max(0, maxLeituras);
+  const porRodada = Math.max(TOKENS_POR_RODADA_DE_BUSCA, maxLeituras > 0 ? tokensPorPagina : 0);
+
+  const tokens = custoUsdMicros(modelo, {
+    entrada: entradaEstimadaComFerramentas(textoEntrada, rodadas, porRodada),
+    saida: Math.max(0, maxTokensSaida),
+    cacheEscrita: 0,
+    cacheLeitura: 0,
+  });
+  if (tokens === null) return null;
+  /* Só a busca tem preço por unidade; `web_fetch` é de graça além
+     dos tokens que ela mete no contexto. */
+  return tokens + custoBuscasUsdMicros(maxBuscas);
+}

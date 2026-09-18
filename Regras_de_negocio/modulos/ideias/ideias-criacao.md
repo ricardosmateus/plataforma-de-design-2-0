@@ -1,6 +1,7 @@
 # Regras de Negócio — Criação e Edição de Idéias
 
-> **Versão:** 1.1.2 · **Status:** Regras definidas; implementação não iniciada
+> **Versão:** 1.2.0 · **Status:** Implementado · conferência parcial
+> **Conferido em:** 16/09/2026, na investigação de por que o alerta de duplicidade não disparava: `duplicidade.ts`, as rotas de `ideias.ts` e a rota `/confirmar` de `ia.ts` conferidas contra o código e contra as 152 idéias reais do projeto Startup/iHouseLog; regras da modal (IDEIA-MODAL) ainda não
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`ideias-quadro.md`](ideias-quadro.md) · [`ideias-movimentacao.md`](ideias-movimentacao.md) · [`ideias-exclusao.md`](ideias-exclusao.md)
@@ -58,7 +59,7 @@ Origem: pedido do Ricardo, 26/08/2026 — evitar que o quadro infle com idéias 
 
 | ID | Regra | Fonte |
 |---|---|---|
-| IDEIA-DUPL-001 | Ao **criar ou editar** uma idéia, o servidor compara título e descrição, juntos, com toda idéia **ativa** do projeto — as três colunas, nunca uma arquivada. | Decisão I12 |
+| IDEIA-DUPL-001 | Ao **criar ou editar** uma idéia, o servidor compara título e descrição, juntos, com toda idéia **ativa** do projeto — as três colunas, nunca uma arquivada. Vale para **toda porta** que cria ou edita idéia, não só a tela do quadro: a confirmação de uma ação proposta pelo assistente passa pela mesma checagem (IDEIA-DUPL-009). | Decisão I12; porta da IA em 16/09/2026 |
 | IDEIA-DUPL-002 | A comparação usa um limiar de semelhança, não igualdade exata: variação de acento, caixa e ordem das palavras não escondem uma duplicata, mas conteúdo só parcialmente parecido não dispara o aviso à toa. | Decisão I12 |
 | IDEIA-DUPL-003 | Encontrada uma parecida e a pessoa ainda não confirmou que quer mesmo assim, o servidor **não grava nada** — devolve qual idéia é a parecida, numa resposta de sucesso (não é erro: é uma decisão pendente, mesmo desenho de `acao_proposta` no assistente de IA). | Decisão I12 |
 | IDEIA-DUPL-004 | A tela mostra um **alerta flutuante**, não uma modal bloqueante: a pessoa continua vendo o quadro atrás dele enquanto decide. | Decisão I12 |
@@ -66,6 +67,7 @@ Origem: pedido do Ricardo, 26/08/2026 — evitar que o quadro infle com idéias 
 | IDEIA-DUPL-006 | O alerta oferece exatamente duas ações: **"Criar"/"Salvar"** (confirma e grava mesmo assim, rotulado conforme é criação ou edição) e **"Cancelar"** (descarta a tentativa nova; a idéia existente não é tocada). Não há uma terceira opção que mescle as duas. | Decisão I12 (ajustada 26/08/2026) |
 | IDEIA-DUPL-007 | Nunca bloqueia o salvamento de forma definitiva — é aviso, não trava. IDEIA-CRIA-007 (títulos repetidos são permitidos) continua valendo integralmente. | Decorre de IDEIA-CRIA-007 |
 | IDEIA-DUPL-008 | Vale tanto para **criar** quanto para **editar**. Ao editar, a própria idéia sendo editada nunca é comparada consigo mesma. | Decisão I12 |
+| IDEIA-DUPL-009 | Confirmar uma ação `criar_ideia`/`editar_ideia` proposta pelo assistente passa pela mesma checagem. Achando uma parecida, **não grava nada** e a sugestão continua `pendente` — o aviso aparece dentro do próprio cartão da sugestão e o "Confirmar" vira "Criar mesmo assim"/"Salvar mesmo assim". | Corrigido 16/09/2026 |
 
 **Por que isto não é unicidade (IDEIA-DUPL-007).** A tentação óbvia seria recusar o salvamento quando algo parecido já existe — mas a decisão I10 já estabeleceu, de propósito, que títulos repetidos são legítimos em brainstorm. Bloquear reintroduziria pela porta dos fundos exatamente o que I10 rejeitou. O que existe aqui é avisar cedo o bastante para a pessoa decidir com informação — nunca decidir por ela.
 
@@ -73,7 +75,13 @@ Origem: pedido do Ricardo, 26/08/2026 — evitar que o quadro infle com idéias 
 
 **Por que o alerta não é a modal de excluir.** A modal de exclusão é destrutiva e irreversível — faz sentido exigir foco total antes de confirmar. Aqui não: a pessoa pode querer reler a idéia existente, comparar, mudar de ideia sobre o texto novo. Uma modal bloqueante atrapalharia exatamente esse ir-e-vir; um alerta flutuante deixa o quadro visível e a decisão acontece no próprio ritmo de quem está brainstormando.
 
-**Sobre o limiar de semelhança (IDEIA-DUPL-002).** É um número calibrado às pressas, sem uso real para validar contra — fica documentado no código (`api/src/ideias/duplicidade.ts`) como a primeira coisa a ajustar se o alerta disparar demais (viraria ruído que a pessoa aprende a ignorar) ou de menos (deixaria de cumprir o propósito). Ver pendência correspondente em §4.
+**Por que a checagem vale também na porta da IA (IDEIA-DUPL-009).** A regra sempre disse "ao criar ou editar uma idéia", e a rota de confirmação do assistente gravava direto, sem passar por ela. Não é um furo qualquer: é justamente a IA que propõe criar idéias a partir de uma conversa longa, onde a chance de propor algo que já está no quadro é **maior**, não menor. O aviso fica dentro do cartão da sugestão, e não num alerta flutuante como na tela do quadro, porque a decisão é sobre *aquela* sugestão — tirar o aviso de perto dela obrigaria a pessoa a lembrar a qual das mensagens ele se referia.
+
+**Sobre os pesos e o limiar (IDEIA-DUPL-002) — recalibrado em 16/09/2026.** A calibração original (peso 0.5 no título, 0.5 na descrição, limiar 0.6) tinha um defeito aritmético, não de gosto: com peso 0.5, **um título idêntico chegava no máximo a 0.5** e por construção nunca alcançava sozinho o limiar. O alerta passava a exigir semelhança de descrição ≥ 0.2 em todo caso, e o índice de Jaccard pune reescrita com força — descrever a mesma idéia com outras palavras derruba o índice para perto de zero.
+
+Medido contra as 152 idéias reais do projeto Startup/iHouseLog, nos 11.476 pares possíveis: **zero alertas**, inclusive nos dois pares com título 60–67% igual. Na prática só a cópia literal disparava — que é exatamente o caso que ninguém comete sem perceber. O caso real de duplicidade é reescrever, sem lembrar, uma idéia que já está lá.
+
+Calibração nova: **0.7 no título, 0.3 na descrição, limiar 0.6 sem mudança**. Título idêntico passa a valer 0.7 e dispara sozinho — o comportamento que a regra sempre descreveu. Os mesmos 11.476 pares reais continuam com **zero falsos alertas**, então o peso maior no título não trocou silêncio por ruído. O que continua fora do alcance é sinônimo ("Locker" x "Armário inteligente"): sobreposição de palavras não enxerga isso, e resolver exigiria embeddings — ver pendência em §4.
 
 **Bug corrigido em 26/08/2026 — o alerta escondido bloqueava o clique em "Nova idéia".** `.dup-alerta{display:flex}` tem a mesma especificidade CSS do `[hidden]{display:none}` do navegador, e regra de autor sempre vence empate contra regra do user-agent — então o elemento nunca ficava de fato `display:none`, mesmo com o atributo `hidden` presente: continuava ocupando layout e, principalmente, continuava recebendo eventos de clique por cima do cabeçalho, mesmo invisível (`opacity:0` não desliga hit-testing). Resultado: com o alerta oculto, clicar em "Nova idéia" não fazia nada. O mesmo defeito, com a mesma causa, já existia em `.toast` — corrigido junto, mesma correção. Ajuste: `pointer-events:none` no estado padrão, `.dup-alerta[hidden]{display:none}` (mais específico, garante o repouso) e `pointer-events:auto` só em `.dup-alerta.is-visible`. Este é o mesmo padrão já usado em `.btn[hidden]`, na mesma página, por um incidente real anterior em `projetos.html`.
 
@@ -107,6 +115,21 @@ Mesmo corpo e mesmas respostas do `POST` — incluindo a checagem de duplicidade
 
 O `PUT` **não** altera `status` — mover tem rota própria (`ideias-movimentacao.md` §2). Uma edição nunca move um card, e uma movimentação nunca reescreve texto.
 
+### `POST /empresas/:empresaId/projetos/:projetoId/ia/mensagens/:mensagemId/confirmar`
+
+A rota é do assistente (`ia-assistente-conhecimento.md` §1.5), e aparece aqui por causa de IDEIA-DUPL-009: quando a ação confirmada é `criar_ideia` ou `editar_ideia`, ela cria/edita idéia e por isso passa pela mesma checagem das rotas acima.
+
+**Corpo:** vazio, ou `{ "ignorar_duplicata": true }` no reenvio.
+
+| Situação | Resposta | O que a conversa faz |
+|---|---|---|
+| Sucesso | `200` com `{ ideia, mensagem }` | Atualiza o quadro e marca a sugestão como confirmada |
+| Idéia ativa parecida encontrada, e `ignorar_duplicata` não veio `true` | `200` com `{ possivel_duplicata: ideia }` | **Não grava nada.** A sugestão continua `pendente`; o cartão mostra o aviso e o "Confirmar" vira "Criar mesmo assim" |
+| A sugestão já foi respondida | `409` | Recarrega a conversa |
+| A sugestão não vale mais (idéia sumiu, dados inválidos) | `422` | Recarrega a conversa |
+
+Repare na diferença com o `POST /ideias`: lá a resposta com `possivel_duplicata` encerra a tentativa e a pessoa recomeça pelo alerta; aqui a **sugestão sobrevive** — ela continua pendente, e o mesmo par de links decide. Se fosse descartada ao avisar, o aviso custaria a sugestão, e a pessoa pagaria por ter sido avisada.
+
 ---
 
 ## 3. Decisões
@@ -117,6 +140,7 @@ O `PUT` **não** altera `status` — mover tem rota própria (`ideias-movimentac
 | I9 | A importância é obrigatória? | Não. Zero é um valor válido e significa "sem prioridade definida". Obrigar uma nota no instante da criação produz números inventados. | 24/08/2026 |
 | I10 | Título de idéia é único no projeto? | Não. Repetição é legítima em brainstorm. Consequência assumida: nenhuma parte do sistema pode identificar idéia por título (ver IDEIA-MOV-015). | 24/08/2026 |
 | I11 | A IA gera idéias nesta versão? | **Não** — adiada com o restante da IA (decisão I3, `ideias-quadro.md`). A modal "Gerar com ajuda da IA" e seu botão saem da tela até a funcionalidade existir. | 24/08/2026 |
+| I13 | Como calibrar o alerta de duplicidade, e ele vale na porta da IA? | **Peso 0.7 no título / 0.3 na descrição, limiar 0.6; e sim, vale em toda porta.** A calibração 0.5/0.5 impedia o título de disparar sozinho e deixava o alerta mudo (zero disparos em 11.476 pares reais). A porta da IA gravava sem checar — corrigida. | 16/09/2026 |
 | I12 | Deve haver checagem de duplicidade ao salvar uma idéia? | **Sim, como aviso — nunca como bloqueio.** Compara título e descrição, juntos, com toda idéia ativa do projeto; encontrando uma parecida, mostra um alerta flutuante — já filtrando o quadro para ela — com duas ações ("Criar"/"Salvar" ou "Cancelar") e não grava nada até a pessoa decidir. Preserva I10 integralmente: não é unicidade, é uma decisão informada. | 26/08/2026 |
 
 ---
@@ -128,7 +152,8 @@ O `PUT` **não** altera `status` — mover tem rota própria (`ideias-movimentac
 | Geração por IA | **Adiada (I3/I11).** Quando entrar, define-se: quantas idéias por vez, se caem direto no quadro ou passam por aprovação, custo em créditos, e que contexto do projeto alimenta o modelo. |
 | Anexos na idéia | O compositor do assistente tem um botão de anexo. Não há regra de anexo em idéia, e o campo não existe no modelo. Fora do escopo desta versão. |
 | Histórico de edição | Não se registra quem editou o quê. Se virar requisito (provável, com especialistas externos escrevendo), exige tabela de auditoria própria. |
-| Limiar de semelhança do IDEIA-DUPL | Calibrado sem uso real para validar contra (`LIMIAR_DUPLICATA` em `api/src/ideias/duplicidade.ts`). Se o alerta disparar demais (vira ruído que a pessoa aprende a ignorar) ou de menos (deixa de cumprir o propósito), este número — e os pesos entre título e descrição — são o primeiro ajuste a fazer, de preferência com casos reais do quadro em mãos. |
+| Limiar de semelhança do IDEIA-DUPL | **Recalibrado em 16/09/2026** (decisão I13) contra as 152 idéias reais do projeto Startup/iHouseLog: 0.7/0.3, limiar 0.6, zero falsos alertas em 11.476 pares. Continua sendo o primeiro número a mexer se o uso real mostrar avisos demais ou de menos (`PESO_TITULO`/`LIMIAR_DUPLICATA` em `api/src/ideias/duplicidade.ts`), agora com uma base de comparação de verdade. |
+| Duplicidade por sinônimo | Fora do alcance da técnica atual. "Seguro encomendas" x "Seguro para encomendas" é pego; "Locker" x "Armário inteligente" não, porque sobreposição de palavras não enxerga sinônimo. Resolver exige comparação semântica (embeddings), com custo e latência em toda gravação de idéia — decisão ainda não tomada. |
 
 ---
 
@@ -136,6 +161,8 @@ O `PUT` **não** altera `status` — mover tem rota própria (`ideias-movimentac
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.2.0 | 2026-09-16 | Alerta de duplicidade recalibrado e estendido (decisão I13). **Pesos** passam de 0.5/0.5 para 0.7/0.3 entre título e descrição, limiar inalterado: com 0.5 o título não alcançava o limiar sozinho e o alerta disparava zero vezes nos 11.476 pares das 152 idéias reais. **Nova IDEIA-DUPL-009**: confirmar uma ação `criar_ideia`/`editar_ideia` do assistente passa pela mesma checagem — essa porta gravava direto, sem checar. Contrato do `/confirmar` documentado em §2. Cinco testes novos em `api/testes/ideias-duplicidade.test.ts`, três deles travando a regressão dos pesos e dois guardando contra falso alerta, tirados de pares reais. |
+| 1.1.3 | 2026-09-13 | Sem mudança de regra. Cabeçalho corrigido: dizia "implementação não iniciada" com `POST`/`PUT` no ar e o alerta de duplicidade funcionando em `js/ideias.js`. |
 | 1.1.2 | 2026-08-26 | Correção de bug: `.dup-alerta` (e, junto, `.toast`, mesmo defeito) ficava clicável e interceptando cliques mesmo escondido (`hidden`), por causa de um empate de especificidade CSS entre `[hidden]` e `display:flex` — bloqueava o clique em "Nova idéia". Corrigido com `pointer-events:none`/`[hidden]{display:none}`/`pointer-events:auto` só em `.is-visible`, mesmo padrão já usado em `.btn[hidden]`. |
 | 1.1.1 | 2026-08-26 | Ajustes de acabamento no alerta de duplicidade (IDEIA-DUPL-005/006): o quadro já vem filtrado para a idéia parecida assim que o alerta aparece, sem precisar clicar em "Ver idéia parecida"; botões renomeados de "Manter a criação/edição" / "Manter apenas o card atual" para "Criar"/"Salvar" e "Cancelar"; alerta mais largo. |
 | 1.1.0 | 2026-08-26 | Novo alerta de duplicidade ao criar ou editar uma idéia (IDEIA-DUPL-001 a 008, decisão I12): compara título e descrição com as idéias ativas do projeto e, encontrando uma parecida, avisa por um alerta flutuante em vez de gravar — a pessoa decide manter a nova tentativa ou o card existente. Não é unicidade: I10 continua valendo. Contrato da API (§2) ganha `ignorar_duplicata` e a resposta `possivel_duplicata`. |

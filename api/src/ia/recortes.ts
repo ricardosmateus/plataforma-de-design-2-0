@@ -330,6 +330,7 @@ export async function segmentarIdeiaEmSegundoPlano(ideiaId: string): Promise<voi
         modelo: d.modelo,
         uso: d.uso,
         requisicaoId: d.requisicaoId,
+        operacaoId,
       });
     }
 

@@ -138,9 +138,34 @@ export async function rotasGrafo(app: FastifyInstance) {
     /* O escopo desce pela relação `projeto`: o `where` é do banco, não
        de uma checagem depois. Idéia arquivada fica fora — foi
        descartada, e ressuscitá-la no grafo desfaria a decisão de quem
-       a arquivou (IDEIA-EXCL-001). */
+       a arquivou (IDEIA-EXCL-001).
+
+       `status: 'finalizado'` FALTAVA AQUI, e o defeito só apareceu com
+       volume (17/09/2026). O mapa é o conhecimento da empresa, e
+       conhecimento é o que foi finalizado — é o que `/temas` já
+       filtrava, é o que o estado vazio do cliente promete em palavras
+       ("o grafo aparece quando houver idéia finalizada e classificada")
+       e é a fronteira de IA-CONHEC-002. Sem o filtro, toda idéia de
+       brainstorm entrava como nó.
+
+       Por que ninguém viu antes: com poucas idéias soltas o desenho
+       ficava só um pouco mais sujo. Com 152 idéias importadas de uma
+       vez em "Minhas idéias" — todas sem `assunto` e sem `tags`,
+       portanto sem aresta nenhuma —, e com o servidor ordenando por
+       `criadoEm desc`, elas chegaram primeiro e consumiram inteiro o
+       teto de 130 nós de idéia do cliente (`dobrarExcedente` em
+       `js/grafo.js`). O grafo virou uma nuvem de pontos soltos e as
+       idéias que tinham categoria foram TODAS dobradas para fora da
+       tela. Nada no código do grafo mudou; o dado mudou, e o filtro
+       que faltava deixou o dado decidir o desenho.
+
+       Idéia finalizada SEM categoria continua entrando: ela é
+       conhecimento, só não classificado, e é isso que o balde "sem
+       pasta" existe para dizer. O que sai são as que ainda não são
+       conhecimento. */
     const escopo = {
       arquivadoEm: null,
+      status: 'finalizado',
       projeto: { empresaId: params.data.empresaId, arquivadoEm: null },
     } as const;
 
@@ -330,9 +355,19 @@ export async function rotasGrafo(app: FastifyInstance) {
         if (nome) categorias.add(nome);
       }
 
-      /* Sem categoria NENHUMA — nem pasta, nem tag. É o balde. */
+      /* Sem categoria NENHUMA — nem pasta, nem tag. É o balde.
+
+         `status === 'finalizado'` FALTAVA AQUI (corrigido 17/09/2026).
+         O balde diz, em palavras, "elas estão finalizadas, mas ainda
+         não têm pasta no mapa", e o botão que ele oferece chama
+         `/reclassificar`, que só olha finalizadas. Sem o filtro, o
+         número contava TODA idéia sem categoria — inclusive as de
+         brainstorm, que não deveriam ter pasta ainda. Com as 152
+         importadas, a tela anunciou "155 idéias sem pasta" e o botão
+         não tinha o que fazer com 152 delas: um aviso que acusa um
+         problema que não existe e oferece um remédio que não age. */
       if (categorias.size === 0) {
-        semCategoria++;
+        if (i.status === 'finalizado') semCategoria++;
         continue;
       }
 

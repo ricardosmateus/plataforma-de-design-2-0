@@ -8,6 +8,12 @@ Escrita depois do código, documentando o que existe de fato. Fase 3
 (lacunas) está planejada e **não** construída — não há arquivo,
 prompt nem coluna em uso para ela.
 
+> **Nota de 13/09/2026.** Esta Skill descreve **como** enriquecer. O que
+> o produto faz — e o que ele garante a quem lê — está registrado, com
+> ID, em `Regras_de_negocio/modulos/temas/temas-pagina.md` (`TEMA-SINTESE`
+> e `TEMA-ORIGEM`). Em caso de divergência, vale a regra.
+> Ver "Skill não é regra" em `Skills/regra_de_negocio.skill`.
+
 ## Objetivo
 
 A página de tema responde "o que foi escrito sobre isto". Faltavam

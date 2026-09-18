@@ -36,10 +36,22 @@
 export const MICROS_POR_REAL = 1_000_000;
 export const MICROS_POR_CENTAVO = 10_000;
 
-/* A comissão em PONTOS-BASE (centésimos de por cento): 5% = 500.
-   Inteiro de propósito — escrever `0.05` aqui reintroduziria o
-   ponto flutuante justamente na conta que gera a receita. */
-export const COMISSAO_PONTOS_BASE = 500;
+/* A comissão em PONTOS-BASE (centésimos de por cento): 30% = 3000.
+   Inteiro de propósito — escrever `0.30` aqui reintroduziria o
+   ponto flutuante justamente na conta que gera a receita.
+
+   Esta é a alíquota VIGENTE, não a de sempre. Subiu de 5% para 30%
+   em 14/09/2026 (DIN-008): os 5% cobriam IOF, câmbio, imposto e
+   tarifa de Pix com folga nenhuma, e não cobriam infraestrutura —
+   servidor, banco e tráfego, que existem mesmo quando ninguém
+   chama o provedor.
+
+   Lançamento antigo NÃO é recalculado por esta constante. A razão
+   é append-only (DIN-002) e cada linha guarda o que foi cobrado na
+   época; conferir uma linha de agosto contra os 30% de hoje dá
+   diferença legítima, não erro. A vigência está em
+   `creditos-pagamentos-regras.md`, DIN-008. */
+export const COMISSAO_PONTOS_BASE = 3000;
 
 /* ------------------------------------------------------------
    Conversões

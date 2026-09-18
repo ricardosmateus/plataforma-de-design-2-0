@@ -67,6 +67,24 @@ describe(
       process.env.DATABASE_URL = URL_TESTE;
       process.env.NODE_ENV = 'test';
 
+      /* Provedores desligados, sempre. Antes isto vinha do `.env` da
+         máquina, e o teste "sem provedor configurado: 503" era o
+         único a depender disso — calado, porque passava enquanto
+         `PESQUISA_DRIVER` fosse "none".
+
+         Em 07/09/2026 o `.env` passou a trazer `PESQUISA_DRIVER
+         ="claude"` e a premissa caiu: a rota deixou de devolver 503 e
+         passou a CHAMAR A ANTHROPIC DE VERDADE dentro do teste — uma
+         chamada paga por execução da suíte, que é o efeito colateral
+         mais caro que um teste de integração pode ter.
+
+         Aqui, e não só naquele caso, porque nenhum teste deste
+         arquivo quer provedor: todos exercitam recusa, planejamento e
+         estado gravado. Um provedor ligado não ajuda nenhum deles e
+         faz mal a um. */
+      process.env.PESQUISA_DRIVER = 'none';
+      process.env.LUGARES_DRIVER = 'none';
+
       db = (await import('../src/db.js')).db;
       const servidorMod = await import('../src/servidor.js');
       const sessaoMod = await import('../src/seguranca/sessao.js');

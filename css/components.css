@@ -224,6 +224,30 @@ a:focus-visible, button:focus-visible { outline: var(--focus-ring); outline-offs
 }
 .link:hover { text-decoration: underline; }
 
+/* Sublinhado SEMPRE. Acrescentado em 16/09/2026, a pedido do Ricardo,
+   quando a conversa do assistente trocou seus botões por texto.
+
+   Por que uma variante e não mudar `.link`: o link padrão vive em
+   telas onde ele é a única coisa azul da área — "Esqueci minha senha"
+   embaixo de um campo, "Editar" ao lado de uma lista — e ali a cor já
+   basta para dizer que é clicável. Numa CONVERSA não basta: o texto
+   ao redor é longo, o olho está lendo, e cor sozinha some para quem
+   não distingue azul. O sublinhado é o que sobra de sinal quando a
+   cor não chega.
+
+   Vale para um `<a>` de verdade e para um `<button>` que é ação e não
+   navegação — o desenho é o mesmo, o elemento é que muda conforme o
+   clique leve a outra tela ou faça algo aqui. */
+.link--sublinhado { text-decoration: underline; text-underline-offset: 2px; }
+.link--sublinhado:hover { color: var(--fill-accent-hover); }
+
+/* O par secundário do link sublinhado: mesma forma, peso de apoio.
+   Serve quando duas ações aparecem lado a lado e uma delas é "não
+   fazer" — sem isto as duas competem pela mesma atenção, e a escolha
+   fica sem recomendação. */
+.link--apoio { color: var(--text-secondary); font-weight: 500; }
+.link--apoio:hover { color: var(--text-primary); }
+
 /* ============================================================
    SENHA — medidor de força e requisitos
    ============================================================

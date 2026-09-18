@@ -2,6 +2,13 @@
 
 > Revisão da visão de 05/08/2026 contra o estado atual do backend.
 > Data: 29/08/2026
+>
+> **Nota de 13/09/2026.** Este é um documento de **planejamento**, não de regra: não tem versionamento nem identificadores, e por isso não pode ser citado pelo código. As regras que nasceram dele foram registradas, com ID, nos documentos do módulo de idéias:
+>
+> - **Regra 1 e Regra 3** (só idéia finalizada tem taxonomia; um assunto, N tags) → [`ideias/ideias-taxonomia.md`](ideias/ideias-taxonomia.md), IDEIA-TAX-001 a 009
+> - **Regra 2** (sair de "finalizado" apaga assunto e tags) → [`ideias/ideias-movimentacao.md`](ideias/ideias-movimentacao.md), IDEIA-MOV-017 a 019
+>
+> Em caso de divergência, valem os documentos do módulo. Este fica como o registro do raciocínio que levou até eles.
 
 ## Mudança de premissa fundamental
 

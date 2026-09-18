@@ -879,18 +879,42 @@ body.is-assistant-closed .assistant-inner{opacity:0;transform:translateX(24px)}
   width:14px;height:14px;flex-shrink:0;margin-top:2px;
   stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
 }
-.ia-acao-botoes{display:flex;gap:8px}
-.ia-acao-btn{
-  flex:1;height:30px;padding:0 12px;
-  border-radius:var(--radius);
-  font-size:12px;line-height:16px;font-weight:600;
-  transition:background var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+/* ---------- Link (sistema de design) ----------
+   Cópia de `css/components.css` — nenhuma página do produto carrega
+   aquele arquivo; cada uma redeclara os componentes aqui dentro.
+   `.link--sublinhado` é a variante criada em 16/09/2026, quando a
+   conversa do assistente trocou seus botões por texto. */
+.link{
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;
+  color:var(--text-accent);text-decoration:none;
+  border-radius:var(--radius-sm,4px);
 }
-.ia-acao-btn:disabled{opacity:.5;cursor:not-allowed}
-.ia-acao-btn--confirmar{background:var(--fill-accent);color:var(--text-on-accent)}
-.ia-acao-btn--confirmar:hover:not(:disabled){background:var(--fill-accent-hover)}
-.ia-acao-btn--descartar{background:var(--surface-2);color:var(--text-secondary)}
-.ia-acao-btn--descartar:hover:not(:disabled){background:var(--border)}
+.link:hover{text-decoration:underline}
+.link--sublinhado{text-decoration:underline;text-underline-offset:2px}
+.link--sublinhado:hover{color:var(--fill-accent-hover)}
+.link--apoio{color:var(--text-secondary);font-weight:500}
+.link--apoio:hover{color:var(--text-primary)}
+.link:disabled{opacity:.5;cursor:not-allowed;text-decoration:none}
+
+/* `gap:20px` e não 8: dois links lado a lado com 8px de respiro viram
+   uma frase só. O botão sólido não tinha esse problema porque a
+   própria caixa separava um do outro. */
+.ia-acao-botoes{display:flex;gap:20px;align-items:baseline}
+/* Aviso de duplicidade dentro do cartão de ação (IDEIA-DUPL na porta
+   da IA, 16/09/2026). Mesma cor de atenção do `.dup-alerta` da tela
+   do quadro, sem a caixa: aqui ele já está dentro do cartão da
+   sugestão, e uma segunda moldura dentro da conversa seria uma
+   caixa dentro de outra. */
+.ia-acao-duplicata{
+  margin:0;
+  font-size:var(--type-body);
+  line-height:var(--type-body-lh);
+  color:var(--text-warning);
+}
+/* Desenho: `.link--sublinhado` (e `.link--apoio` no "Descartar"). */
+.ia-acao-btn{
+  transition:color var(--dur-fast) var(--ease-out),opacity var(--dur-fast) var(--ease-out);
+}
 
 /* Estado final — sem botão nenhum, só o registro do que aconteceu.
    Um segundo clique não existe mais para existir (IA-ACAO-006). */
@@ -1202,6 +1226,24 @@ body.modal-open{overflow:hidden}
 .pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .pf-extrato-valor.is-entrada{color:var(--text-success)}
 .pf-extrato-valor.is-saida{color:var(--text-secondary)}
+/* DIN-014 — consumo medido que não virou lançamento (CREDITOS_COBRAR=nao).
+   Sem sinal e em cor de apoio: ele não mexeu no saldo, e um "− R$ 0,43"
+   igual aos outros faria a pessoa procurar a diferença no saldo. */
+.pf-extrato-valor.is-neutro{color:var(--text-secondary);font-weight:500}
+.pf-extrato-item.is-nao-cobrado{opacity:.85}
+.pf-extrato-etiqueta{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 6px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  font-size:11px;
+  line-height:16px;
+  font-weight:500;
+  color:var(--text-secondary);
+  white-space:nowrap;
+  vertical-align:1px;
+}
 .pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
 
 /* Barra de evolução do crédito: o trecho disponível encolhe conforme
@@ -2034,6 +2076,41 @@ function openEditTaskModal(task){
 openTaskBtns.forEach(function(btn){
   if(btn) btn.addEventListener('click', openTaskModal);
 });
+
+/* ------------------------------------------------------------
+   Proposta vinda de uma lacuna da investigação
+   ------------------------------------------------------------
+   BOARD-PESQUISA-086. Quando uma investigação não responde uma das
+   partes, o board oferece "Criar tarefa" e manda para cá com a
+   proposta na URL. Ela chega no MESMO modal de sempre, aberta e
+   editável: nada é gravado até o Salvar (ATV-GERAR-001).
+
+   Por que a criação não foi feita no board, que tem a rota à mão:
+   criar tarefa já tem dono aqui, com as validações e o
+   papel-pode-escrever de ATV-TAR. Um segundo caminho divergiria
+   deste no primeiro ajuste — e divergência em criação de dado é a
+   pior de todas.
+   ------------------------------------------------------------ */
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (q.get('nova_tarefa') !== '1') return;
+
+  openTaskModal();
+  document.getElementById('taskTitle').value = q.get('titulo') || '';
+  document.getElementById('taskDesc').value = q.get('descricao') || '';
+  var tipo = q.get('tipo');
+  if (tipo) document.getElementById('taskTipo').value = tipo;
+
+  /* Os parâmetros saem da barra de endereço. Sem isso um F5 depois
+     de salvar reabriria o modal com a MESMA proposta, e a pessoa
+     criaria a tarefa duas vezes sem perceber — o mesmo defeito que
+     BOARD-PESQUISA-077 consertou na investigação, uma tela antes. */
+  ['nova_tarefa', 'titulo', 'descricao', 'tipo'].forEach(function (k) { q.delete(k); });
+  var resto = q.toString();
+  history.replaceState(null, '', location.pathname + (resto ? '?' + resto : ''));
+
+  document.getElementById('taskTitle').focus();
+})();
 document.getElementById('closeTaskModal').addEventListener('click', closeTaskModal);
 document.getElementById('generateWithAIBtn').addEventListener('click', function(){
   closeTaskModal();

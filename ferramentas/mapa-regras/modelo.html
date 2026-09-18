@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Regras de Negócio — Plataforma de Design 2.0</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --surface:#fff; --border:#e3e6ea; --ink:#14181f; --muted:#5b6472;
+    --accent:#2563eb; --accent-soft:#eff4ff; --ok:#0f9960; --warn:#b7791f; --code:#f2f4f7;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#0f1216; --surface:#161b22; --border:#2a313a; --ink:#e6eaf0; --muted:#9aa5b4;
+           --accent:#5b9bff; --accent-soft:#17233c; --ok:#3fb984; --warn:#e0a44a; --code:#1c222b; }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:grid; grid-template-columns:300px 1fr; grid-template-rows:100vh;
+  }
+  aside{background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:0}
+  .marca{padding:18px 18px 12px; border-bottom:1px solid var(--border)}
+  .marca h1{margin:0; font-size:15px; letter-spacing:-.01em}
+  .marca p{margin:4px 0 0; font-size:12px; color:var(--muted)}
+  .busca{padding:12px 14px; border-bottom:1px solid var(--border)}
+  .busca input{width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:7px;
+    background:var(--bg); color:var(--ink); font-size:13px}
+  .busca input:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+  nav{overflow-y:auto; flex:1; padding:8px 0 24px; min-height:0}
+  .modulo>summary{list-style:none; cursor:pointer; padding:9px 16px; font-weight:600; font-size:13px;
+    display:flex; align-items:center; gap:8px; user-select:none}
+  .modulo>summary::-webkit-details-marker{display:none}
+  .modulo>summary:hover{background:var(--accent-soft)}
+  .modulo>summary .cont{margin-left:auto; font-weight:500; font-size:11px; color:var(--muted)}
+  .modulo a{display:block; padding:7px 16px 7px 38px; font-size:13px; color:var(--muted);
+    text-decoration:none; border-left:2px solid transparent}
+  .modulo a:hover{background:var(--accent-soft); color:var(--ink)}
+  .modulo a.ativo{color:var(--accent); border-left-color:var(--accent); background:var(--accent-soft); font-weight:500}
+  main{overflow-y:auto; min-height:0}
+  .envelope{max-width:860px; margin:0 auto; padding:40px 40px 120px}
+  .painel{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:0 0 32px}
+  .cartao{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px}
+  .cartao b{display:block; font-size:24px; line-height:1.2; color:var(--accent)}
+  .cartao span{font-size:12px; color:var(--muted)}
+  .cabecalho{border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:24px}
+  .cabecalho h2{margin:0 0 10px; font-size:26px; letter-spacing:-.02em; line-height:1.25}
+  .selos{display:flex; gap:8px; flex-wrap:wrap}
+  .selo{font-size:11px; padding:3px 9px; border-radius:20px; background:var(--code);
+    color:var(--muted); border:1px solid var(--border)}
+  .selo.ok{color:var(--ok); border-color:currentColor}
+  .selo.warn{color:var(--warn); border-color:currentColor}
+  .caminho{font-size:12px; color:var(--muted); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; margin-top:10px}
+  .md h1{font-size:24px; margin:32px 0 12px; letter-spacing:-.02em}
+  .md h2{font-size:19px; margin:30px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border)}
+  .md h3{font-size:16px; margin:24px 0 8px}
+  .md h4{font-size:14px; margin:20px 0 6px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+  .md p{margin:0 0 14px}
+  .md ul,.md ol{margin:0 0 14px; padding-left:24px}
+  .md li{margin:4px 0}
+  .md blockquote{margin:0 0 18px; padding:10px 16px; border-left:3px solid var(--accent);
+    background:var(--accent-soft); border-radius:0 6px 6px 0; color:var(--muted); font-size:14px}
+  .md blockquote p:last-child{margin:0}
+  .md code{background:var(--code); padding:2px 5px; border-radius:4px; font-size:.88em;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .md pre{background:var(--code); padding:14px 16px; border-radius:8px; overflow-x:auto;
+    margin:0 0 18px; border:1px solid var(--border)}
+  .md pre code{background:none; padding:0; font-size:13px; line-height:1.55}
+  .md hr{border:0; border-top:1px solid var(--border); margin:28px 0}
+  .md a{color:var(--accent)}
+  .rolagem{overflow-x:auto; margin:0 0 18px}
+  .md table{border-collapse:collapse; width:100%; font-size:13.5px}
+  .md th,.md td{border:1px solid var(--border); padding:8px 11px; text-align:left; vertical-align:top}
+  .md th{background:var(--code); font-weight:600}
+  mark{background:#fde68a; color:#14181f; border-radius:3px; padding:0 2px}
+  .vazio{color:var(--muted); padding:12px 16px; font-size:13px}
+  .rodape{margin-top:60px; padding-top:16px; border-top:1px solid var(--border); font-size:12px; color:var(--muted)}
+  @media (max-width:860px){
+    body{grid-template-columns:1fr; grid-template-rows:auto 1fr}
+    aside{max-height:42vh}
+    .envelope{padding:24px 18px 80px}
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="marca">
+    <h1>📋 Regras de Negócio</h1>
+    <p>Plataforma de Design 2.0</p>
+  </div>
+  <div class="busca"><input id="q" type="search" placeholder="Buscar no conteúdo…" autocomplete="off"></div>
+  <nav id="nav"></nav>
+</aside>
+<main><div class="envelope" id="conteudo"></div></main>
+
+<script id="dados" type="application/json">__DADOS__</script>
+<script>
+(function(){
+  'use strict';
+  var D = JSON.parse(document.getElementById('dados').textContent);
+  var nav = document.getElementById('nav');
+  var alvo = document.getElementById('conteudo');
+  var campo = document.getElementById('q');
+  var indice = {};
+  D.modulos.forEach(function(m){ m.docs.forEach(function(d){ indice[d.id] = d; }); });
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  var CRASE = String.fromCharCode(96);
+  var reCodigo   = new RegExp(CRASE + '([^' + CRASE + ']+)' + CRASE, 'g');
+  var reCerca    = new RegExp('^\\s*' + CRASE + CRASE + CRASE);
+  var SEP = String.fromCharCode(1);
+
+  function embutido(s){
+    var guarda = [];
+    s = String(s).replace(reCodigo, function(_, c){
+      guarda.push(c);
+      return SEP + (guarda.length - 1) + SEP;
+    });
+    var out = esc(s)
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '$1')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, t, h){
+        return /^https?:/.test(h) ? '<a href="' + h + '" target="_blank" rel="noopener">' + t + '</a>' : t;
+      })
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    var reVolta = new RegExp(SEP + '(\\d+)' + SEP, 'g');
+    return out.replace(reVolta, function(_, n){ return '<code>' + esc(guarda[+n]) + '</code>'; });
+  }
+
+  function celulas(l){
+    return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function(c){ return c.trim(); });
+  }
+
+  function render(md){
+    var linhas = String(md).split(/\r?\n/), h = [], i = 0;
+    while (i < linhas.length){
+      var l = linhas[i];
+
+      if (reCerca.test(l)){
+        var buf = []; i++;
+        while (i < linhas.length && !reCerca.test(linhas[i])) buf.push(linhas[i++]);
+        i++;
+        h.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+        continue;
+      }
+      if (/^\s*\|/.test(l) && /^\s*\|[\s:|-]+\|?\s*$/.test(linhas[i + 1] || '')){
+        var cab = celulas(l); i += 2;
+        var corpo = [];
+        while (i < linhas.length && /^\s*\|/.test(linhas[i])) corpo.push(celulas(linhas[i++]));
+        h.push('<div class="rolagem"><table><thead><tr>' +
+          cab.map(function(c){ return '<th>' + embutido(c) + '</th>'; }).join('') +
+          '</tr></thead><tbody>' +
+          corpo.map(function(r){
+            return '<tr>' + cab.map(function(_, k){ return '<td>' + embutido(r[k] || '') + '</td>'; }).join('') + '</tr>';
+          }).join('') + '</tbody></table></div>');
+        continue;
+      }
+      if (/^\s*>/.test(l)){
+        var cit = [];
+        while (i < linhas.length && /^\s*>/.test(linhas[i])) cit.push(linhas[i++].replace(/^\s*>\s?/, ''));
+        h.push('<blockquote>' + render(cit.join('\n')) + '</blockquote>');
+        continue;
+      }
+      if (/^\s*[-*+]\s+/.test(l)){
+        var ul = [];
+        while (i < linhas.length && /^\s*[-*+]\s+/.test(linhas[i])) ul.push(linhas[i++].replace(/^\s*[-*+]\s+/, ''));
+        h.push('<ul>' + ul.map(function(x){ return '<li>' + embutido(x) + '</li>'; }).join('') + '</ul>');
+        continue;
+      }
+      if (/^\s*\d+[.)]\s+/.test(l)){
+        var ol = [];
+        while (i < linhas.length && /^\s*\d+[.)]\s+/.test(linhas[i])) ol.push(linhas[i++].replace(/^\s*\d+[.)]\s+/, ''));
+        h.push('<ol>' + ol.map(function(x){ return '<li>' + embutido(x) + '</li>'; }).join('') + '</ol>');
+        continue;
+      }
+      if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)){ h.push('<hr>'); i++; continue; }
+      var t = l.match(/^(#{1,6})\s+(.*)$/);
+      if (t){ var n = t[1].length; h.push('<h' + n + '>' + embutido(t[2]) + '</h' + n + '>'); i++; continue; }
+      if (l.trim() === ''){ i++; continue; }
+      var p = [];
+      while (i < linhas.length && linhas[i].trim() !== '' &&
+             !/^\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\|)/.test(linhas[i]) &&
+             !reCerca.test(linhas[i])) p.push(linhas[i++]);
+      h.push('<p>' + embutido(p.join(' ')) + '</p>');
+    }
+    return h.join('\n');
+  }
+
+  function montarNav(filtro){
+    nav.innerHTML = '';
+    var achou = 0;
+    D.modulos.forEach(function(m){
+      var docs = m.docs.filter(function(d){
+        if (!filtro) return true;
+        return (d.titulo + ' ' + d.nome + ' ' + m.nome + ' ' + d.md).toLowerCase().indexOf(filtro) >= 0;
+      });
+      if (!docs.length) return;
+      achou += docs.length;
+      var det = document.createElement('details');
+      det.className = 'modulo';
+      det.open = true;
+      var sum = document.createElement('summary');
+      sum.innerHTML = '<span>' + m.emoji + '</span><span>' +
+        m.nome.charAt(0).toUpperCase() + m.nome.slice(1) +
+        '</span><span class="cont">' + docs.length + '</span>';
+      det.appendChild(sum);
+      docs.forEach(function(d){
+        var a = document.createElement('a');
+        a.href = '#' + encodeURIComponent(d.id);
+        a.textContent = d.nome;
+        a.dataset.id = d.id;
+        det.appendChild(a);
+      });
+      nav.appendChild(det);
+    });
+    if (!achou) nav.innerHTML = '<p class="vazio">Nada encontrado.</p>';
+  }
+
+  function selos(d){
+    var s = [];
+    if (d.versao) s.push('<span class="selo">v' + esc(d.versao) + '</span>');
+    if (d.status){
+      var cls = /implementad|verificad|conclu/i.test(d.status) ? 'ok'
+              : /pend|bloquei|n[ãa]o existe|levantamento/i.test(d.status) ? 'warn' : '';
+      s.push('<span class="selo ' + cls + '">' + esc(d.status) + '</span>');
+    }
+    if (d.pagina) s.push('<span class="selo">' + esc(d.pagina) + '</span>');
+    s.push('<span class="selo">' + (d.bytes / 1024).toFixed(1) + ' KB</span>');
+    s.push('<span class="selo">alterado ' + new Date(d.modificado).toLocaleDateString('pt-BR') + '</span>');
+    return s.join('');
+  }
+
+  function abrir(id){
+    var d = indice[id];
+    if (!d) return inicio();
+    alvo.innerHTML =
+      '<div class="cabecalho"><h2>' + esc(d.titulo) + '</h2><div class="selos">' + selos(d) + '</div>' +
+      '<div class="caminho">' + esc(d.rel) + '</div></div>' +
+      '<div class="md">' + render(d.md) + '</div>' +
+      '<p class="rodape">Conteúdo embutido a partir do arquivo em disco. ' +
+      'Rode <code>node ferramentas/mapa-regras/gerar.mjs</code> para atualizar.</p>';
+    marcar();
+    [].forEach.call(nav.querySelectorAll('a'), function(a){
+      a.classList.toggle('ativo', a.dataset.id === id);
+    });
+    document.querySelector('main').scrollTop = 0;
+  }
+
+  function inicio(){
+    var nIds = 0;
+    D.modulos.forEach(function(m){ m.docs.forEach(function(d){ nIds += d.ids.length; }); });
+    alvo.innerHTML =
+      '<div class="cabecalho"><h2>Regras de Negócio</h2><div class="selos"><span class="selo">gerado em ' +
+      new Date(D.geradoEm).toLocaleString('pt-BR') + '</span></div></div>' +
+      '<div class="painel">' +
+        '<div class="cartao"><b>' + D.modulos.length + '</b><span>módulos</span></div>' +
+        '<div class="cartao"><b>' + D.totalDocs + '</b><span>documentos</span></div>' +
+        '<div class="cartao"><b>' + nIds + '</b><span>identificadores de regra</span></div>' +
+        '<div class="cartao"><b>' + D.totalKB + '</b><span>KB de documentação</span></div>' +
+      '</div>' +
+      '<div class="md"><p>Escolha um documento na barra lateral. A busca percorre o ' +
+      '<strong>texto inteiro</strong> de todas as regras, não apenas os títulos.</p>' +
+      '<p>Esta página é autocontida: todo o conteúdo está embutido nela, então abre sem API e sem servidor. ' +
+      'Ela não é servida pela API de propósito — a allowlist de <code>api/src/servidor.ts</code> ' +
+      'mantém a documentação interna fora da web.</p></div>';
+  }
+
+  function marcar(){
+    var termo = campo.value.trim();
+    if (termo.length < 2) return;
+    var re = new RegExp('(' + termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    var raiz = alvo.querySelector('.md');
+    if (!raiz) return;
+    var it = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
+    var nos = [], n;
+    while ((n = it.nextNode())) if (re.test(n.nodeValue)) nos.push(n);
+    nos.forEach(function(no){
+      var span = document.createElement('span');
+      span.innerHTML = esc(no.nodeValue).replace(re, '<mark>$1</mark>');
+      no.parentNode.replaceChild(span, no);
+    });
+  }
+
+  campo.addEventListener('input', function(){
+    montarNav(campo.value.trim().toLowerCase());
+    if (location.hash) abrir(decodeURIComponent(location.hash.slice(1)));
+  });
+  window.addEventListener('hashchange', function(){
+    abrir(decodeURIComponent(location.hash.slice(1)));
+  });
+
+  montarNav('');
+  if (location.hash) abrir(decodeURIComponent(location.hash.slice(1))); else inicio();
+})();
+</script>
+</body>
+</html>

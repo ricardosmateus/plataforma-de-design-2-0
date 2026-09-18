@@ -1,6 +1,7 @@
 # Regras de Negócio — Criação de Projeto
 
-> **Versão:** 1.1.0 · **Status:** Regras definidas; implementação não iniciada
+> **Versão:** 1.2.0 · **Status:** Implementado · "Editar" fora da interface no lançamento (PROJ-CRIA-009)
+> **Conferido em:** 13/09/2026, contra `api/src/rotas/projetos.ts`, `api/src/projetos/catalogo.ts` e `projetos.html`
 > **Módulo:** Projetos · **Página:** `projetos.html` (modal "Novo projeto")
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`projetos-listagem.md`](projetos-listagem.md) — a listagem que este modal alimenta, e de onde vem PROJ-ISO
@@ -56,6 +57,8 @@ Requisição autenticada pelo cookie de acesso. Corpo `application/json`.
 
 `PUT /empresas/:empresaId/projetos/:id` segue o mesmo contrato, trocando `201` por `200` — usado pela mesma modal em modo "Editar" (PROJ-CRIA-005). As mesmas checagens de papel e de vínculo se aplicam.
 
+> **Nota de 13/09/2026.** O `PUT` está implementado e no ar, mas nenhuma tela o chama: a opção "Editar" não existe na interface do lançamento (PROJ-CRIA-009). Isso torna a menção a "Editar" em PROJ-CRIA-004 uma regra sobre o que *voltará* a aparecer, não sobre o que aparece hoje — hoje o menu do card tem só "Excluir", para todos os papéis que operam.
+
 ---
 
 ## 3. Catálogo de tipos — lançamento só com Startup
@@ -64,6 +67,8 @@ Requisição autenticada pelo cookie de acesso. Corpo `application/json`.
 |---|---|---|
 | PROJ-CRIA-006 | No lançamento, o único `tipo` habilitado é `startup`. Os demais (Franquia, Plano de Negócios, e o resto do protótipo) ficam **fora do catálogo** — não é possível criar projeto com eles ainda, mesmo que a modal um dia volte a listá-los visualmente. | Decidido 24/08/2026 com o Ricardo |
 | PROJ-CRIA-007 | Novos tipos entram um de cada vez, conforme forem sendo construídos — cada um é um novo valor no enum mais a tela/fluxo que aquele tipo de projeto abre ao ser acessado. Não é uma tarefa de copy isolada: "adicionar o tipo Franquia" só fecha quando o que existe *dentro* de um projeto Franquia também existir. | Decidido 24/08/2026 |
+| PROJ-CRIA-008 | Cada `tipo` tem uma **miniatura** própria no card. Ela faz parte do que um tipo novo precisa trazer (junto do valor de enum e da tela interna, PROJ-CRIA-007): sem ela o card cai num recurso genérico e o tipo entra na listagem parecendo defeito. | Registrado 13/09/2026, a partir do código |
+| PROJ-CRIA-009 | No lançamento **não existe "Editar projeto" na interface**. Com um único tipo no catálogo (PROJ-CRIA-006), reabrir a modal para escolher Startup de novo não muda nada. O `PUT` continua no ar e com o contrato da §2 — a regra retira a opção da tela, não o endpoint. Quando o segundo tipo entrar, a opção volta sob PROJ-CRIA-005, sem contrato novo. | Decidido durante a implementação; registrado 13/09/2026 |
 
 | `tipo` | Rótulo | Descrição | Status |
 |---|---|---|---|
@@ -83,6 +88,7 @@ Consequência direta para a implementação: o enum `TipoProjeto` nasce com um �
 | P3 | Quem pode criar/editar projeto? | Proprietário e membro. Especialista só visualiza. | 24/08/2026 |
 | P4 | Nome duplicado bloqueia? | Não — não existe nome próprio, só `tipo`, e repetir tipo é permitido (PROJ-CRIA-003). | 24/08/2026 |
 | P7 | Lançar com o catálogo completo ou só parte dele? | Só `startup`. Os demais tipos entram depois, um a um, junto com o que cada um abre por dentro. | 24/08/2026 |
+| P8 | A miniatura do card vem do catálogo do servidor, como nome e descrição? | **Em aberto.** Hoje não: o mapa `THUMBS` vive no `<script>` de `projetos.html`, e um tipo ausente dele cai em `img/projetos-vazio.svg` — a arte de "nenhum projeto". Nome e descrição vêm do servidor por PROJ-CRIA-002, justamente para o cliente não decidir isso; a imagem escapou dessa regra. Recomendação: mover o nome do arquivo para `CATALOGO_TIPOS`, ao lado de `nome` e `descricao`, e trocar o fallback por um recurso neutro que não se confunda com estado vazio. | Levantado 13/09/2026 |
 
 ---
 
@@ -92,3 +98,4 @@ Consequência direta para a implementação: o enum `TipoProjeto` nasce com um �
 |---|---|---|
 | 1.0.0 | 2026-08-24 | Documento criado. Regras de criação por tipo fechado (PROJ-CRIA-001 a 005), contrato de `POST`/`PUT` e catálogo parcial de tipos registrados antes da implementação. |
 | 1.1.0 | 2026-08-24 | PROJ-CRIA-006 e 007: lançamento restrito ao tipo `startup`; demais tipos ficam fora do catálogo até serem construídos, um de cada vez. Decisão P7. |
+| 1.2.0 | 2026-09-13 | Conferência contra o código implementado. PROJ-CRIA-008 (miniatura por tipo) e PROJ-CRIA-009 ("Editar" fora da interface no lançamento) registradas — a segunda existia só como comentário de código. Decisão P8 aberta sobre a miniatura vir ou não do catálogo do servidor. Nota na §2 esclarecendo que o `PUT` está no ar sem tela que o chame. Cabeçalho atualizado de "implementação não iniciada" para o estado real. |

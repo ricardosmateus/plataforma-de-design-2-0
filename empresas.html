@@ -130,7 +130,7 @@ a:focus-visible{
   content:attr(data-label);
   position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);
   background:var(--text-primary);color:var(--surface-1);
-  font-size:12px;font-weight:500;line-height:18px;
+  font-size:var(--type-caption);font-weight:500;line-height:var(--type-caption-lh);
   padding:6px 10px;border-radius:var(--radius);
   white-space:nowrap;pointer-events:none;
   opacity:0;transition:opacity .12s ease, transform .12s ease;
@@ -165,7 +165,7 @@ a:focus-visible{
   display:flex;align-items:center;justify-content:space-between;gap:24px;
 }
 .page-title{
-  font-size:30px;line-height:0px;font-weight:600;letter-spacing:-.02em;color:var(--text-primary);
+  font-size:var(--type-display);line-height:0px;font-weight:600;letter-spacing:var(--type-display-track);color:var(--text-primary);
   /* 48px = "Respiro no rodapé do painel" na escala de espaçamento do styleguide */
   padding:48px 0;
 }
@@ -178,7 +178,7 @@ a:focus-visible{
    margin-top aqui somaria a esse padding e a linha pareceria flutuar
    longe do cabeçalho, em vez de marcar onde ele termina. */
 .rule{height:1px;background:var(--border);margin:0 0 24px}
-.section-label{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+.section-label{font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh);font-weight:600;color:var(--text-primary)}
 
 /* ============================================================
    BOTÕES
@@ -187,7 +187,7 @@ a:focus-visible{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   height:44px;padding:0 18px;
   border-radius:var(--radius);
-  font-size:16px;line-height:24px;font-weight:600;
+  font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh);font-weight:600;
   transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,color .15s ease;
   white-space:nowrap;
 }
@@ -202,7 +202,7 @@ a:focus-visible{
   background:var(--surface-1);color:var(--text-secondary);
   border:1px solid var(--border-strong);
   box-shadow:var(--shadow-xs);
-  font-size:14px;line-height:20px;
+  font-size:var(--type-body);line-height:var(--type-body-lh);
 }
 .btn--secondary:hover{background:var(--sky-100);color:var(--text-primary)}
 
@@ -263,7 +263,7 @@ a:focus-visible{
   background:var(--surface-0);
   border-radius:var(--radius-lg);
   color:var(--text-secondary);
-  font-size:14px;line-height:22px;
+  font-size:var(--type-body);line-height:22px;
 }
 
 /* Um botão que não responde precisa PARECER que não responde */
@@ -311,7 +311,7 @@ a:focus-visible{
 .menu button{
   display:flex;align-items:center;gap:10px;width:100%;
   padding:9px 10px;border-radius:var(--radius);
-  font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary);
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;color:var(--text-secondary);
   text-align:left;
 }
 .menu button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -322,9 +322,9 @@ a:focus-visible{
 
 /* Texto do card */
 .card-body{display:flex;flex-direction:column;gap:8px;text-align:center;flex:1}
-.card-title{font-size:18px;line-height:28px;font-weight:600;color:var(--text-primary)}
+.card-title{font-size:var(--type-heading);line-height:var(--type-heading-lh);font-weight:600;color:var(--text-primary)}
 .card-desc{
-  font-size:14px;line-height:20px;color:var(--text-secondary);
+  font-size:var(--type-body);line-height:var(--type-body-lh);color:var(--text-secondary);
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
 }
 
@@ -345,8 +345,8 @@ a:focus-visible{
   margin-bottom:24px;
   display:block;
 }
-.empty h2{font-size:18px;line-height:28px;font-weight:600;margin-bottom:6px;color:var(--text-primary)}
-.empty p{font-size:14px;line-height:20px;color:var(--text-secondary);max-width:380px;margin-bottom:24px}
+.empty h2{font-size:var(--type-heading);line-height:var(--type-heading-lh);font-weight:600;margin-bottom:6px;color:var(--text-primary)}
+.empty p{font-size:var(--type-body);line-height:var(--type-body-lh);color:var(--text-secondary);max-width:380px;margin-bottom:24px}
 
 /* Estado alternado */
 body.is-empty .grid-wrap{display:none}
@@ -390,7 +390,7 @@ body.is-carregando-lista .empty{display:none}
   display:flex;align-items:center;justify-content:space-between;gap:24px;
   flex-shrink:0;
 }
-.modal-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.modal-title{display:flex;align-items:center;gap:12px;font-size:var(--type-heading);line-height:var(--type-heading-lh);font-weight:600}
 .modal-title-icon{
   width:36px;height:36px;flex-shrink:0;
   display:grid;place-items:center;
@@ -402,7 +402,7 @@ body.is-carregando-lista .empty{display:none}
 .modal-close{
   display:inline-flex;align-items:center;gap:6px;
   padding:6px 10px;border-radius:var(--radius);
-  font-size:14px;line-height:20px;font-weight:500;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
   color:var(--text-secondary);
   transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
 }
@@ -431,15 +431,15 @@ body.is-carregando-lista .empty{display:none}
   display:flex;flex-direction:column;
   padding:0;
 }
-.section-title{font-size:18px;line-height:28px;font-weight:600;text-align:center}
-.section-sub{font-size:14px;line-height:22px;color:var(--text-secondary);text-align:center;margin-top:8px}
+.section-title{font-size:var(--type-heading);line-height:var(--type-heading-lh);font-weight:600;text-align:center}
+.section-sub{font-size:var(--type-body);line-height:22px;color:var(--text-secondary);text-align:center;margin-top:8px}
 
 /* ---------- Seção 1: Sobre a empresa ---------- */
 /* 24px abaixo do header e 16px entre campos — mesmo ritmo de .modal-form
    na "Nova idéia". */
 .form{width:100%;max-width:100%;margin:24px 0 0;display:flex;flex-direction:column;gap:16px}
 .field{display:flex;flex-direction:column;gap:6px}
-.label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-secondary)}
+.label{font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;color:var(--text-secondary)}
 .input,.textarea{
   width:100%;
   padding:10px 14px;
@@ -451,7 +451,7 @@ body.is-carregando-lista .empty{display:none}
      tudo (família, peso, tamanho), então as duas linhas abaixo só
      reafirmam o que o resto do form já espera. */
   font-family:inherit;
-  font-size:16px;line-height:24px;
+  font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh);
   transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
 }
 .input::placeholder,.textarea::placeholder{color:var(--text-muted)}
@@ -469,7 +469,7 @@ body.is-carregando-lista .empty{display:none}
 .segmented{display:inline-flex;padding:2px;gap:2px;border-radius:var(--radius);background:var(--surface-0);border:1px solid var(--border)}
 .segmented button{
   padding:6px 16px;border-radius:6px;
-  font-size:14px;line-height:20px;font-weight:500;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
   color:var(--text-secondary);
   transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
 }
@@ -509,9 +509,9 @@ body.is-carregando-lista .empty{display:none}
   color:var(--text-secondary);
 }
 .dropzone-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.dropzone-text{font-size:14px;line-height:20px;color:var(--text-secondary)}
+.dropzone-text{font-size:var(--type-body);line-height:var(--type-body-lh);color:var(--text-secondary)}
 .dropzone-text b{color:var(--text-accent);font-weight:600}
-.dropzone-hint{font-size:12px;line-height:18px;color:var(--text-muted)}
+.dropzone-hint{font-size:var(--type-caption);line-height:var(--type-caption-lh);color:var(--text-muted)}
 
 /* Logotipo centralizado na caixa; o botão de remover sai do fluxo para o
    canto, senão empurraria o logo para fora do centro. */
@@ -531,10 +531,10 @@ body.is-carregando-lista .empty{display:none}
 }
 .upload-meta{display:flex;flex-direction:column;gap:2px;max-width:100%;min-width:0}
 .upload-name{
-  font-size:14px;line-height:20px;font-weight:500;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.upload-size{font-size:12px;line-height:18px;color:var(--text-secondary)}
+.upload-size{font-size:var(--type-caption);line-height:var(--type-caption-lh);color:var(--text-secondary)}
 .upload-remove{
   position:absolute;top:8px;right:8px;
   flex-shrink:0;padding:6px;border-radius:var(--radius);
@@ -547,7 +547,7 @@ body.is-carregando-lista .empty{display:none}
 
 .upload-error{
   margin-top:8px;
-  font-size:12px;line-height:18px;color:var(--text-danger);
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);color:var(--text-danger);
 }
 .upload-error[hidden]{display:none}
 
@@ -558,7 +558,7 @@ body.is-carregando-lista .empty{display:none}
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   height:44px;padding:0 18px;
   border-radius:var(--radius);
-  font-size:16px;line-height:24px;font-weight:600;
+  font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh);font-weight:600;
   width:auto;
   transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
 }
@@ -588,7 +588,7 @@ body.is-carregando-lista .empty{display:none}
   background:var(--fill-success);
   color:var(--text-on-success);
   box-shadow:var(--shadow-lg);
-  font-size:14px;line-height:20px;font-weight:500;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
   z-index:100;
   opacity:0;
   transition:opacity .2s ease,transform .2s ease;
@@ -664,16 +664,16 @@ body.is-carregando-lista .empty{display:none}
   flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:0}
 
 .timeline-date{
-  font-size:11px;line-height:16px;font-weight:600;color:var(--text-muted);
+  font-size:var(--type-overline);line-height:var(--type-overline-lh);font-weight:600;color:var(--text-muted);
   text-transform:uppercase;letter-spacing:0.5px;
 }
 
 .timeline-task{
-  font-size:13px;line-height:20px;font-weight:500;color:var(--text-primary);
+  font-size:var(--type-body-sm);line-height:var(--type-body-sm-lh);font-weight:500;color:var(--text-primary);
 }
 
 .timeline-cost{
-  font-size:12px;line-height:18px;font-weight:500;color:var(--text-secondary);
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);font-weight:500;color:var(--text-secondary);
 }
 
 .timeline-cost strong{color:var(--text-primary);font-weight:700}
@@ -696,10 +696,10 @@ body.is-carregando-lista .empty{display:none}
   transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
 }
 .pf-valor-wrap:focus-within{border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
-.pf-valor-prefixo{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary);flex-shrink:0}
+.pf-valor-prefixo{font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;color:var(--text-secondary);flex-shrink:0}
 .pf-input--valor{
   border:none;padding:0;height:auto;box-shadow:none;
-  font-size:16px;font-weight:600;
+  font-size:var(--type-body-lg);font-weight:600;
 }
 .pf-input--valor:focus{box-shadow:none}
 
@@ -731,9 +731,9 @@ body.is-carregando-lista .empty{display:none}
 .pf-pix-qr img{display:block;width:176px;height:176px}
 .pf-pix-qr.is-expirado img{opacity:.35;filter:grayscale(1)}
 
-.pf-pix-legenda{font-size:13px;line-height:20px;font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
+.pf-pix-legenda{font-size:var(--type-body-sm);line-height:var(--type-body-sm-lh);font-weight:500;color:var(--text-secondary);text-align:center;margin:0}
 
-.pf-pix-status{font-size:13px;line-height:20px;font-weight:600;text-align:center;margin:0;display:flex;align-items:center;gap:6px}
+.pf-pix-status{font-size:var(--type-body-sm);line-height:var(--type-body-sm-lh);font-weight:600;text-align:center;margin:0;display:flex;align-items:center;gap:6px}
 .pf-pix-status[hidden]{display:none}
 .pf-pix-status .pf-pix-ponto{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .pf-pix-status.is-aguardando{color:var(--text-secondary)}
@@ -751,13 +751,13 @@ body.is-carregando-lista .empty{display:none}
   border:1px solid var(--border-strong);border-radius:var(--radius);
   background:var(--surface-1);
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:12px;color:var(--text-secondary);
+  font-size:var(--type-caption);color:var(--text-secondary);
   text-overflow:ellipsis;
 }
 .pf-pix-copia .pf-btn{flex-shrink:0;height:40px}
 .pf-pix-copia .pf-btn.is-copiado{background:var(--fill-success);color:var(--text-on-success);border-color:transparent}
 
-.pf-recarga-erro{font-size:13px;line-height:18px;font-weight:500;color:var(--text-danger);margin:0}
+.pf-recarga-erro{font-size:var(--type-body-sm);line-height:18px;font-weight:500;color:var(--text-danger);margin:0}
 .pf-recarga-erro[hidden]{display:none}
 
 
@@ -802,7 +802,7 @@ body.modal-open{overflow:hidden}
   width:100%;height:40px;
   padding:10px 16px;
   border-radius:6px;
-  font-size:14px;line-height:20px;font-weight:500;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
   color:var(--text-primary);
   text-align:left;
   transition:background var(--dur-fast) var(--ease-out);
@@ -826,7 +826,7 @@ body.modal-open{overflow:hidden}
   display:flex;align-items:center;justify-content:space-between;gap:24px;
   height:48px;
 }
-.pf-title{display:flex;align-items:center;gap:12px;font-size:18px;line-height:28px;font-weight:600}
+.pf-title{display:flex;align-items:center;gap:12px;font-size:var(--type-heading);line-height:var(--type-heading-lh);font-weight:600}
 .pf-title-icon{
   width:40px;height:40px;flex-shrink:0;
   display:grid;place-items:center;border-radius:50%;
@@ -837,7 +837,7 @@ body.modal-open{overflow:hidden}
 .pf-close{
   display:inline-flex;align-items:center;gap:6px;
   padding:6px 10px;border-radius:var(--radius);
-  font-size:14px;line-height:20px;font-weight:500;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;
   color:var(--text-secondary);
   transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
 }
@@ -868,7 +868,7 @@ body.modal-open{overflow:hidden}
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   height:36px;padding:0 14px;
   border-radius:var(--radius);
-  font-size:14px;line-height:20px;font-weight:600;
+  font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;
   background:var(--surface-1);color:var(--text-primary);
   border:1px solid var(--border-strong);
   box-shadow:var(--shadow-xs);
@@ -881,7 +881,7 @@ body.modal-open{overflow:hidden}
 /* ---------- Campos ---------- */
 .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .pf-field{display:flex;flex-direction:column;gap:6px;min-width:0}
-.pf-label{font-size:14px;line-height:20px;font-weight:500;color:var(--text-primary)}
+.pf-label{font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:500;color:var(--text-primary)}
 .pf-input{
   width:100%;height:44px;
   padding:0 14px;
@@ -889,13 +889,13 @@ body.modal-open{overflow:hidden}
   border:1px solid var(--border-strong);
   background:var(--surface-1);
   box-shadow:var(--shadow-xs);
-  font:inherit;font-size:14px;line-height:20px;
+  font:inherit;font-size:var(--type-body);line-height:var(--type-body-lh);
   color:var(--text-primary);
   transition:border-color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out);
 }
 .pf-input::placeholder{color:var(--text-muted)}
 .pf-input:focus{outline:none;border-color:var(--fill-accent);box-shadow:0 0 0 4px var(--sky-100)}
-.pf-hint{font-size:12px;line-height:18px;color:var(--text-secondary)}
+.pf-hint{font-size:var(--type-caption);line-height:var(--type-caption-lh);color:var(--text-secondary)}
 
 /* Barra de evolução do crédito: o trecho disponível encolhe conforme
    o uso aumenta (a faixa restante da barra representa o usado). */
@@ -910,7 +910,7 @@ body.modal-open{overflow:hidden}
 .pf-extrato{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
 .pf-extrato-item{
   display:flex;align-items:baseline;gap:12px;padding:8px 0;
-  border-bottom:1px solid var(--border);font-size:13px;line-height:18px;
+  border-bottom:1px solid var(--border);font-size:var(--type-body-sm);line-height:18px;
 }
 .pf-extrato-item:last-child{border-bottom:0}
 .pf-extrato-desc{flex:1;color:var(--text-primary)}
@@ -918,14 +918,32 @@ body.modal-open{overflow:hidden}
    o valor pago (taxa do PSP). Só aparece quando houve taxa. */
 .pf-extrato-detalhe{
   display:block;margin-top:2px;
-  color:var(--text-muted);font-size:12px;line-height:16px;
+  color:var(--text-muted);font-size:var(--type-caption);line-height:16px;
   font-variant-numeric:tabular-nums;
 }
-.pf-extrato-data{color:var(--text-muted);font-size:12px}
+.pf-extrato-data{color:var(--text-muted);font-size:var(--type-caption)}
 .pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .pf-extrato-valor.is-entrada{color:var(--text-success)}
 .pf-extrato-valor.is-saida{color:var(--text-secondary)}
-.pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
+/* DIN-014 — consumo medido que não virou lançamento (CREDITOS_COBRAR=nao).
+   Sem sinal e em cor de apoio: ele não mexeu no saldo, e um "− R$ 0,43"
+   igual aos outros faria a pessoa procurar a diferença no saldo. */
+.pf-extrato-valor.is-neutro{color:var(--text-secondary);font-weight:500}
+.pf-extrato-item.is-nao-cobrado{opacity:.85}
+.pf-extrato-etiqueta{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 6px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  font-size:11px;
+  line-height:16px;
+  font-weight:500;
+  color:var(--text-secondary);
+  white-space:nowrap;
+  vertical-align:1px;
+}
+.pf-extrato-vazio{color:var(--text-muted);font-size:var(--type-body-sm);margin:8px 0 0}
 
 /* Pagamento confirmado: some TUDO que servia para pagar — o campo de
    valor, o botão de gerar, o QR, o "copia e cola" e as instruções.
@@ -958,7 +976,7 @@ body.modal-open{overflow:hidden}
 }
 .pf-credito-meta{
   display:flex;align-items:center;justify-content:space-between;gap:16px;
-  font-size:12px;line-height:18px;font-weight:600;color:var(--text-secondary);
+  font-size:var(--type-caption);line-height:var(--type-caption-lh);font-weight:600;color:var(--text-secondary);
 }
 
 /* ---------- Linha com interruptor ---------- */
@@ -983,8 +1001,8 @@ body.modal-open{overflow:hidden}
 .pf-row--stack .pf-row-actions{width:100%}
 .pf-row-actions{display:flex;align-items:flex-start}
 .pf-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.pf-row-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-primary)}
-.pf-row-desc{font-size:14px;line-height:20px;color:var(--text-secondary)}
+.pf-row-title{font-size:var(--type-body);line-height:var(--type-body-lh);font-weight:600;color:var(--text-primary)}
+.pf-row-desc{font-size:var(--type-body);line-height:var(--type-body-lh);color:var(--text-secondary)}
 
 .pf-switch{
   appearance:none;-webkit-appearance:none;
@@ -1036,7 +1054,7 @@ body.modal-open{overflow:hidden}
   height:48px;padding:0 24px;
   border-radius:var(--radius);
   background:var(--fill-accent);color:var(--text-on-accent);
-  font-size:16px;line-height:24px;font-weight:600;
+  font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh);font-weight:600;
   box-shadow:var(--shadow-xs);
   transition:background var(--dur-fast) var(--ease-out);
 }
@@ -1045,7 +1063,7 @@ body.modal-open{overflow:hidden}
   display:inline-flex;align-items:center;justify-content:center;
   height:48px;padding:0 20px;
   border-radius:var(--radius);
-  font-size:16px;line-height:24px;font-weight:600;
+  font-size:var(--type-body-lg);line-height:var(--type-body-lg-lh);font-weight:600;
   color:var(--text-secondary);
   transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
 }

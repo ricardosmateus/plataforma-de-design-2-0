@@ -50,6 +50,15 @@ export type CustoDaChamada = {
   requisicoes?: number;
   buscas?: number;
 
+  /* Páginas abertas com `web_fetch` (Fase 1b). Fica de fora da razão
+     de propósito: a ferramenta não cobra por uso, e o que ela custa
+     já está contado nos tokens. Existe para a narração poder dizer
+     "li 3 páginas" — que é a diferença visível entre a investigação
+     de agora e a consulta rasa de antes. Guardar em
+     `consumos_pesquisa` uma coluna que nunca vira dinheiro seria
+     coluna sem pergunta que ela responda. */
+  leituras?: number;
+
   /* Quando o provedor informa o custo direto, na moeda dele. É o
      dado mais confiável que existe sobre a chamada. */
   custoUsdMicros?: number;
@@ -80,9 +89,50 @@ export type Fonte = {
    `sessao.classificarResultado` faz exatamente essa leitura. Exceção
    obrigaria try/catch em toda rota para reconstruir a mesma
    informação. */
+/* ============================================================
+   Uma afirmação, e a fonte que a sustenta — Fase 1b
+   ============================================================
+   `PES-006` pede fonte por AFIRMAÇÃO, não por bloco de resposta. O
+   plano previa uma terceira chamada de modelo para isso: um
+   sintetizador que releria a resposta e re-atribuiria as fontes.
+
+   Não foi preciso. A atribuição já existe e vem da origem: quando
+   as citações estão ligadas, a API devolve a resposta partida em
+   blocos, e cada bloco carrega as citações que o sustentam. O
+   provedor juntava tudo numa string e descartava essa estrutura.
+
+   Pagar um modelo para reconstruir por leitura o que a primeira
+   chamada entregou com precisão seria caro e PIOR — a segunda
+   atribuição é palpite sobre a primeira. Mesmo princípio de
+   `IA-CONV-NARRA-005`: o que é determinístico não se pede a um
+   modelo.
+
+   `semFonte` é `true` quando o bloco não trouxe citação nenhuma.
+   Fica visível de propósito (`PES-006`): afirmação sem fonte é
+   marcada, nunca escondida — quem lê vai decidir dinheiro em cima
+   disso. ============================================================ */
+export type Afirmacao = {
+  texto: string;
+  /* Índices dentro de `fontes` — não URLs repetidas. O board casa a
+     afirmação com a fonte pela lista, e um índice não diverge da
+     lista como uma cópia da URL divergiria. */
+  fonteIds: number[];
+  /* O `cited_text` de cada fonte, na ordem de `fonteIds`. É o que
+     mantém a afirmação auditável depois que a página sair do ar. */
+  trechos: string[];
+  semFonte: boolean;
+  /* Onde a afirmação começa dentro de `resposta`. O board usa para
+     casar afirmação com o quadro que a contém. */
+  inicio: number;
+};
+
 export type RespostaBusca = {
   resposta: string;
   fontes: Fonte[];
+  /* Vazio quando o provedor não entrega citações estruturadas — e
+     vazio é honesto: significa "não sei de onde veio cada frase",
+     não "toda frase tem fonte". */
+  afirmacoes?: Afirmacao[];
   custo?: CustoDaChamada;
   erro?: string | null;
 };

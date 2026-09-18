@@ -1,0 +1,30 @@
+/* ============================================================
+   O build que vai para a hospedagem
+   ============================================================
+   `tsconfig.json` inclui `src`, `testes`, `corpus` e os scripts de
+   avaliação da raiz, porque é ele que o editor e o `tsc --noEmit`
+   usam para conferir TUDO. Isso é certo para conferir e errado para
+   publicar, por duas razões:
+
+     1. Com `rootDir: "."` e mais de uma pasta incluída, o `tsc`
+        preserva a hierarquia e o servidor sai em
+        `dist/src/servidor.js`. O `npm start` aponta para
+        `dist/servidor.js` — ou seja, `npm start` nunca funcionou.
+        Ninguém tinha notado porque o desenvolvimento roda
+        `tsx watch src/servidor.ts`, que não usa o dist.
+
+     2. O que vai ao ar não precisa dos testes, do corpus nem dos
+        scripts de avaliação. Publicar código que ninguém chama é
+        superfície a mais sem nenhum ganho.
+
+   Com `rootDir: "src"` e só `src` incluído, o servidor sai em
+   `dist/servidor.js`, que é onde o `start` sempre esperou por ele.
+   ============================================================ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts"]
+}

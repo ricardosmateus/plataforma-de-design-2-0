@@ -32,8 +32,39 @@
    ============================================================ */
 
 import { lancar, saldoDe, SaldoInsuficiente, LancamentoRepetido, type OrigemLancamento } from './razao.js';
+import { env } from '../env.js';
 
 export { SaldoInsuficiente, LancamentoRepetido };
+
+/* ------------------------------------------------------------
+   A CHAVE DE COBRANÇA MORA AQUI, E NÃO NAS ROTAS
+   ------------------------------------------------------------
+   `CREDITOS_COBRAR="nao"` promete, no `.env.example`, que "a IA
+   responde normalmente mas nada sai do saldo de ninguém". Até
+   15/09/2026 essa promessa era cumprida por cada rota lembrar de
+   perguntar — `rotas/ia.ts`, recortes, taxonomia, enriquecimento —
+   e as rotas de pesquisa, que nasceram depois, não lembraram.
+   Investigar em desenvolvimento debitava saldo de verdade.
+
+   Pedir a cada rota que não cobre é instrução; cortar aqui é
+   garantia. Reserva, liberação e consumo são o único caminho para
+   a razão, então desligar aqui desliga para todo chamador — os que
+   existem e os que vierem.
+
+   O que NÃO se desliga junto: a MEDIÇÃO. `registrarPesquisa` e
+   `registrar` gravam tokens, buscas e custo em dólar por outro
+   caminho, e continuam gravando. PES-003 — "o custo vem do
+   provedor, transação a transação" — vale igual com a cobrança
+   desligada; o que para é o débito, não a conta.
+
+   Nota: as verificações de `CREDITOS_COBRAR` que já existem nas
+   rotas de IA ficam onde estão. Elas não são mais o mecanismo —
+   são um atalho, que também evita calcular um teto que ninguém vai
+   reservar. Quem for escrever rota nova não precisa copiá-las.
+   ------------------------------------------------------------ */
+function cobrancaLigada(): boolean {
+  return env.CREDITOS_COBRAR === 'sim';
+}
 
 export type OperacaoConsumo = 'assistente' | 'classificacao' | 'pesquisa' | 'sintese_tema';
 
@@ -85,7 +116,18 @@ export async function reservar(
   tetoMicros: number,
   origemId: string,
   operacao: OperacaoConsumo,
-): Promise<{ saldoMicros: number }> {
+): Promise<{ saldoMicros: number | null }> {
+  /* Desligada a cobrança, não há reserva — e, portanto, não há
+     `SaldoInsuficiente`: quem não é cobrado não pode ficar sem
+     saldo.
+
+     `null`, e não zero nem o saldo lido do banco. Zero seria
+     mentira; ler o saldo seria uma ida ao banco para produzir um
+     número que nenhum chamador usa — e que tornaria esta função
+     impossível de provar sem banco de pé. `null` diz o que é
+     verdade: nada foi lançado, então não há saldo novo a informar. */
+  if (!cobrancaLigada()) return { saldoMicros: null };
+
   const r = await lancar({
     usuarioId,
     tipo: 'reserva',
@@ -109,6 +151,11 @@ export async function liberar(
   origemId: string,
   operacao: OperacaoConsumo,
 ): Promise<void> {
+  /* Nada foi reservado, então não há o que devolver. Sair aqui é o
+     que mantém reserva e liberação sempre em par: se só uma das
+     duas respeitasse a chave, o saldo andaria sozinho. */
+  if (!cobrancaLigada()) return;
+
   try {
     await lancar({
       usuarioId,
@@ -144,7 +191,14 @@ export async function consumir(
   totalMicros: number,
   origemId: string,
   operacao: OperacaoConsumo,
-): Promise<{ saldoMicros: number; cobradoIntegralmente: boolean }> {
+): Promise<{ saldoMicros: number | null; cobradoIntegralmente: boolean }> {
+  /* `cobradoIntegralmente: true` porque não ficou dívida para
+     trás. `false` significa "a chamada foi entregue e o saldo não
+     cobriu", que aciona revisão em quem chama — dizer isso quando
+     a cobrança está desligada inventaria um prejuízo que não
+     existe. */
+  if (!cobrancaLigada()) return { saldoMicros: null, cobradoIntegralmente: true };
+
   try {
     const r = await lancar({
       usuarioId,

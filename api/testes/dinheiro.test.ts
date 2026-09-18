@@ -71,16 +71,19 @@ describe('câmbio', () => {
   });
 });
 
-describe('a comissão de 5%', () => {
-  test('cinco por cento são 500 pontos-base', () => {
-    assert.equal(COMISSAO_PONTOS_BASE, 500);
+describe('a comissão de 30%', () => {
+  test('trinta por cento são 3000 pontos-base', () => {
+    /* Subiu de 500 (5%) em 14/09/2026 — DIN-008. Este teste existe
+       para a alíquota não mudar por descuido: mexer nela é decisão
+       de negócio, e quebrar um teste é o jeito de ser avisado. */
+    assert.equal(COMISSAO_PONTOS_BASE, 3000);
   });
 
   test('devolve custo, comissão e total separados — nunca só a soma', () => {
     const c = comissaoSobre(MICROS_POR_REAL); // custo de R$ 1,00
     assert.equal(c.custoMicros, 1_000_000);
-    assert.equal(c.comissaoMicros, 50_000);   // R$ 0,05
-    assert.equal(c.totalMicros, 1_050_000);   // R$ 1,05
+    assert.equal(c.comissaoMicros, 300_000);  // R$ 0,30
+    assert.equal(c.totalMicros, 1_300_000);   // R$ 1,30
   });
 
   test('o total é sempre custo + comissão, sem sobra nem falta', () => {
@@ -96,18 +99,18 @@ describe('a comissão de 5%', () => {
   });
 
   test('arredonda para baixo — a sobra de meio micro fica com o usuário', () => {
-    /* 5% de 19 micros = 0,95. Para baixo: 0. */
-    assert.equal(comissaoSobre(19).comissaoMicros, 0);
-    /* 5% de 20 micros = 1,0 exato. */
-    assert.equal(comissaoSobre(20).comissaoMicros, 1);
+    /* 30% de 3 micros = 0,9. Para baixo: 0. */
+    assert.equal(comissaoSobre(3).comissaoMicros, 0);
+    /* 30% de 10 micros = 3,0 exato. */
+    assert.equal(comissaoSobre(10).comissaoMicros, 3);
   });
 
-  test('a comissão nunca ultrapassa 5% do custo', () => {
-    for (const custo of [1, 19, 20, 21, 9_485, 1_000_000]) {
+  test('a comissão nunca ultrapassa 30% do custo', () => {
+    for (const custo of [1, 3, 10, 19, 20, 21, 9_485, 1_000_000]) {
       const c = comissaoSobre(custo);
       assert.ok(
-        c.comissaoMicros <= custo * 0.05,
-        `comissão ${c.comissaoMicros} passou de 5% de ${custo}`,
+        c.comissaoMicros <= custo * 0.3,
+        `comissão ${c.comissaoMicros} passou de 30% de ${custo}`,
       );
     }
   });

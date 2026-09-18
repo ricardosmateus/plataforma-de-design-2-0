@@ -164,5 +164,63 @@ window.API = (function () {
     return renovou ? buscar(caminho, true) : resposta;
   }
 
-  return { chamar, bruto, buscar, BASE };
+  /* ------------------------------------------------------------
+     `fluxo` — POST que devolve um STREAM, com renovação silenciosa
+     ------------------------------------------------------------
+     Existe para a investigação em etapas (`/pesquisa/sessoes/:id/
+     investigar`), que responde `text/event-stream`: os passos
+     precisam chegar conforme acontecem, e `chamar()` só devolve
+     depois que o corpo inteiro terminou — o que, para um stream de
+     30 segundos, é o mesmo que não ter stream.
+
+     `EventSource` não serve: ele só faz GET, e esta rota precisa de
+     corpo (a tarefa a investigar). Daí `fetch` cru com leitura
+     incremental.
+
+     Devolve a `Response` para quem chamou ler `body.getReader()`.
+     Erro ANTES do stream abrir (401, 402, 503) ainda vem em JSON e
+     é lançado igual a `chamar` — é justamente por isso que a rota
+     decide tudo que pode falhar antes do `writeHead`. */
+  async function fluxo(caminho, opcoes, jaRenovou) {
+    const { corpo, sinal } = opcoes || {};
+    let resposta;
+
+    try {
+      resposta = await fetch(BASE + caminho, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo || {}),
+        signal: sinal,
+      });
+    } catch (e) {
+      /* Abortar de propósito não é falha de rede: quem abortou sabe
+         o que fez, e transformar isso em "não foi possível falar com
+         o servidor" mentiria na tela. */
+      if (e && e.name === 'AbortError') throw e;
+      throw Falha('Não foi possível falar com o servidor.', { rede: true, status: 0, campo: null });
+    }
+
+    if (resposta.status === 401 && !jaRenovou) {
+      let renovou = false;
+      try {
+        const nova = await fetch(BASE + '/auth/sessao', { credentials: 'include' });
+        renovou = nova.ok;
+      } catch (_) { /* rede caiu: cai no erro abaixo */ }
+      if (renovou) return fluxo(caminho, opcoes, true);
+    }
+
+    if (!resposta.ok) {
+      let dados = null;
+      try { dados = await resposta.json(); } catch (_) { /* corpo vazio */ }
+      throw Falha(
+        (dados && dados.mensagem) || 'Erro inesperado. Tente novamente.',
+        { status: resposta.status, campo: (dados && dados.campo) || null, dados: dados || {} }
+      );
+    }
+
+    return resposta;
+  }
+
+  return { chamar, bruto, buscar, fluxo, BASE };
 })();

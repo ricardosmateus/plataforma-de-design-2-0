@@ -37,6 +37,22 @@
   var pensando = false;
   var iaDisponivel = true;
 
+  /* ------------------------------------------------------------
+     O modo caderno — Fase 3a
+     ------------------------------------------------------------
+     Quando ligado, o que a pessoa escreve não vai ao assistente do
+     projeto: vai à investigação que ela está lendo, e é respondido
+     SÓ com as fontes que aquela busca trouxe.
+
+     Por que um modo, e não um roteador que adivinha: as duas
+     perguntas parecem iguais ("e quantas lojas eles têm?") e têm
+     respostas de naturezas diferentes — uma lê o conhecimento da
+     empresa, a outra não pode sair de um material fechado. Um
+     roteador que escolhe sozinho erraria em silêncio, e a pessoa não
+     teria como saber qual dos dois respondeu. O modo é ligado por
+     gesto e fica VISÍVEL enquanto durar. */
+  var caderno = null;
+
   function base() {
     var e = window.EmpresaAtual;
     var p = window.ProjetoAtual;
@@ -179,12 +195,40 @@
     }
     /* pendente: só aqui aparecem botões — é o único estado em que
        a confirmação ainda vale (IA-ACAO-006). */
+
+    /* IDEIA-DUPL na porta da IA (16/09/2026). `m.avisoDuplicata` é
+       campo do CLIENTE, não do servidor: aparece quando a pessoa já
+       clicou em "Confirmar" e o servidor respondeu "achei uma
+       parecida, não gravei nada". A sugestão continua pendente, e o
+       "Confirmar" vira "Criar mesmo assim" — a mesma escolha de duas
+       saídas do alerta da tela do quadro (IDEIA-DUPL-006), dita em
+       linha, do jeito da conversa.
+
+       Fica dentro do cartão, e não num toast, porque a decisão é
+       sobre ESTA sugestão: tirar o aviso de perto dela obrigaria a
+       pessoa a lembrar a qual das mensagens ele se referia. */
+    var d = m.avisoDuplicata;
+    var rotuloConfirmar = d
+      ? (a.tipo === 'editar_ideia' ? 'Salvar mesmo assim' : 'Criar mesmo assim')
+      : 'Confirmar';
+
     return (
       '<div class="ia-acao" data-mensagem-id="' + escapar(m.id) + '">' +
       '<div class="ia-acao-corpo">' + ICON_CARTAO + '<span>' + escapar(resumoAcao(a)) + '</span></div>' +
+      (d
+        ? '<p class="ia-acao-duplicata">Já existe uma idéia parecida: “' + escapar(d.titulo)
+          + '”, em ' + escapar(ROTULO_COLUNA[d.status] || d.status) + '. Nada foi gravado.</p>'
+        : '') +
       '<div class="ia-acao-botoes">' +
-      '<button type="button" class="ia-acao-btn ia-acao-btn--confirmar" data-acao="confirmar">Confirmar</button>' +
-      '<button type="button" class="ia-acao-btn ia-acao-btn--descartar" data-acao="descartar">Descartar</button>' +
+      /* Links, e não botões (decisão do Ricardo, 16/09/2026): dentro
+         da conversa, um botão sólido é um objeto no meio do texto.
+         As classes vêm do sistema — `.link--sublinhado` e, no "não
+         fazer", `.link--apoio` —, e o elemento continua sendo
+         `<button>` porque o clique acontece AQUI; um `<a>` sem `href`
+         não é link para leitor de tela nenhum. */
+      '<button type="button" class="link link--sublinhado ia-acao-btn ia-acao-btn--confirmar" data-acao="confirmar">'
+      + escapar(rotuloConfirmar) + '</button>' +
+      '<button type="button" class="link link--sublinhado link--apoio ia-acao-btn ia-acao-btn--descartar" data-acao="descartar">Descartar</button>' +
       '</div>' +
       '</div>'
     );
@@ -200,13 +244,23 @@
       );
     }
     return (
-      '<article class="msg msg--bot">' +
+      '<article class="msg msg--bot' + (m.caderno ? ' msg--caderno' : '') + '">' +
       '<span class="msg-avatar msg-avatar--bot" aria-hidden="true">' + ICON_BOT + '</span>' +
       '<div>' +
       (m.sem_verdade_validada ? avisoSemVerdade(!!(m.fontes && m.fontes.length)) : '') +
       (m.alerta_acao_sem_proposta ? avisoAcaoNaoExecutada() : '') +
+      /* Dito na resposta, e não só no compositor: quem rolar a
+         conversa depois precisa saber que ESTA resposta não leu o
+         conhecimento da empresa — leu as fontes de uma busca. */
+      (m.caderno ? '<span class="msg-origem">Respondido com as fontes da investigação</span>' : '') +
       '<p class="msg-bubble">' + comQuebras(m.texto) + '</p>' +
       fontes(m.fontes) +
+      /* O custo saiu daqui em 15/09/2026 (decisão do Ricardo): valor
+         aparece num lugar só, em Configurações → Créditos de uso →
+         Histórico de uso. Mostrá-lo aqui espalhava o mesmo número por
+         várias jornadas — e o preço colado na resposta não ajudava a
+         decidir nada, porque a decisão já tinha sido tomada. */
+      (m.cortado ? '<span class="msg-origem">Parte do material ficou de fora por limite de tamanho.</span>' : '') +
       blocoAcao(m) +
       '</div>' +
       '</article>'
@@ -224,8 +278,180 @@
 
   var mensagens = [];
 
+  /* ------------------------------------------------------------
+     A ORDEM DA CONVERSA
+     ------------------------------------------------------------
+     Mensagens e narrações vivem em listas separadas — e isso é regra,
+     não arrumação (ver o bloco da narração logo abaixo). Mas a TELA é
+     uma só, e até 16/09/2026 ela desenhava todas as mensagens e depois
+     todas as narrações. O efeito: uma investigação de ontem aparecia
+     DEPOIS de uma pergunta feita agora, sempre grudada no fim. A
+     pessoa mandava uma mensagem e a narração pulava para baixo dela.
+
+     `ordem` é um contador que cresce e é carimbado no item quando ele
+     ENTRA na tela — não importa de que lista ele venha. Desenhar pela
+     ordem devolve a sequência da conversa sem juntar as duas listas,
+     que é justamente o que não pode acontecer.
+
+     Por que um contador e não a data: mensagem vinda do servidor tem
+     data, mensagem otimista (a pergunta que acabou de ser digitada)
+     não tem, e narração tem `inicio` em outro relógio. Um contador
+     único responde a única pergunta que importa aqui — o que veio
+     antes do quê — sem depender de três fontes de tempo concordarem. */
+  var proximaOrdem = 1;
+
+  function comOrdem(item) {
+    if (item && item.ordem == null) item.ordem = proximaOrdem++;
+    return item;
+  }
+
+  /* ------------------------------------------------------------
+     A narração da investigação — IA-CONV-NARRA
+     ------------------------------------------------------------
+     Lista SEPARADA de `mensagens`, e essa separação é a regra, não
+     uma escolha de organização.
+
+     `mensagens` é a conversa: ela é persistida em `ia_mensagens`, e
+     o servidor a relê para montar o contexto das perguntas
+     seguintes (IA-CONV-004). Uma linha de progresso que entrasse
+     ali seria paga em tokens em toda pergunta futura, e o modelo
+     teria que adivinhar quem disse "buscando 2 de 4".
+
+     Aqui, isso não pode acontecer por construção: a narração nunca
+     entra em `mensagens`, nunca é enviada em lugar nenhum, e morre
+     com a aba. É desenho de tela, não fala de ninguém
+     (IA-CONV-NARRA-002/003).
+
+     Ela vive nesta lista e não em DOM solto porque `desenhar()`
+     reescreve o `innerHTML` inteiro a cada mudança — DOM anexado
+     por fora sumiria na primeira resposta do assistente. */
+  var narracoes = [];
+
+  function narracaoPorId(id) {
+    for (var i = 0; i < narracoes.length; i++) {
+      if (narracoes[i].id === id) return narracoes[i];
+    }
+    return null;
+  }
+
+  function segundosDe(n) {
+    return Math.floor(((n.fim || Date.now()) - n.inicio) / 1000);
+  }
+
+  /* Só o tempo, e sem redesenhar nada: um `desenhar()` por segundo
+     destruiria os botões de saída no meio de um clique. */
+  function pintarTempos() {
+    var vivos = 0;
+    for (var i = 0; i < narracoes.length; i++) {
+      var n = narracoes[i];
+      if (n.estado !== 'correndo') continue;
+      vivos++;
+      var alvo = thread.querySelector('[data-tempo="' + n.id + '"]');
+      if (alvo) alvo.textContent = segundosDe(n) + 's';
+    }
+    if (!vivos && relogio) { clearInterval(relogio); relogio = null; }
+  }
+
+  var relogio = null;
+
+  function ligarRelogio() {
+    if (relogio) return;
+    relogio = setInterval(pintarTempos, 1000);
+  }
+
+  var ICONE_ESTADO = {
+    correndo: '🔎',
+    ok: '✅',
+    falha: '⚠️',
+    parada: '⏸️',
+    /* `aguardando` não é `parada`: parada é o assistente dizendo que
+       não dá para seguir, aguardando é ele esperando VOCÊ. A mão
+       levantada diz "sua vez" — e a diferença importa porque só uma
+       das duas tem dinheiro do outro lado do botão. */
+    aguardando: '✋',
+  };
+
+  function narracaoHtml(n) {
+    var passos = n.passos.length
+      ? '<ul class="ia-narracao-passos">' +
+        n.passos.map(function (t) { return '<li>' + escapar(t) + '</li>'; }).join('') +
+        '</ul>'
+      : '';
+
+    /* O tempo continua visível depois de terminar: quanto uma
+       investigação demorou é informação, e apagá-la no fim deixaria
+       a pessoa sem saber se foram 4 segundos ou 40. */
+    var tempo = '<span class="ia-narracao-tempo" data-tempo="' + escapar(n.id) + '">' +
+      segundosDe(n) + 's</span>';
+
+    var fecho = n.fecho
+      ? '<p class="ia-narracao-fecho">' + escapar(n.fecho) + '</p>'
+      : '';
+
+    /* BOARD-PESQUISA-012 chegando na tela: a recusa vem com o que
+       dá para fazer, e o botão manda de volta com `nivelConfirmado`.
+       O texto e as opções vêm do servidor (`pesquisa/saidas.ts`) —
+       a tela desenha, não redige. */
+    var saidas = (n.saidas && n.saidas.length)
+      ? '<div class="ia-narracao-saidas">' +
+        n.saidas.map(function (s) {
+          /* Saída com `href` é uma ida a outra tela, não uma ação
+             aqui dentro — então é um link, e não um botão que
+             teleporta. Três coisas vêm de graça com isso: a pessoa
+             vê para onde vai antes de clicar, pode abrir em outra
+             aba sem perder a investigação que está lendo, e o
+             teclado trata como navegação, que é o que é. */
+          var CLASSES = 'link link--sublinhado ia-narracao-btn';
+          var miolo = s.href
+            ? '<a class="' + CLASSES + '" href="' + escapar(s.href) + '">' + escapar(s.rotulo) + '</a>'
+            : '<button type="button" class="' + CLASSES + '" ' +
+              'data-narracao-saida="' + escapar(s.nivel) + '" ' +
+              'data-narracao="' + escapar(n.id) + '">' + escapar(s.rotulo) + '</button>';
+          return miolo +
+            '<span class="ia-narracao-exp">' + escapar(s.explicacao || '') + '</span>';
+        }).join('') +
+        '</div>'
+      : '';
+
+    return (
+      '<section class="ia-narracao ia-narracao--' + escapar(n.estado) + '" ' +
+      'data-narracao="' + escapar(n.id) + '" aria-live="polite">' +
+      '<div class="ia-narracao-topo">' +
+      '<span class="ia-narracao-icone" aria-hidden="true">' + (ICONE_ESTADO[n.estado] || '🔎') + '</span>' +
+      '<span class="ia-narracao-titulo">' + escapar(n.titulo) + '</span>' +
+      tempo +
+      '</div>' +
+      '<p class="ia-narracao-tarefa">' + escapar(n.tarefa) + '</p>' +
+      passos +
+      fecho +
+      saidas +
+      '</section>'
+    );
+  }
+
   function desenhar(extra) {
-    var corpo = mensagens.length ? mensagens.map(bolha).join('') : convite();
+    var temConversa = mensagens.length > 0;
+
+    /* Uma fila só, na ordem em que as coisas aconteceram. As duas
+       listas continuam separadas na memória — o que se junta aqui é
+       só o desenho. */
+    var itens = [];
+    var i;
+    for (i = 0; i < mensagens.length; i++) {
+      itens.push({ ordem: mensagens[i].ordem || 0, html: bolha(mensagens[i]) });
+    }
+    for (i = 0; i < narracoes.length; i++) {
+      itens.push({ ordem: narracoes[i].ordem || 0, html: narracaoHtml(narracoes[i]) });
+    }
+    itens.sort(function (a, b) { return a.ordem - b.ordem; });
+
+    var corpo = itens.map(function (x) { return x.html; }).join('');
+
+    /* O convite sai de cena quando há uma investigação correndo:
+       "por onde começar?" ao lado de uma busca em andamento é
+       conselho para quem já começou. */
+    if (!temConversa && !narracoes.length) corpo = convite();
+
     thread.innerHTML = corpo + (extra || '');
     thread.scrollTop = thread.scrollHeight;
   }
@@ -242,6 +468,46 @@
     var travado = carregando || pensando || !iaDisponivel;
     enviar.disabled = travado;
     campo.disabled = travado;
+    desenharMarcaCaderno();
+  }
+
+  /* A marca fica ENTRE a conversa e o campo, onde o olho passa antes
+     de digitar. Um modo que muda para onde a pergunta vai não pode
+     ser invisível — e sair dele tem que custar um clique, não uma
+     descoberta. */
+  function desenharMarcaCaderno() {
+    var atual = document.getElementById('iaMarcaCaderno');
+    if (!caderno) {
+      if (atual) atual.remove();
+      campo.setAttribute('placeholder', campo.dataset.placeholderOriginal || campo.placeholder || '');
+      return;
+    }
+
+    if (!campo.dataset.placeholderOriginal) {
+      campo.dataset.placeholderOriginal = campo.getAttribute('placeholder') || '';
+    }
+    campo.setAttribute('placeholder', 'Pergunte sobre as fontes desta investigação…');
+
+    if (!atual) {
+      atual = document.createElement('div');
+      atual.id = 'iaMarcaCaderno';
+      atual.className = 'ia-marca-caderno';
+      campo.parentNode.insertBefore(atual, campo);
+    }
+    atual.innerHTML =
+      '<span class="ia-marca-caderno-txt">Perguntando às fontes de: <b>' +
+      escapar(caderno.rotulo || 'investigação') + '</b></span>' +
+      '<button type="button" class="ia-marca-caderno-sair" id="iaSairCaderno" ' +
+      'aria-label="Voltar a falar com o assistente do projeto">✕</button>';
+
+    var sair = document.getElementById('iaSairCaderno');
+    if (sair) sair.addEventListener('click', function () { desligarCaderno(); });
+  }
+
+  function desligarCaderno() {
+    caderno = null;
+    atualizarCompositor();
+    campo.focus();
   }
 
   /* ------------------------------------------------------------
@@ -275,7 +541,10 @@
 
     chamarComRenovacao(b + '/conversa', {}, false).then(
       function (r) {
-        mensagens = (r && r.mensagens) || [];
+        /* O histórico chega em ordem e é o começo de tudo: carimbar
+           aqui garante que qualquer narração aberta depois caia
+           embaixo dele. */
+        mensagens = ((r && r.mensagens) || []).map(comOrdem);
         iaDisponivel = !(r && r.ia_disponivel === false);
         if (!iaDisponivel) {
           definirAviso('Assistente ainda não configurado neste ambiente.');
@@ -306,18 +575,42 @@
     /* Otimista só na pergunta: ela é da pessoa e não depende de
        verificação nenhuma. A resposta, essa, só aparece depois de o
        servidor conferir a procedência. */
-    mensagens.push({ autor: 'pessoa', texto: texto });
+    mensagens.push(comOrdem({ autor: 'pessoa', texto: texto }));
     pensando = true;
     definirAviso('');
     atualizarCompositor();
     mostrarPensando();
 
-    chamarComRenovacao(b + '/perguntas', { metodo: 'POST', corpo: { pergunta: texto } }, false).then(
+    /* O destino depende do modo, e o modo está à vista. O assistente
+       do projeto lê o conhecimento da empresa; o caderno não pode sair
+       das fontes de uma investigação. */
+    var destino = caderno
+      ? { caminho: '/pesquisa/sessoes/' + caderno.sessaoId + '/consultas/' + caderno.consultaId + '/perguntar' }
+      : { caminho: b + '/perguntas' };
+
+    chamarComRenovacao(destino.caminho, { metodo: 'POST', corpo: { pergunta: texto } }, false).then(
       function (r) {
         pensando = false;
         campo.value = '';
         atualizarCompositor();
-        if (r && r.mensagem) mensagens.push(r.mensagem);
+        if (caderno) {
+          /* A resposta do caderno NÃO é gravada em `ia_mensagens` e
+             nunca volta ao modelo nas perguntas seguintes ao
+             assistente: ela vive aqui como desenho, e no banco como
+             conversa daquela consulta. Se voltasse, um achado da web
+             — que só vale com a fonte colada — reapareceria depois
+             como coisa que a empresa sabe (IA-GERAL-005). */
+          if (r && r.resposta) {
+            mensagens.push(comOrdem({
+              autor: 'ia',
+              texto: r.resposta,
+              caderno: true,
+              cortado: !!r.material_cortado,
+            }));
+          }
+        } else if (r && r.mensagem) {
+          mensagens.push(comOrdem(r.mensagem));
+        }
         desenhar();
         campo.focus();
       },
@@ -342,17 +635,44 @@
      são inteiramente reconstruídos a cada `desenhar()` via
      innerHTML, então um listener preso a um botão específico
      morreria no redesenho seguinte. */
-  function responderAcao(mensagemId, tipo, botoesDoCartao) {
+  function responderAcao(mensagemId, tipo, botoesDoCartao, ignorarDuplicata) {
     var b = base();
     if (!b) return;
 
     for (var i = 0; i < botoesDoCartao.length; i++) botoesDoCartao[i].disabled = true;
 
     var caminho = b + '/mensagens/' + encodeURIComponent(mensagemId) + '/' + tipo;
-    chamarComRenovacao(caminho, { metodo: 'POST' }, false).then(
+    var pedido = { metodo: 'POST' };
+    /* Só no reenvio: um "Confirmar" comum continua sendo um POST sem
+       corpo, e é a ausência da flag que faz a checagem rodar. */
+    if (ignorarDuplicata) pedido.corpo = { ignorar_duplicata: true };
+
+    chamarComRenovacao(caminho, pedido, false).then(
       function (r) {
+        /* IDEIA-DUPL-003: resposta de SUCESSO que não gravou nada.
+           Não é erro e não é `r.mensagem` — a sugestão segue
+           pendente, só ganhou um aviso. Por isso volta aqui em cima,
+           antes de qualquer troca de mensagem. */
+        if (r.possivel_duplicata) {
+          for (var k = 0; k < mensagens.length; k++) {
+            if (mensagens[k].id === mensagemId) { mensagens[k].avisoDuplicata = r.possivel_duplicata; break; }
+          }
+          desenhar();
+          return;
+        }
+
         for (var i = 0; i < mensagens.length; i++) {
-          if (mensagens[i].id === mensagemId) { mensagens[i] = r.mensagem; break; }
+          if (mensagens[i].id === mensagemId) {
+            /* A `ordem` é do LUGAR na conversa, não do objeto: trocar
+               a mensagem por uma versão nova do servidor não pode
+               mandá-la para o fim da tela. */
+            r.mensagem.ordem = mensagens[i].ordem;
+            /* Gravou (ou descartou): o aviso morre junto — deixá-lo
+               de pé mostraria "já existe uma parecida" ao lado de
+               "Idéia criada no quadro". */
+            mensagens[i] = comOrdem(r.mensagem);
+            break;
+          }
         }
         desenhar();
 
@@ -400,7 +720,16 @@
     if (!mensagemId) return;
 
     var tipo = botao.getAttribute('data-acao') === 'confirmar' ? 'confirmar' : 'descartar';
-    responderAcao(mensagemId, tipo, cartao.querySelectorAll('.ia-acao-btn'));
+
+    /* Segundo clique em "Confirmar" DEPOIS do aviso = "mesmo assim".
+       Quem sabe que o aviso está na tela é o próprio cartão, então a
+       decisão sai daqui e não de um estado solto no módulo. */
+    var jaAvisado = false;
+    for (var i = 0; i < mensagens.length; i++) {
+      if (mensagens[i].id === mensagemId) { jaAvisado = !!mensagens[i].avisoDuplicata; break; }
+    }
+
+    responderAcao(mensagemId, tipo, cartao.querySelectorAll('.ia-acao-btn'), tipo === 'confirmar' && jaAvisado);
   });
 
   enviar.addEventListener('click', perguntar);
@@ -415,7 +744,194 @@
     }
   });
 
+  /* ------------------------------------------------------------
+     A porta da narração — quem usa é js/pesquisa.js
+     ------------------------------------------------------------
+     Fica aqui, e não lá, porque quem é dono do DOM da thread é este
+     arquivo. Dois módulos escrevendo no mesmo `innerHTML` é a
+     receita para um apagar o outro — e, pior, seria fácil um deles
+     empurrar a narração para dentro de `mensagens` sem perceber.
+     Expondo só estas quatro funções, isso não tem como acontecer.
+
+     `aoEscolher` é guardado no objeto da narração, não no DOM: o
+     `innerHTML` é reescrito a cada passo, e um listener preso ao
+     botão morreria no primeiro redesenho. */
+  var proximoId = 1;
+
+  window.IaNarracao = {
+    /* Abre a entrada e devolve o id. `tarefa` é o texto que a
+       pessoa escreveu — aparece entre aspas, para ela reconhecer
+       qual investigação é esta. */
+    abrir: function (titulo, tarefa) {
+      var n = {
+        id: 'n' + (proximoId++),
+        titulo: titulo || 'Investigando',
+        tarefa: tarefa || '',
+        inicio: Date.now(),
+        fim: null,
+        estado: 'correndo',
+        passos: [],
+        fecho: '',
+        saidas: [],
+        aoEscolher: null,
+      };
+      narracoes.push(comOrdem(n));
+      ligarRelogio();
+      desenhar();
+      return n.id;
+    },
+
+    /* Um passo que JÁ ACONTECEU (IA-CONV-NARRA-005). Nada de
+       "vou buscar": só "busquei". */
+    passo: function (id, texto) {
+      var n = narracaoPorId(id);
+      if (!n || !texto) return;
+      n.passos.push(texto);
+      desenhar();
+    },
+
+    /* Fecha com um estado e, quando houver, com o que dá para
+       fazer a seguir.
+       `estado`: 'ok' | 'falha' | 'parada' | 'aguardando'.
+
+       `aguardando` fecha o desenho sem fechar o assunto: o stream
+       acabou, mas a investigação continua viva no servidor esperando
+       um clique (BOARD-PESQUISA-037). O relógio para junto, e é
+       certo que pare — o tempo que a pessoa leva para decidir não é
+       tempo de investigação. */
+    fechar: function (id, estado, fecho, saidas, aoEscolher) {
+      var n = narracaoPorId(id);
+      if (!n) return;
+      n.estado = estado || 'ok';
+      n.fim = Date.now();
+      n.fecho = fecho || '';
+      n.saidas = saidas || [];
+      n.aoEscolher = aoEscolher || null;
+      pintarTempos();
+      desenhar();
+    },
+
+    /* Remonta uma entrada inteira a partir do que ficou gravado no
+       servidor (Fase 1b). Existe porque uma investigação não morre
+       com a aba: o servidor termina, cobra e grava mesmo sem
+       cliente. Ao voltar, a pessoa precisa ver o que aconteceu
+       enquanto ela não estava olhando — inclusive o resultado que
+       ela já pagou.
+
+       `duracaoMs` vem do servidor: sem ela, uma investigação de
+       ontem apareceria como "0s", que é a única coisa que
+       certamente não é verdade. */
+    restaurar: function (dados) {
+      var n = {
+        id: 'n' + (proximoId++),
+        titulo: dados.titulo || 'Investigação anterior',
+        tarefa: dados.tarefa || '',
+        inicio: Date.now() - (dados.duracaoMs || 0),
+        fim: dados.estado === 'correndo' ? null : Date.now(),
+        estado: dados.estado || 'ok',
+        passos: (dados.passos || []).slice(),
+        fecho: dados.fecho || '',
+        saidas: dados.saidas || [],
+        aoEscolher: dados.aoEscolher || null,
+      };
+      narracoes.push(comOrdem(n));
+      if (n.estado === 'correndo') ligarRelogio();
+      desenhar();
+      return n.id;
+    },
+
+    /* Volta a correr. É o que acontece quando a pessoa escolhe uma
+       saída: a MESMA entrada continua, com um passo a mais dizendo
+       o que ela escolheu. Abrir uma segunda entrada faria parecer
+       que rodaram duas investigações, e perderia o motivo pelo qual
+       esta recomeçou. */
+    retomar: function (id, passo) {
+      var n = narracaoPorId(id);
+      if (!n) return;
+      n.estado = 'correndo';
+      n.inicio = Date.now();
+      n.fim = null;
+      n.fecho = '';
+      n.saidas = [];
+      n.aoEscolher = null;
+      if (passo) n.passos.push(passo);
+      ligarRelogio();
+      desenhar();
+    },
+
+    /* Some com a entrada. Usado quando a pessoa escolheu uma saída:
+       a investigação recomeça numa entrada nova, e deixar as duas
+       na tela faria parecer que rodaram duas buscas. */
+    remover: function (id) {
+      narracoes = narracoes.filter(function (n) { return n.id !== id; });
+      desenhar();
+    },
+  };
+
+  /* Clique numa saída. Delegado na thread pelo mesmo motivo do
+     bloco de ação: o `innerHTML` é reescrito o tempo todo. */
+  thread.addEventListener('click', function (ev) {
+    var botao = ev.target.closest ? ev.target.closest('[data-narracao-saida]') : null;
+    if (!botao) return;
+
+    var n = narracaoPorId(botao.getAttribute('data-narracao'));
+    if (!n || !n.aoEscolher) return;
+
+    /* Trava os dois botões antes de chamar: uma segunda escolha
+       enquanto a primeira está saindo seria uma segunda busca paga.
+       Mesmo raciocínio de IA-ACAO-006. */
+    var todos = thread.querySelectorAll('[data-narracao="' + n.id + '"][data-narracao-saida]');
+    for (var i = 0; i < todos.length; i++) todos[i].disabled = true;
+
+    n.aoEscolher(botao.getAttribute('data-narracao-saida'), n.id);
+  });
+
   /* O painel só carrega depois que js/ideias.js resolveu empresa e
      projeto — é de lá que sai o endereço das chamadas. */
+  /* ------------------------------------------------------------
+     O caderno, para quem liga o modo — Fase 3a
+     ------------------------------------------------------------
+     Quem liga é `js/pesquisa.js`, pelo botão da narração. O painel
+     não decide sozinho que uma pergunta é sobre a investigação: ele
+     obedece a um gesto e o mostra enquanto durar. */
+  window.IaCaderno = {
+    ligar: function (dados) {
+      if (!dados || !dados.sessaoId || !dados.consultaId) return false;
+      caderno = { sessaoId: dados.sessaoId, consultaId: dados.consultaId, rotulo: dados.rotulo || '' };
+      atualizarCompositor();
+      campo.focus();
+      return true;
+    },
+    desligar: desligarCaderno,
+    ligado: function () { return !!caderno; },
+
+    /* O que foi conversado com o caderno, para quem vai montar o
+       relatório. Lê da mesma lista que a tela desenha — sem uma
+       segunda cópia, que divergiria. */
+    rodadas: function () {
+      var saida = [];
+      for (var i = 0; i < mensagens.length; i++) {
+        var m = mensagens[i];
+        if (!m.caderno) continue;
+        var antes = mensagens[i - 1];
+        if (!antes || antes.autor !== 'pessoa') continue;
+        saida.push({ pergunta: antes.texto, resposta: m.texto });
+      }
+      return saida;
+    },
+
+    /* Remonta uma conversa de caderno já gravada, ao reabrir a
+       tarefa. Sem isto o caderno seria um lugar para voltar onde não
+       há nada do que foi conversado — que é o contrário da promessa. */
+    restaurar: function (rodadas) {
+      (rodadas || []).forEach(function (r) {
+        if (!r || !r.pergunta) return;
+        mensagens.push(comOrdem({ autor: 'pessoa', texto: r.pergunta }));
+        mensagens.push(comOrdem({ autor: 'ia', texto: r.resposta || '', caderno: true }));
+      });
+      if ((rodadas || []).length) desenhar();
+    },
+  };
+
   window.IaAssistente = { carregar: carregar };
 })();

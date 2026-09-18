@@ -37,6 +37,28 @@ try {
 
 const URL_TESTE = process.env.DATABASE_URL_TESTE;
 
+/* ------------------------------------------------------------
+   `--opcional`: falhar aqui não pode derrubar os testes puros
+   ------------------------------------------------------------
+   Este script é o `pre` de dois comandos com necessidades
+   OPOSTAS. `npm run teste:integracao` existe para tocar o banco:
+   se a migração não roda, rodar os testes seria pior do que não
+   rodar — eles passariam contra um schema velho. Já `npm run
+   teste` roda as ~380 provas puras, e os arquivos de integração
+   se pulam sozinhos quando não há `DATABASE_URL_TESTE`.
+
+   Até 15/09/2026 os dois usavam o mesmo `process.exit(1)`, então
+   um banco de teste fora do ar — ou, numa máquina sem acesso a
+   `binaries.prisma.sh`, só o download do engine — apagava a
+   suíte inteira. O comando que se digita primeiro era o que
+   falhava, e nada do que ele apagava dependia de banco.
+
+   Com a bandeira, a falha vira aviso e o processo sai em 0: os
+   puros rodam, os de integração se pulam, e ninguém fica sem
+   nada por causa de uma dependência que não era dele.
+   ------------------------------------------------------------ */
+const OPCIONAL = process.argv.includes('--opcional');
+
 if (!URL_TESTE) {
   console.log('[preteste] DATABASE_URL_TESTE não definida — pulando migração do banco de teste.');
   process.exit(0);
@@ -134,9 +156,16 @@ try {
     '              DATABASE_URL_TESTE. Defina também DIRECT_URL_TESTE com a mesma\n' +
     '              URL sem o "-pooler" — o lock de migração briga com o pooler.\n\n' +
     '           Sem DATABASE_URL_TESTE definida, os testes de integração se\n' +
-    '           pulam sozinhos em vez de falhar.\n'
+    '           pulam sozinhos em vez de falhar.\n' +
+    (OPCIONAL
+      ? '\n[preteste] Seguindo assim mesmo: os testes que NÃO precisam de banco\n' +
+        '           vão rodar normalmente, e os de integração vão se pular.\n' +
+        '           Para rodar os de integração, use `npm run teste:integracao`\n' +
+        '           depois de subir o banco — lá a falha acima para tudo, de\n' +
+        '           propósito.\n'
+      : '')
   );
-  process.exit(1);
+  process.exit(OPCIONAL ? 0 : 1);
 }
 
 console.log('[preteste] banco de teste migrado.');

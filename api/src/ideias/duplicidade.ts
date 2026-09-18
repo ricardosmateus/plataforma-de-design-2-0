@@ -57,15 +57,31 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return uniao === 0 ? 0 : intersecao / uniao;
 }
 
-/* Título e descrição pesam igual (IDEIA-DUPL-002: "título e descrição
-   juntos") — não é só o título que decide, nem só a descrição.
-   Título curto (até 60) e descrição mais longa (até 280) já se
-   comportam de forma diferente por si só: poucas palavras iguais no
-   título pesam muito mais ali do que as mesmas poucas palavras
-   perdidas numa descrição longa, e é assim mesmo — cada campo mede a
-   própria semelhança, não o texto inteiro concatenado. */
-const PESO_TITULO = 0.5;
-const PESO_DESCRICAO = 0.5;
+/* Título e descrição pesam DIFERENTE (IDEIA-DUPL-002: "título e
+   descrição juntos" — juntos, não em partes iguais). Cada campo mede
+   a própria semelhança; o que muda é quanto cada um decide.
+
+   Recalibrado em 16/09/2026, e o motivo é aritmético. Com 0.5/0.5 e
+   limiar 0.6, o título sozinho chegava no máximo a 0.5 — ou seja,
+   **título idêntico nunca alcançava o limiar por si só**. O alerta
+   passava a exigir semelhança de descrição ≥ 0.2 SEMPRE, e Jaccard
+   pune reescrita com força (vocabulário diferente para a mesma
+   idéia derruba o índice para perto de zero). Resultado medido nas
+   152 idéias reais do projeto Startup/iHouseLog: em 11.476 pares,
+   o alerta disparava ZERO vezes — só sobrevivia a cópia literal,
+   que é justamente o caso que ninguém comete sem perceber.
+
+   Com 0.7/0.3 e o mesmo limiar 0.6, título idêntico vale 0.7 e
+   dispara sozinho — que é o comportamento que a regra descreve. Os
+   mesmos 11.476 pares reais continuam com ZERO falsos alertas, então
+   subir o peso do título não trocou silêncio por ruído.
+
+   O que continua fora do alcance: título sinônimo ("Seguro
+   encomendas" x "Seguro para encomendas" passa; "Locker" x "Armário
+   inteligente" não). Sobreposição de palavras não enxerga sinônimo —
+   isso exigiria embeddings, e está registrado como pendência. */
+const PESO_TITULO = 0.7;
+const PESO_DESCRICAO = 0.3;
 
 /* Ponto em que a semelhança deixa de ser coincidência de vocabulário
    e passa a valer um aviso. Deliberadamente conservador — um alerta

@@ -1,0 +1,95 @@
+# ============================================================
+# Render — um serviço só, API e site na mesma origem
+# ============================================================
+# Por que um serviço e não dois: com SERVIR_FRONTEND=sim o próprio
+# Fastify serve os .html/.css/.js da raiz do repositório
+# (api/src/servidor.ts, allowlist PERMITIDO). Mesma origem significa
+# sem CORS e sem cookie cross-site — e o cookie de sessão é
+# `sameSite: strict`, que é justamente o que NÃO atravessa origens.
+# Separar em dois serviços obrigaria a afrouxar essa política.
+#
+# Por que não serverless: a investigação transmite por SSE
+# (`text/event-stream` em src/rotas/pesquisa.ts). Função com teto de
+# duração corta a conexão no meio de uma busca JÁ PAGA. Este serviço
+# precisa ser um processo que fica de pé.
+#
+# rootDir: api — o build e o start rodam dentro de api/, mas o Render
+# faz checkout do repositório INTEIRO. É isso que mantém
+# `RAIZ_SITE` (api/dist/../.. = raiz do repo) apontando para os
+# .html do site. Mudar rootDir para a raiz quebraria o start.
+# ============================================================
+services:
+  - type: web
+    name: plataforma-de-design
+    runtime: node
+    plan: starter
+    # O banco é Neon em AWS us-east-2, que é Ohio. App e banco na
+    # mesma região porque CADA consulta paga a ida e volta: com o app
+    # no Brasil e o banco em Ohio seriam ~120ms por consulta, e uma
+    # tela como o board faz várias em sequência.
+    region: ohio
+    rootDir: api
+
+    # `npm ci` e não `npm install`: instala exatamente o que está no
+    # lock. `prisma generate` antes do build porque o TypeScript não
+    # compila sem o client. `migrar` é `prisma migrate deploy` —
+    # aplica o que falta e nunca cria migração nova (ao contrário de
+    # `migrar:dev`, que não deve chegar perto de um servidor).
+    buildCommand: npm ci && npx prisma generate && npm run migrar && npm run build
+    startCommand: npm run start
+
+    # /saude faz `SELECT 1` no banco. É de propósito: um serviço que
+    # responde 200 sem conseguir falar com o banco está de pé e
+    # inútil, e o Render promoveria o deploy achando que deu certo.
+    healthCheckPath: /saude
+    autoDeployTrigger: commit
+
+    envVars:
+      # ---- O que decide o comportamento ----
+      - key: NODE_ENV
+        value: production
+      # Explícito e obrigatório: em produção o env.ts desliga o site
+      # por padrão (`producao ? 'nao' : 'sim'`). Sem esta linha o
+      # deploy sobe uma API sem nenhuma tela.
+      - key: SERVIR_FRONTEND
+        value: sim
+
+      # ---- Segredos que o Render gera e eu nunca vejo ----
+      # `generateValue` cria o valor no primeiro deploy e o guarda.
+      # Não reutilize os do .env local: segredo de desenvolvimento
+      # circula em máquina, backup e histórico de terminal.
+      # Trocar JWT_SEGREDO invalida as sessões abertas; trocar
+      # OTP_PIMENTA invalida os códigos de verificação em trânsito.
+      - key: JWT_SEGREDO
+        generateValue: true
+      - key: OTP_PIMENTA
+        generateValue: true
+
+      # ---- O que você preenche no painel ----
+      # sync: false = o Render pede o valor e não o guarda aqui, que
+      # é o que mantém este arquivo publicável no repositório.
+      - key: DATABASE_URL
+        sync: false
+      # Allowlist de origens (env.ts §ORIGENS). Com tudo na mesma
+      # origem ela quase não é exercitada, mas as rotas de stream
+      # escrevem o cabeçalho de CORS à mão depois do `hijack()` e
+      # leem esta lista — deixá-la no padrão `http://localhost:8000`
+      # faria a investigação falhar só em produção.
+      #
+      # Valor à vista (não é segredo) para haver menos coisa a digitar
+      # no painel. Se o endereço do serviço mudar, muda aqui.
+      - key: ORIGENS
+        value: https://www.plataformadedesign.com
+      # Chave da IA. Sem ela o assistente e a pesquisa não funcionam;
+      # o resto da plataforma sobe normalmente.
+      - key: IA_API_KEY
+        sync: false
+
+      # ---- Cobrança e pagamento ----
+      # Ambiente de demonstração: cobrança desligada mede sem lançar
+      # (DIN-011) e o Histórico de uso mostra o consumo marcado como
+      # "medido, não cobrado" (DIN-014). Para valer, mude para `sim`.
+      - key: CREDITOS_COBRAR
+        value: nao
+      - key: PSP_DRIVER
+        value: sandbox

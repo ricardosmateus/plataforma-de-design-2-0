@@ -58,6 +58,10 @@ documentação do projeto já registra isso (`board-analise-pre-implementacao.md
 
 ### 1.3 A margem de 5% é mais apertada do que parece
 
+> **RESOLVIDO em 14/09/2026.** A margem subiu de **5% para 30%** por decisão do Ricardo, pela terceira das três saídas que esta seção listou. A análise abaixo fica **inteira, como foi escrita** — ela é o raciocínio que levou à decisão, e apagá-la esconderia por que 5% não bastavam. Ver `creditos-pagamentos-regras.md`, `DIN-008`.
+>
+> Um item que faltava nesta lista: **infraestrutura**. Os quatro custos abaixo são todos *por transação*; servidor, banco e tráfego são *por tempo*, e existem no mês em que ninguém consome. Foi esse o argumento do Ricardo.
+
 Isto não é objeção ao plano — é o número que precisa ser conferido com
 um contador antes de a régua ser fixada, porque o desenvolvimento
 inteiro se apoia nele.
@@ -650,7 +654,7 @@ Só depois das anteriores, e **depende de resposta jurídica/contábil**
 
 | Item | Situação |
 |---|---|
-| **A margem de 5% cobre os custos?** | §1.3 lista o que sai dela: IOF, câmbio, imposto, tarifa de Pix. **Precisa da resposta de um contador antes da Fase 4.** A Fase 0 dá os números reais para essa conta. |
+| ~~**A margem de 5% cobre os custos?**~~ | **RESOLVIDO (14/09/2026): não cobriam — a alíquota subiu para 30%** (`DIN-008`). §1.3 listava IOF, câmbio, imposto e tarifa de Pix; o Ricardo acrescentou o item que faltava, **infraestrutura**, que é custo por tempo e não por transação. A conferência com contador continua valendo para o regime tributário, mas não bloqueia mais: a decisão de alíquota foi tomada. |
 | **Qual provedor de Pix** (C3) | ~~Decidir até a Fase 4.~~ ~~Decidido: Mercado Pago (31/08/2026).~~ ~~`PspMercadoPago` implementado (31/08/2026).~~ **RESOLVIDO (01/09/2026): funcionando com dinheiro real, ciclo completo e automático** — cobrança, pagamento, webhook e crédito líquido (taxa da transação descontada). Ver Fase 4. |
 | **Valor mínimo de recarga** | R$ 10,00 hoje na tela. Se a tarifa de recebimento for ~R$ 1,00, são 10% da recarga (§1.3). Revisar com os números da Fase 0. |
 | **Quem fica com os R$ 50,00 do serviço?** | O enunciado diz "ganhamos R$ 50 + 5% do consumo". Se a plataforma fica com os R$ 50 inteiros, o profissional trabalha de graça — então provavelmente esse valor se divide. **Precisa ser definido antes da Fase 6.** |

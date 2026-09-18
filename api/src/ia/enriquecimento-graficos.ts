@@ -217,6 +217,7 @@ export async function enriquecerGraficosEmSegundoPlano(
         modelo: d.modelo,
         uso: d.uso,
         requisicaoId: d.requisicaoId,
+        operacaoId,
       });
     }
 

@@ -821,10 +821,13 @@ model ConsumoIa {
   // request-id da resposta do provedor, para conciliar com a fatura.
   requisicaoId String? @map("requisicao_id")
 
+  operacaoId String? @map("operacao_id") @db.Uuid
+
   criadoEm DateTime @default(now()) @map("criado_em")
 
   @@index([usuarioId, criadoEm])
   @@index([criadoEm])
+  @@index([operacaoId])
   @@map("consumos_ia")
 }
 
@@ -1041,7 +1044,8 @@ model PesquisaSessao {
   criadoEm   DateTime  @default(now()) @map("criado_em")
   encerradoEm DateTime? @map("encerrado_em")
 
-  consultas PesquisaConsulta[]
+  consultas     PesquisaConsulta[]
+  investigacoes PesquisaInvestigacao[]
   entidades PesquisaEntidade[]
 
   @@index([usuarioId, criadoEm])
@@ -1077,6 +1081,27 @@ model PesquisaConsulta {
   // depois de onde veio cada resposta.
   provedor String?
 
+  // O TEXTO que o provedor devolveu. Não existia — Fase 1b, 14/09/2026.
+  //
+  // A consulta guardava a pergunta, o nível, o resultado e as fontes,
+  // mas não a resposta: ela vivia só no corpo HTTP e virava conteúdo
+  // do quadro que o NAVEGADOR montava. Consequência: fechar a aba
+  // entre a busca e o desenho do quadro perdia o texto de uma busca
+  // já paga, para sempre.
+  //
+  // Isto não contraria BOARD-PESQUISA-002 ("dois donos do mesmo fato
+  // divergem em silêncio"). Aquela regra separa o CANVAS de
+  // `pesquisa_entidades` — o que a pessoa decidiu guardar do que o
+  // sistema descobriu. Aqui os papéis também são distintos: a
+  // consulta é o registro do que foi COMPRADO; o quadro é o que a
+  // pessoa resolveu FICAR. Editar um card não reescreve a consulta,
+  // e é isso que permite auditar depois se o quadro ainda diz o que
+  // a busca disse.
+  //
+  // Nulo em consulta que falhou, e em tudo que foi gravado antes
+  // desta coluna existir.
+  resposta String?
+
   // O consumo que esta consulta custou. Nulo quando não custou nada
   // (nível `conhecimento` sem chamada) ou quando falhou antes de
   // gastar.
@@ -1084,10 +1109,212 @@ model PesquisaConsulta {
 
   criadoEm DateTime @default(now()) @map("criado_em")
 
-  fontes PesquisaFonte[]
+  fontes     PesquisaFonte[]
+  afirmacoes PesquisaAfirmacao[]
+  perguntas  PesquisaPergunta[]
 
   @@index([sessaoId, criadoEm])
   @@map("pesquisa_consultas")
+}
+
+// A conversa com o caderno — Fase 3a, 14/09/2026.
+//
+// POR QUE NÃO VAI EM `ia_mensagens`
+// Porque não é a mesma conversa. A do assistente lê o conhecimento
+// interno da empresa e volta ao modelo a cada pergunta seguinte
+// (`IA-CONV-004`). Esta é fechada num material: as fontes de UMA
+// investigação. Misturar as duas faria um achado da web, que só vale
+// com a fonte colada, voltar depois como se fosse coisa que a
+// empresa sabe — exatamente o que `IA-GERAL-005` existe para impedir.
+//
+// Mesma lógica da narração (`IA-CONV-NARRA-003`): coisa de outra
+// natureza ganha persistência própria em vez de entrar na fila das
+// mensagens.
+model PesquisaPergunta {
+  id String @id @default(uuid()) @db.Uuid
+
+  consultaId String           @map("consulta_id") @db.Uuid
+  consulta   PesquisaConsulta @relation(fields: [consultaId], references: [id], onDelete: Cascade)
+
+  pergunta String
+  resposta String
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  @@index([consultaId, criadoEm])
+  @@map("pesquisa_perguntas")
+}
+
+// A resposta, partida nas frases que a sustentam — Fase 2, 14/09/2026.
+//
+// POR QUE TABELA, E NÃO MAIS UM CAMPO Json
+// `plano` e `passos` são Json porque ninguém os edita: são registro
+// do que aconteceu. A afirmação é o contrário — `removida_pelo_usuario`
+// é um campo que A PESSOA muda, e mudar um item dentro de um array
+// Json é reescrever o array inteiro. Foi exatamente isso que obrigou
+// `anotarPasso` a serializar gravações numa fila.
+//
+// E a Fase 3 quer perguntar "quais afirmações dependem desta fonte",
+// que é pergunta de tabela. O caminho Json → tabela existe; o
+// contrário não.
+//
+// POR QUE PENDURADA NA CONSULTA, E NÃO NA INVESTIGAÇÃO
+// Porque as fontes já estão aqui, e afirmação sem fonte do lado é
+// meia coisa. Além disso `abrirInvestigacao` pode falhar sem
+// derrubar a busca (é de propósito): pendurar na investigação faria
+// a curadoria sumir junto com o registro do histórico, que é a parte
+// dispensável das duas.
+model PesquisaAfirmacao {
+  id String @id @default(uuid()) @db.Uuid
+
+  consultaId String           @map("consulta_id") @db.Uuid
+  consulta   PesquisaConsulta @relation(fields: [consultaId], references: [id], onDelete: Cascade)
+
+  // Onde a afirmação começa dentro de `pesquisa_consultas.resposta`.
+  // É por esta posição — e não por uma releitura do texto — que ela
+  // se casa com a seção, e portanto com o quadro. A posição vem das
+  // citações do provedor: mesma procedência que sustenta a fonte.
+  inicio Int
+
+  texto String
+
+  // Dita, nunca escondida (PES-006). Guardada porque é o que faz a
+  // afirmação chegar DESLIGADA no rascunho ao ser reaberta — a
+  // recalcular no cliente, uma versão futura do agrupamento poderia
+  // ligar sozinha o que a pessoa tinha deixado de fora.
+  semFonte Boolean @default(false) @map("sem_fonte")
+
+  // A decisão de quem leu. `null` é o estado que importa: **ninguém
+  // decidiu ainda** — rascunho aberto, busca paga, resultado à
+  // espera. É por este campo que a tela sabe que há um rascunho
+  // pendente para reabrir, sem precisar de uma segunda coluna
+  // dizendo a mesma coisa (BOARD-PESQUISA-002).
+  removidaPeloUsuario Boolean? @map("removida_pelo_usuario")
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  fontes PesquisaAfirmacaoFonte[]
+
+  @@index([consultaId, inicio])
+  @@map("pesquisa_afirmacoes")
+}
+
+// Qual fonte sustenta qual afirmação.
+//
+// Antes disto a ligação era um ÍNDICE (`fonteIds: [0, 1]`) dentro de
+// um array que só existia no corpo de uma resposta HTTP. Gravado,
+// seria uma referência que não referencia nada: bastava a ordem das
+// fontes mudar para a procedência apontar para a página errada.
+model PesquisaAfirmacaoFonte {
+  afirmacaoId String            @map("afirmacao_id") @db.Uuid
+  afirmacao   PesquisaAfirmacao @relation(fields: [afirmacaoId], references: [id], onDelete: Cascade)
+
+  fonteId String        @map("fonte_id") @db.Uuid
+  fonte   PesquisaFonte @relation(fields: [fonteId], references: [id], onDelete: Cascade)
+
+  // O trecho que ESTA afirmação citou DESTA fonte. Não é o mesmo que
+  // `pesquisa_fontes.trecho`: a mesma página sustenta frases
+  // diferentes com passagens diferentes, e é a passagem que
+  // sobrevive à página sair do ar (PES-006).
+  trecho String?
+
+  @@id([afirmacaoId, fonteId])
+  @@index([fonteId])
+  @@map("pesquisa_afirmacao_fontes")
+}
+
+// A CORRIDA de uma investigação — Fase 1b.
+//
+// `pesquisa_consultas` guarda o que foi PERGUNTADO ao provedor e o
+// que voltou. Esta tabela guarda o PROCESSO: o que foi lido antes,
+// o plano que o modelo escreveu, cada passo conforme aconteceu, e
+// como terminou.
+//
+// O motivo não é registro por registro. Hoje o servidor termina a
+// investigação mesmo se a aba fechar — a busca completa, é cobrada,
+// e a consulta é gravada. O que some é só o cliente, e é ELE quem
+// monta o quadro. Resultado: fechar a aba no meio perde o resultado
+// de uma busca JÁ PAGA, que está no banco o tempo todo. Com esta
+// tabela, recarregar a página reencontra a investigação e o quadro
+// nasce do que ficou gravado.
+//
+// Fica separada de `pesquisa_consultas` porque uma investigação
+// pode terminar SEM consulta nenhuma: o planejador pode recusar
+// (BOARD-PESQUISA-020), e aí não houve busca para gravar — mas
+// houve gasto de planejamento, e houve o que contar a quem pediu.
+enum EstadoInvestigacao {
+  correndo   // o stream está aberto, ou o servidor ainda trabalha
+  aguardando // o plano e o preço estão prontos, esperando alguém confirmar
+  entregue   // terminou com resultado
+  parada     // o planejador recusou, com saída oferecida
+  falhou     // erro no meio
+}
+
+model PesquisaInvestigacao {
+  id String @id @default(uuid()) @db.Uuid
+
+  sessaoId String         @map("sessao_id") @db.Uuid
+  sessao   PesquisaSessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  // Sem `usuarioId` próprio: a sessão já pertence a uma pessoa
+  // (`pesquisa_sessoes.user_id`) e toda leitura passa por
+  // `sessaoDoDono`. Uma segunda cópia do dono seria uma segunda
+  // verdade sobre quem pode ver a narração (IA-CONV-NARRA-008).
+
+  // Repetida da sessão de propósito: é por ela que a tela procura a
+  // investigação ao recarregar, antes de saber qual sessão é.
+  tarefaId String? @map("tarefa_id") @db.Uuid
+
+  pergunta          String
+  perguntaResolvida String @map("pergunta_resolvida")
+
+  estado EstadoInvestigacao @default(correndo)
+
+  // { perguntas: [{ pergunta, porque }], ja_sabido: [...] }
+  // Json porque o contrato do plano ainda vai crescer na 1b (fontes
+  // por afirmação, seções) e uma tabela por campo agora seria
+  // migração a cada ajuste de formato. Quando o formato assentar,
+  // vira tabela — o caminho contrário é que não existe.
+  plano Json?
+
+  // [{ texto, em }] na ordem em que aconteceram. É a narração
+  // (IA-CONV-NARRA-004): persistência própria, separada de
+  // `ia_mensagens`, porque passo não é mensagem e nunca vai ao
+  // contexto do modelo (IA-CONV-NARRA-003).
+  passos Json @default("[]")
+
+  // A frase final: "Pronto.", o motivo da recusa, o erro.
+  fecho String?
+
+  // O portão de confirmação do gasto (Fase 2, BOARD-PESQUISA-037).
+  // Entre o plano e a busca a investigação PARA, e o que ela precisa
+  // para ser retomada depois fica gravado aqui: a pergunta que vai
+  // à web e o preço que foi mostrado.
+  //
+  // Gravados porque a confirmação é de gente, e gente fecha aba. Um
+  // portão que só existe enquanto a conexão existe seria um aviso
+  // com prazo, não uma escolha — e o planejamento, que já foi pago,
+  // se perderia junto.
+  perguntaBusca String? @map("pergunta_busca")
+
+  // Em micros de real, com comissão dentro (DIN-001, DIN-007). É o
+  // número que a pessoa VIU. Guardá-lo é o que permite conferir, na
+  // hora de confirmar, se o preço ainda é o mesmo que foi prometido.
+  estimativaMicros Int? @map("estimativa_micros")
+
+  // A consulta que a busca gerou, quando houve busca. Sem chave
+  // estrangeira, pelo mesmo motivo de `pesquisa_sessoes.foco_id`: a
+  // investigação é o registro do que aconteceu e sobrevive à
+  // entidade que ela aponta.
+  consultaId String? @map("consulta_id") @db.Uuid
+
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+  encerradoEm DateTime? @map("encerrado_em")
+
+  // A tela pergunta sempre "desta tarefa, qual foi a última".
+  @@index([tarefaId, criadoEm])
+  @@index([sessaoId, criadoEm])
+  @@map("pesquisa_investigacoes")
 }
 
 model PesquisaEntidade {
@@ -1143,6 +1370,8 @@ model PesquisaFonte {
 
   criadoEm DateTime @default(now()) @map("criado_em")
 
+  afirmacoes PesquisaAfirmacaoFonte[]
+
   @@index([consultaId])
   @@map("pesquisa_fontes")
 }
@@ -1191,9 +1420,20 @@ model ConsumoPesquisa {
   comissaoMicros Int? @map("comissao_micros")
   totalMicros    Int? @map("total_micros")
 
+  // DIN-014: a MESMA chave que a razão usa em `origemId` quando o
+  // consumo é lançado. Sem ela não há como saber, olhando uma linha
+  // medida, se ela chegou a ser cobrada — e é exatamente isso que o
+  // Histórico de uso precisa responder quando `CREDITOS_COBRAR=nao`
+  // mediu sem lançar. Nulo = linha anterior a 17/09/2026, de quando
+  // isto não era gravado: o Histórico a IGNORA em vez de adivinhar,
+  // porque adivinhar erraria para o lado de mostrar o mesmo gasto
+  // duas vezes.
+  operacaoId String? @map("operacao_id") @db.Uuid
+
   criadoEm DateTime @default(now()) @map("criado_em")
 
   @@index([usuarioId, criadoEm])
   @@index([sessaoId])
+  @@index([operacaoId])
   @@map("consumos_pesquisa")
 }

@@ -37,6 +37,16 @@ build/
 api/node_modules/.prisma/
 api/src/generated/
 
+# ---- Descartes e provas ----
+# `_to_delete/` é, por definição, o que já foi decidido jogar fora —
+# e desde 17/09/2026 o repositório é também o que o Render faz
+# checkout para publicar. Lixo versionado é lixo que vai ao ar.
+# (Apagar dentro desta pasta está bloqueado para o agente, então as
+# coisas param aqui em vez de desaparecer; isso não é motivo para
+# versioná-las.)
+_to_delete/
+_prova-deploy/
+
 # ---- Logs e temporários ----
 *.log
 servidor.log

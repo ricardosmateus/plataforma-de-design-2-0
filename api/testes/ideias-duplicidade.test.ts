@@ -162,4 +162,97 @@ describe('IDEIA-DUPL — encontrarDuplicata', () => {
     };
     assert.equal(encontrarDuplicata(candidata, []), null);
   });
+
+  /* ----------------------------------------------------------
+     O caso que a suíte NÃO cobria até 16/09/2026
+     ----------------------------------------------------------
+     Todos os testes acima repetem texto quase igual nos DOIS
+     campos — e por isso passavam mesmo com a calibração que
+     deixava o alerta mudo na prática. O caso real de duplicidade
+     não é copiar e colar: é escrever de novo, com outras
+     palavras, uma idéia que a pessoa esqueceu que já tinha
+     escrito. O título volta igual (é o nome que ela dá à coisa);
+     a descrição sai reescrita.
+
+     Com peso 0.5/0.5 estes três davam 0.53, 0.57 e 0.50 — todos
+     abaixo do limiar de 0.6. É a regressão que estes testes
+     travam.
+     ---------------------------------------------------------- */
+  test('mesmo título, descrição reescrita com outras palavras: ainda é duplicata', () => {
+    const candidata = {
+      titulo: 'Reciclagem',
+      descricao: 'Juntar as caixas de papelão que sobram das entregas e mandar para reciclagem.',
+    };
+    const existente = ideia({
+      id: 'reciclagem',
+      titulo: 'Reciclagem',
+      descricao: 'Recolher as embalagens dos ecommerces para reciclar.',
+    });
+
+    const achada = encontrarDuplicata(candidata, [existente]);
+    assert.ok(achada, 'título idêntico precisa bastar — ver PESO_TITULO em duplicidade.ts');
+    assert.equal(achada.id, 'reciclagem');
+  });
+
+  test('mesmo título, descrição muito mais curta que a original: ainda é duplicata', () => {
+    const candidata = { titulo: 'Assinatura do serviço', descricao: 'Modelo de assinatura mensal.' };
+    const existente = ideia({
+      id: 'assinatura',
+      titulo: 'Assinatura do serviço',
+      descricao: 'Criar um tipo de assinatura do serviço da iHouseLog.',
+    });
+
+    const achada = encontrarDuplicata(candidata, [existente]);
+    assert.ok(achada, 'Jaccard pune diferença de tamanho; o título precisa carregar a decisão');
+    assert.equal(achada.id, 'assinatura');
+  });
+
+  test('título idêntico e descrição sem NENHUMA palavra em comum: ainda é duplicata', () => {
+    const candidata = {
+      titulo: 'Integração com e-commerces',
+      descricao: 'Receber pedidos direto das grandes lojas online.',
+    };
+    const existente = ideia({
+      id: 'integracao',
+      titulo: 'Integração com e-commerces',
+      descricao: 'Conectar com Shopee e Mercado Livre.',
+    });
+
+    const achada = encontrarDuplicata(candidata, [existente]);
+    assert.ok(achada, 'o pior caso: semelhança de descrição = 0, e mesmo assim precisa avisar');
+    assert.equal(achada.id, 'integracao');
+  });
+
+  /* O contrapeso do teste acima: subir o peso do título não pode
+     transformar o alerta em ruído. Estes dois pares saíram das 152
+     idéias reais do projeto iHouseLog/Startup — compartilham uma
+     palavra forte do domínio e NÃO são a mesma idéia. Se algum dia
+     começarem a disparar, o limiar foi longe demais. */
+  test('palavra de domínio em comum não basta: “Amazon” x “Amazon prime” não é duplicata', () => {
+    const candidata = {
+      titulo: 'Amazon prime',
+      descricao: 'Fazer parcerias com a amazon para incluir nossos serviços dentro da assinatura amazon prime',
+    };
+    const existente = ideia({
+      id: 'amazon',
+      titulo: 'Amazon',
+      descricao: 'Pesquisar em relação o e-commerce da Amazon Brasil. Entender sobre a logística deles.',
+    });
+
+    assert.equal(encontrarDuplicata(candidata, [existente]), null);
+  });
+
+  test('mesmo formato de título não basta: apresentação para síndicos x para e-commerces', () => {
+    const candidata = {
+      titulo: 'Apresentação iHouseLog para e-commerces',
+      descricao: 'Criar uma apresentação para explicar o que é a ihouseLog e para o que ela serve.',
+    };
+    const existente = ideia({
+      id: 'sindicos',
+      titulo: 'Apresentação iHouseLog para Síndicos',
+      descricao: 'Criar uma apresentação para que possamos mostrar aos síndicos como funciona a iHouseLog.',
+    });
+
+    assert.equal(encontrarDuplicata(candidata, [existente]), null);
+  });
 });

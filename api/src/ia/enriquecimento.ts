@@ -269,6 +269,7 @@ export async function enriquecerLeituraEmSegundoPlano(
         modelo: d.modelo,
         uso: d.uso,
         requisicaoId: d.requisicaoId,
+        operacaoId,
       });
     }
 

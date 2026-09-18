@@ -36,6 +36,12 @@ export type Registro = {
   modelo: string;
   uso: Uso;
   requisicaoId?: string | null;
+
+  /* DIN-014: o MESMO id passado a `reservar`/`consumir`. É por ele que
+     o Histórico de uso liga a linha medida ao lançamento cobrado — e
+     sabe, quando não há lançamento, que o consumo foi medido sem ser
+     cobrado (`CREDITOS_COBRAR=nao`) em vez de não ter acontecido. */
+  operacaoId?: string | null;
 };
 
 /* A cotação é configuração, não consulta — nesta fase. A Fase 1
@@ -68,6 +74,7 @@ export async function registrarConsumo(r: Registro): Promise<void> {
       tipo: r.tipo,
       resultado: r.resultado,
       modelo: r.modelo,
+      operacaoId: r.operacaoId ?? null,
       tokensEntrada: r.uso.entrada,
       tokensSaida: r.uso.saida,
       tokensCacheEscrita: r.uso.cacheEscrita,

@@ -34,6 +34,7 @@ import { registrar } from '../creditos/registro.js';
 import { tetoUsdMicros, custoUsdMicros } from '../creditos/precos.js';
 import { usdParaMicrosBrl, comissaoSobre, cotacaoParaMilesimos } from '../creditos/dinheiro.js';
 import { reservar, liberar, consumir, SaldoInsuficiente } from '../creditos/reserva.js';
+import { encontrarDuplicata } from '../ideias/duplicidade.js';
 import { randomUUID } from 'node:crypto';
 
 type Erro = { campo: string | null; mensagem: string };
@@ -517,6 +518,7 @@ export async function rotasIa(app: FastifyInstance) {
         modelo: bruta.modelo,
         uso: bruta.uso,
         requisicaoId: bruta.requisicaoId,
+        operacaoId,
       });
     }
 
@@ -626,6 +628,36 @@ export async function rotasIa(app: FastifyInstance) {
     });
   }
 
+  /* IDEIA-DUPL-001 também vale AQUI (corrigido 16/09/2026).
+     ------------------------------------------------------------
+     A regra diz "ao criar ou editar uma idéia" — não "ao criar pela
+     tela do quadro". Esta rota gravava com `db.ideia.create` direto,
+     sem passar pela checagem, então a porta da IA era um jeito de
+     criar duplicata sem nunca ver o aviso. Pior que um furo comum:
+     é justamente a IA que sugere criar idéias a partir de uma
+     conversa longa, onde a chance de propor algo que já está no
+     quadro é maior, não menor.
+
+     Cópia local da busca em vez de importar a de `ideias.ts`: quem
+     decide o que entra na comparação é sempre o chamador (contrato
+     escrito em `duplicidade.ts`), e as duas rotas não têm por que
+     depender uma da outra. São três linhas. */
+  async function buscarPossivelDuplicata(
+    projetoId: string,
+    conteudo: { titulo: string; descricao: string },
+    ignorarId?: string | null,
+  ) {
+    const ativas = await db.ideia.findMany({ where: { projetoId, arquivadoEm: null } });
+    const achada = encontrarDuplicata(conteudo, ativas, ignorarId);
+    return achada ? (ativas.find((i) => i.id === achada.id) ?? null) : null;
+  }
+
+  /* O reenvio depois do aviso. Mesmo nome e mesmo sentido do corpo
+     de `ideias.ts`: ausente ou `false`, a checagem roda. O corpo
+     inteiro é opcional porque "Confirmar" continua sendo um POST
+     sem corpo nenhum. */
+  const corpoConfirmar = z.object({ ignorar_duplicata: z.boolean().optional().default(false) });
+
   app.post('/empresas/:empresaId/projetos/:projetoId/ia/mensagens/:mensagemId/confirmar', async (req, resposta) => {
     const ctx = await abrirContexto(req);
     if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
@@ -641,6 +673,9 @@ export async function rotasIa(app: FastifyInstance) {
       return resposta.code(403).send(erro(null, 'Seu papel não permite alterar idéias.'));
     }
 
+    const confirmacao = corpoConfirmar.safeParse(req.body ?? {});
+    const ignorarDuplicata = confirmacao.success ? confirmacao.data.ignorar_duplicata : false;
+
     const dados = (mensagem.acaoDados ?? {}) as Record<string, unknown>;
 
     /* IDEIA-CRIA-003 continua valendo mesmo vindo do assistente: toda
@@ -652,6 +687,16 @@ export async function rotasIa(app: FastifyInstance) {
       if (!conteudo.success) {
         await db.iaMensagem.update({ where: { id: mensagem.id }, data: { acaoStatus: 'descartada' } });
         return resposta.code(422).send(erro(null, 'A sugestão não é mais válida. Recarregue a conversa.'));
+      }
+
+      /* IDEIA-DUPL-003: achou parecida e a pessoa ainda não disse
+         "mesmo assim" -> NÃO grava nada e devolve 200 com a idéia
+         parecida. A sugestão continua `pendente`, então os mesmos
+         "Confirmar"/"Descartar" da conversa continuam valendo — é
+         uma decisão a mais, não uma sugestão queimada. */
+      if (!ignorarDuplicata) {
+        const duplicata = await buscarPossivelDuplicata(ctx.projetoId, conteudo.data);
+        if (duplicata) return resposta.send({ possivel_duplicata: ideiaParaResposta(duplicata) });
       }
 
       const ideia = await db.ideia.create({
@@ -683,6 +728,14 @@ export async function rotasIa(app: FastifyInstance) {
       if (!ideiaId || !conteudo.success || !existente) {
         await db.iaMensagem.update({ where: { id: mensagem.id }, data: { acaoStatus: 'descartada' } });
         return resposta.code(422).send(erro(null, 'A sugestão não é mais válida. Recarregue a conversa.'));
+      }
+
+      /* IDEIA-DUPL-008: ao editar, a própria idéia nunca é comparada
+         com ela mesma — senão toda edição bateria com o registro
+         original e o aviso viraria impossível de escapar. */
+      if (!ignorarDuplicata) {
+        const duplicata = await buscarPossivelDuplicata(ctx.projetoId, conteudo.data, existente.id);
+        if (duplicata) return resposta.send({ possivel_duplicata: ideiaParaResposta(duplicata) });
       }
 
       /* Sem `status` no data: editar texto nunca move o card — mesma

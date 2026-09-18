@@ -12,5 +12,10 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "testes/**/*.ts"]
+  /* Os scripts da raiz e o corpus ficavam FORA do `tsc` — descoberto
+     em 14/09/2026, depois de estender `ver-investigacao.ts` e dizer
+     "tsc limpo" três vezes sem que ele tivesse olhado o arquivo.
+     Ferramenta que não compila também quebra, e quebra na hora em
+     que alguém foi conferir um defeito. */
+  "include": ["src/**/*.ts", "testes/**/*.ts", "corpus/**/*.ts", "*.ts"]
 }

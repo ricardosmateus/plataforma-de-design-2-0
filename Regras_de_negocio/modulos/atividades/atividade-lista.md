@@ -1,6 +1,7 @@
 # Regras de Negócio — Lista de Tarefas da Atividade
 
-> **Versão:** 1.6.0 · **Status:** Implementado e verificado ao vivo (backend + `atividade.html` + `visao_do_projeto.html`)
+> **Versão:** 1.7.0 · **Status:** Implementado e verificado ao vivo (backend + `atividade.html` + `visao_do_projeto.html`)
+> **Conferido em:** 13/09/2026, contra `api/src/rotas/tarefas.ts`, `js/atividade.js` e `js/orquestrador-gateway.js`
 > **Módulo:** Atividades · **Página:** `atividade.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`ideias-movimentacao.md`](../ideias/ideias-movimentacao.md) — de onde vem `IDEIA-MOV-014/015/016` · [`ideias-criacao.md`](../ideias/ideias-criacao.md) · [`ideias-quadro.md`](../ideias/ideias-quadro.md)
@@ -101,7 +102,35 @@ O botão "Concluir atividade", no topo da tela, é o atalho que `IDEIA-MOV-014` 
 
 ---
 
-## 2. Contrato da API (rascunho — nada implementado ainda)
+### 1.7 Editar tarefa — `ATV-TAR-EDIT`
+
+| ID | Regra | Fonte |
+|---|---|---|
+| ATV-TAR-EDIT-001 | Editar uma tarefa altera **título e descrição**, e só. `tipo`, `ordem` e `status` têm cada um a sua própria rota — mesmo raciocínio já registrado na §2 para a reordenação: a ação mais frequente não pode arrastar junto, por acidente, o texto que alguém escreveu. | Registrado 13/09/2026, a partir do código |
+| ATV-TAR-EDIT-002 | Quem cria, edita: proprietário, membro e especialista, a mesma régua de `ATV-TAR-CRIA-004`. Papel sem permissão recebe `403` "Seu papel não permite editar tarefas." | Registrado 13/09/2026; decorre de ATV-TAR-CRIA-004 |
+| ATV-TAR-EDIT-003 | Tarefa inexistente, ou que pertence a outra idéia, devolve `404` — mesma resposta nos dois casos, por `IDEIA-ISO-003/004`. | Registrado 13/09/2026 |
+| ATV-TAR-EDIT-004 | O `tipo` é escolhido na criação e **não muda depois**. Trocar o tipo trocaria o espaço de trabalho que a tarefa abre (`BOARD-ACESSO`), deixando um quadro já preenchido apontando para o lugar errado. | Registrado 13/09/2026, a partir do código — confirmar como decisão (§5) |
+
+**Por que esta seção demorou a existir.** A rota `PUT` está no ar, e a §2 já a mencionava de passada ao justificar por que reordenar tem rota própria — mas nunca teve regra. O histórico da v1.1.0, que dizia "editar/duplicar/excluir tarefa não foram implementados", ficou verdadeiro para duplicar, foi corrigido para excluir na v1.3.0, e seguiu valendo por engano para editar até esta conferência.
+
+### 1.8 Sugerir a próxima tarefa — `ATV-GERAR`
+
+| ID | Regra | Fonte |
+|---|---|---|
+| ATV-GERAR-001 | O botão **"Gerar com ajuda da IA"**, no modal "Nova tarefa", preenche Título, Descrição e Tipo com uma proposta. O modal **continua aberto** e tudo é editável: nada é gravado até o Salvar. É o padrão de proposta/confirmação de `IA-ACAO` — **resolve P4** (§5). | Registrado 13/09/2026, a partir de `js/orquestrador-gateway.js` |
+| ATV-GERAR-002 | A proposta é montada **no cliente**, por heurística determinística, em cima do que já está gravado. **Não há chamada a modelo**: não consome crédito (`IA-CUSTO` não se aplica) e não passa pelas garantias de `IA-GARANT`/`IA-CONHEC`, que valem para o que o assistente afirma. | Registrado 13/09/2026 |
+| ATV-GERAR-003 | O botão **mantém o nome "Gerar com ajuda da IA"**. Consequência aceita: o rótulo promete mais do que a implementação entrega hoje. Fica registrado para ninguém procurar consumo de crédito que não existe, nem tratar a proposta como saída de modelo. | Decidido 13/09/2026 com o Ricardo |
+| ATV-GERAR-004 | A proposta lê **apenas tarefas concluídas** e as entidades já nomeadas no projeto. Tarefa pendente não entra: ela ainda não tem o que ensinar, e ler o quadro dela devolveria as perguntas que ela mesma vai responder — a proposta competiria com trabalho já em curso. | Registrado 13/09/2026, a partir do código |
+| ATV-GERAR-005 | Descrição de tarefa do tipo `pesquisa` é escrita **como pergunta**. `board.html` classifica a descrição antes de executar e recusa o nível "conhecimento" — o que se responde por raciocínio em vez de por fonte. Uma descrição reflexiva nasceria impossível de executar, e a pessoa só descobriria ao abrir o quadro. | Registrado 13/09/2026; decorre do roteador de pesquisa |
+| ATV-GERAR-006 | Evolução prevista: quando `/orquestrador/proxima-tarefa` existir, a heurística sai do cliente e a rota passa a receber o contexto e devolver `{ titulo, descricao, tipo, porque }`. ATV-GERAR-001 não muda — muda quem monta a proposta, e só então ATV-GERAR-002 deixa de valer. | Registrado 13/09/2026, do ponto de ligação marcado no próprio código |
+
+**Onde esta lógica mora, e por que isso é um problema.** As 722 linhas de `js/orquestrador-gateway.js` são governadas por `Skills/orquestrador-atividades.skill`, não por este documento — foi assim que um botão visível numa tela em produção chegou até aqui sem nenhuma regra. É o segundo caso do mesmo padrão: a taxonomia das idéias veio por `categorizacao-taxonomia.skill` e também nasceu sem ID (ver `../ideias/ideias-taxonomia.md`). Arquivo de Skill descreve **como** fazer; ele não substitui a regra que diz **o que** o produto faz.
+
+**Por que ATV-GERAR-002 precisa estar escrita.** Sem ela, a leitura natural de ATV-GERAR-001 é que existe uma chamada de IA no caminho — e a partir daí alguém procura o custo em `IA-CUSTO`, espera as garantias de `IA-GARANT`, ou investiga por que o crédito não baixou. A regra existe para encurtar essa investigação para zero.
+
+---
+
+## 2. Contrato da API
 
 Todas as rotas abaixo seguem a mesma corrente de isolamento já usada em idéias (`empresa → projeto → idéia`, `IDEIA-ISO-003`), e o mesmo padrão de autenticação por cookie das demais rotas.
 
@@ -121,11 +150,15 @@ Devolve `{ tarefas: [...] }`, em ordem. **Encontra ou cria**: se a idéia ainda 
 
 **Corpo:** `{ "status": "pendente" | "concluida" }`. Só muda esse campo (`ATV-TAR-CONCLUIR-001`).
 
+### `PUT /empresas/:empresaId/projetos/:projetoId/ideias/:ideiaId/tarefas/:tarefaId`
+
+**Corpo:** `{ "titulo": string, "descricao": string }`. Grava só esses dois campos (`ATV-TAR-EDIT-001`); `tipo`, `ordem` e `status` ficam como estão. Devolve `{ tarefa }`.
+
 ### `DELETE /empresas/:empresaId/projetos/:projetoId/ideias/:ideiaId/tarefas/:tarefaId`
 
 Apaga a linha de verdade (`ATV-TAR-EXCLUI-001`) e devolve `{ ok: true }`. Uma segunda chamada sobre a mesma tarefa devolve `404` — já não existe, não é um sucesso silencioso.
 
-| Situação (comum às cinco rotas) | Resposta |
+| Situação (comum às seis rotas) | Resposta |
 |---|---|
 | Sessão inválida | `401` |
 | Papel não permite | `403` |
@@ -172,11 +205,12 @@ Sem tabela `atividades` — ver §0. `ordem` é um inteiro simples, renumerado a
 |---|---|
 | P2 — Concluir atividade com tarefas pendentes | Ainda não decidido se bloqueia, avisa ou ignora. |
 | ~~P3 — Tipos de tarefa~~ | **Resolvido em 29/08/2026** — `BOARD-ACESSO-001/002` ([`board-lista.md`](board-lista.md), decisão A24): a tarefa ganhou o campo `tipo` (`pesquisa` / `matriz_csd` / `sem_tela`, padrão `sem_tela`), escolhido na criação, e o "Acessar tarefa" roteia por ele — não mais comparando o texto do título. O catálogo é **fechado**: um tipo novo entra por migração, não por texto livre. |
-| P4 — "Gerar tarefas com IA" | Ainda não decidido se segue o padrão de proposta/confirmação do `IA-ACAO`. |
+| ~~P4 — "Gerar tarefas com IA"~~ | **Resolvido em 13/09/2026** — `ATV-GERAR` (§1.8). Segue sim o padrão de proposta/confirmação: o modal fica aberto, a proposta é editável e nada grava até o Salvar. A decisão já estava tomada em `js/orquestrador-gateway.js` desde 06/09; faltava registrar. Fica aberto, no lugar dela, o **ponto de ligação com o backend** (ATV-GERAR-006): enquanto `/orquestrador/proxima-tarefa` não existir, a proposta é heurística no cliente, sem modelo. |
 | P5 — Editar/excluir a atividade (idéia) a partir desta tela | Modais já existem no protótipo, sem gatilho na interface — ainda não decidido se o escopo inclui isso. |
 | ~~P8 — Conversa do assistente nesta tela~~ | **Resolvido em 29/08/2026** — Decisão A23: reaproveita a conversa do projeto (`IA-CONV-001`). `js/ia.js` foi religado a esta tela (mesmo módulo de `visao_do_projeto.html`), com o mesmo `window.EmpresaAtual`/`window.ProjetoAtual` resolvidos em `js/atividade.js`. |
-| P9 | Confirmado — mesmos três papéis de idéias (`ATV-TAR-CRIA-004`). A metade "excluir" está **resolvida** (`ATV-TAR-EXCLUI-004`, Decisão A22, 29/08/2026): segue a mesma régua. Falta só duplicar (P10). |
-| P10 — Duplicar tarefa | Ainda não decidido se é um clique só ou passa por revisão antes de gravar. |
+| P9 | Confirmado — mesmos três papéis de idéias (`ATV-TAR-CRIA-004`). "Excluir" **resolvido** (`ATV-TAR-EXCLUI-004`, Decisão A22, 29/08/2026) e "editar" **resolvido** (`ATV-TAR-EDIT-002`, 13/09/2026): os dois seguem a mesma régua. Falta só duplicar (P10). |
+| P10 — Duplicar tarefa | Ainda não decidido se é um clique só ou passa por revisão antes de gravar. Segue só-na-tela, sem persistência. |
+| Imutabilidade do `tipo` (ATV-TAR-EDIT-004) | Foi **lida do código**, não de uma decisão registrada: o `PUT` simplesmente não toca no campo. A regra e o motivo estão escritos; falta confirmar que é intencional e não omissão. Se um dia precisar mudar, exige decidir o que fazer com o quadro já preenchido. Levantada em 13/09/2026. |
 | ~~Excluir tarefa~~ | **Resolvido em 29/08/2026** — `ATV-TAR-EXCLUI` (§1.5): apaga a linha de verdade (sem arquivamento), com confirmação prévia e só some da tela depois que a API confirma. |
 
 ---
@@ -185,9 +219,10 @@ Sem tabela `atividades` — ver §0. `ordem` é um inteiro simples, renumerado a
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.7.0 | 2026-09-13 | Conferência de `atividade.html` contra o código. Duas seções novas: **§1.7 `ATV-TAR-EDIT`** — a rota `PUT` estava no ar desde antes, citada de passada na §2, e nunca teve regra; a linha do histórico da v1.1.0 que a dava por não implementada seguia valendo por engano. E **§1.8 `ATV-GERAR`** — o botão "Gerar com ajuda da IA" é servido por `js/orquestrador-gateway.js` (722 linhas, governadas por `Skills/orquestrador-atividades.skill`) sem nenhuma regra até aqui; fica registrado que a proposta é heurística **no cliente**, sem chamada a modelo, sem consumo de crédito e fora das garantias de `IA-GARANT`. Nome do botão mantido por decisão do Ricardo, com a consequência aceita escrita em ATV-GERAR-003. Contrato do `PUT` acrescentado à §2 e o título dela corrigido — dizia "rascunho, nada implementado ainda" com as seis rotas no ar. P4 resolvida, P9 atualizada, duas pendências novas. |
 | 1.6.0 | 2026-08-29 | Acompanha a decisão A31 ([`board-lista.md`](board-lista.md) v1.2.0): **toda tarefa passa a ter um espaço de trabalho**. O tipo `sem_tela` saiu do catálogo — ele era o padrão, e por isso as tarefas criadas antes do campo `tipo` existir ficaram sem o botão "Acessar tarefa" e sem como ganhar um. O padrão virou `pesquisa`, inclusive para a **tarefa-semente** de `ATV-ACESSO-002`, agora explícito em `tarefas.ts` (antes herdava o default do banco). O seletor do modal "Nova tarefa" virou "Que tipo de tarefa é esta", com os dois tipos reais. |
 | 1.5.0 | 2026-08-29 | Resolve **P3** (§5) e liga esta tela ao novo `board.html`: a tarefa ganhou o campo `tipo` e o "Acessar tarefa" passou a rotear por ele em `js/atividade.js`, em vez de comparar o texto do título com "Matriz CSD" — o mesmo defeito que `IDEIA-MOV-015` já corrigira em outro lugar. Tarefa `sem_tela` não mostra mais o botão (antes ele aparecia sempre e, fora do caso "Matriz CSD", não fazia nada). O modal "Nova tarefa" ganhou o campo "Onde esta tarefa acontece". As regras do quadro em si estão em [`board-lista.md`](board-lista.md) v1.0.0. |
-| 1.4.0 | 2026-08-29 | O painel "Assistente de IA" desta tela, que não funcionava (conversa fixa em HTML, sem `js/ia.js` incluído), agora é o mesmo assistente de `visao_do_projeto.html`: `js/ia.js` passou a ser incluído em `atividade.html`, a marcação do painel (`assistant-thread`, `composer-actions`) ganhou os ids `iaThread`/`iaAviso`/`iaEnviar` que o módulo exige, o CSS de `.ia-*`/`.composer-aviso`/estados `:disabled` (ausente neste arquivo) foi copiado de `visao_do_projeto.html`, e `js/atividade.js` passou a gravar `window.EmpresaAtual`/`window.ProjetoAtual` e chamar `IaAssistente.carregar()` depois de resolver empresa e projeto — mesma sequência de `js/ideias.js`. Resolve P8 (Decisão A23): a conversa é a mesma do projeto (`IA-CONV-001`), não uma dimensão nova por atividade. Verificado ao vivo: painel carrega o convite/histórico existente, uma pergunta feita em `atividade.html` recebe resposta real da API, e ao recarregar a página a mesma conversa aparece — confirmando que é a conversa do projeto, compartilhada com `visao_do_projeto.html`.
+| 1.4.0 | 2026-08-29 | O painel "Assistente de IA" desta tela, que não funcionava (conversa fixa em HTML, sem `js/ia.js` incluído), agora é o mesmo assistente de `visao_do_projeto.html`: `js/ia.js` passou a ser incluído em `atividade.html`, a marcação do painel (`assistant-thread`, `composer-actions`) ganhou os ids `iaThread`/`iaAviso`/`iaEnviar` que o módulo exige, o CSS de `.ia-*`/`.composer-aviso`/estados `:disabled` (ausente neste arquivo) foi copiado de `visao_do_projeto.html`, e `js/atividade.js` passou a gravar `window.EmpresaAtual`/`window.ProjetoAtual` e chamar `IaAssistente.carregar()` depois de resolver empresa e projeto — mesma sequência de `js/ideias.js`. Resolve P8 (Decisão A23): a conversa é a mesma do projeto (`IA-CONV-001`), não uma dimensão nova por atividade. Verificado ao vivo: painel carrega o convite/histórico existente, uma pergunta feita em `atividade.html` recebe resposta real da API, e ao recarregar a página a mesma conversa aparece — confirmando que é a conversa do projeto, compartilhada com `visao_do_projeto.html`. |
 | 1.3.0 | 2026-08-29 | Nova seção `ATV-TAR-EXCLUI` (§1.5), implementando de verdade a exclusão de tarefa: rota `DELETE .../tarefas/:tarefaId` em `api/src/rotas/tarefas.ts` (apaga a linha, sem arquivamento — decisão A22), `AtividadeAcoes.excluir` em `js/atividade.js`, e o handler de `confirmTaskDeleteBtn` em `atividade.html` reescrito para chamar a API real e só remover o card depois da confirmação (antes era só DOM, `task.remove()` sem persistência). Resolve a metade "excluir" de P9 e a pendência "Excluir tarefa" (§5) — duplicar (P10) continua aberto. `ATV-CONCLUIR` renumerada de §1.5 para §1.6 para abrir espaço. Verificado ao vivo: tarefa criada, excluída, e confirmada ausente depois de recarregar a página (exclusão real, não só visual). |
 | 1.2.0 | 2026-08-29 | Nova seção `ATV-CONCLUIR` (§1.5), descrevendo o botão "Concluir atividade" em si: confirmação, gravação pela API real (`IDEIA-MOV-014/015/016`), redirecionamento para `visao_do_projeto.html` e o alerta flutuante de confirmação — que agora aparece na tela de destino, não na de origem (`ATV-CONCLUIR-004`, Decisão A21). Implementado em `js/atividade.js` (`concluirAtividade` acrescenta `?atividade_concluida=1` à URL de retorno) e `visao_do_projeto.html` (lê o parâmetro, mostra o alerta e limpa a URL). Verificado ao vivo: idéia movida para "Finalizado", alerta exibido, URL limpa. |
 | 1.1.1 | 2026-08-28 | Verificado ao vivo (Acessar, criar, reordenar, concluir/reabrir tarefa, Concluir atividade — todos persistindo de verdade). Corrigido um bug encontrado na verificação: o selo de status (`.task-status`) que os botões "Concluir tarefa"/"Reabrir tarefa" atualizam na hora não estava trocando o rótulo visível ("Tarefa"/"Concluída") nem a classe `task-status--labeled`, então o selo virava um círculo sem texto até a página ser recarregada. |

@@ -73,7 +73,20 @@
   function carregarExtrato() {
     if (!lista) return;
 
-    fetch('/creditos/extrato', { credentials: 'same-origin' })
+    /* `API.buscar`, não `fetch` cru — o mesmo motivo que já está
+       escrito em js/api.js, que cita este arquivo pelo nome: o token
+       de acesso vive 15 minutos (ACS-SESSAO-001), e sem renovação
+       silenciosa o extrato falha sozinho depois desse tempo.
+
+       O saldo, dez linhas acima, já usava `API.buscar`. Este ficou
+       para trás na migração — e o resultado era exatamente o sintoma
+       que api.js descreve: a modal abria com o saldo certo e o
+       histórico dizendo "não foi possível carregar", sem nada na tela
+       explicando por que um funcionou e o outro não.
+
+       `buscar` devolve a Response crua e não lança, então o `r.ok`
+       abaixo continua valendo sem mais nenhuma mudança. */
+    window.API.buscar('/creditos/extrato')
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
@@ -104,11 +117,25 @@
               '</span>';
           }
 
-          html += '<li class="pf-extrato-item">' +
-            '<span class="pf-extrato-desc">' + escapar(l.descricao) + detalhe + '</span>' +
+          /* DIN-014: linha medida que não virou lançamento. Acontece
+             com `CREDITOS_COBRAR=nao` — a medição continua (DIN-011) e
+             a razão fica sem a linha. Ela aparece aqui porque, desde
+             DIN-013, este é o único lugar onde valor aparece: esconder
+             deixaria um gasto real invisível em todo o produto.
+
+             `cobrado !== false` e não `!l.cobrado`: resposta antiga,
+             de antes deste campo existir, não deve virar "não cobrado"
+             por ausência. */
+          var naoCobrado = l.cobrado === false;
+          var etiqueta = naoCobrado
+            ? '<span class="pf-extrato-etiqueta">medido, não cobrado</span>'
+            : '';
+
+          html += '<li class="pf-extrato-item' + (naoCobrado ? ' is-nao-cobrado' : '') + '">' +
+            '<span class="pf-extrato-desc">' + escapar(l.descricao) + etiqueta + detalhe + '</span>' +
             '<span class="pf-extrato-data">' + dataCurta(l.criado_em) + '</span>' +
-            '<span class="pf-extrato-valor ' + (l.entrou ? 'is-entrada' : 'is-saida') + '">' +
-              (l.entrou ? '+' : '−') + ' ' + escapar(l.valor_formatado) +
+            '<span class="pf-extrato-valor ' + (naoCobrado ? 'is-neutro' : (l.entrou ? 'is-entrada' : 'is-saida')) + '">' +
+              (naoCobrado ? '' : (l.entrou ? '+' : '−') + ' ') + escapar(l.valor_formatado) +
             '</span>' +
           '</li>';
         });

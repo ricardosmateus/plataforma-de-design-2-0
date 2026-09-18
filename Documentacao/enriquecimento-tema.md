@@ -1,5 +1,12 @@
 # Enriquecimento de tema — leitura guiada, gráficos e lacunas
 
+> **Nota de 13/09/2026.** Este é o **plano**, não a regra. O que está
+> construído e o que o produto garante a quem lê a página de tema estão
+> registrados com ID em
+> [`../Regras_de_negocio/modulos/temas/temas-pagina.md`](../Regras_de_negocio/modulos/temas/temas-pagina.md)
+> (`TEMA-SINTESE`, `TEMA-ORIGEM`). Em divergência, vale a regra. A Fase 3
+> continua só aqui, porque continua não construída.
+
 Plano de desenvolvimento. Nada aqui está construído ainda — este
 documento existe para travar o desenho ANTES do código, porque as
 três capacidades pedidas têm níveis de risco de alucinação bem

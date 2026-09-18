@@ -94,6 +94,26 @@ const esquema = z.object({
   IA_API_KEY: z.string().optional(),
   IA_MODELO: z.string().optional(),
   IA_MODELO_SONNET: z.string().optional(),
+  /* O modelo da SÍNTESE da busca, separado do planejador — Fase 4,
+     15/09/2026.
+     Os dois liam `IA_MODELO`, e o efeito era o contrário do que o
+     plano supunha: a etapa mais profunda (ler a web e escrever a
+     análise) rodava no modelo mais barato, enquanto o planejador —
+     que só escreve 3 a 6 perguntas — pagava o mesmo.
+     Vazio mantém o comportamento de hoje. Trocar é uma linha, e
+     dobra o custo da investigação (medido: ~R$ 0,69 → ~R$ 1,33),
+     então a decisão é de produto, não de código. */
+  IA_MODELO_BUSCA: z.string().optional(),
+  /* A versão da ferramenta `web_search` — Fase 4, 15/09/2026.
+     `web_search_20260209` e adiante fazem FILTRAGEM DINÂMICA: o
+     modelo escreve código que filtra os resultados antes de eles
+     entrarem no contexto. É onde está o custo desta investigação —
+     38.662 tokens de entrada medidos em 14/09, contra 724 do
+     planejador — e a filtragem não é cobrada à parte (a execução de
+     código sai de graça quando acompanha `web_search`).
+     O padrão é a versão de sempre: mudança de formato de resposta
+     não se liga sem medir. */
+  PESQUISA_BUSCA_VERSAO: z.string().default('web_search_20250305'),
   /* 1024 era pouco desde que o contexto passou a levar o conteudo
      das atividades finalizadas (IA-CONHEC-007): pergunta que pede
      enumeracao estourava o teto e a resposta chegava cortada. */
@@ -197,7 +217,23 @@ const esquema = z.object({
   SERVIR_FRONTEND: z.enum(['sim', 'nao']).optional(),
 });
 
-const resultado = esquema.safeParse(process.env);
+/* `PORT` como alternativa a `PORTA` (17/09/2026, para a hospedagem).
+   Render, Fly, Railway e praticamente todo serviço de hospedagem
+   INJETAM a porta em `PORT` e esperam que o processo escute nela — o
+   roteador deles não adivinha outra. Sem esta linha o servidor subia
+   em 3333, a plataforma sondava a porta dela, não recebia resposta e
+   marcava o deploy como falho, com um log em que a API diz
+   tranquilamente que está de pé.
+
+   `PORTA` vem primeiro de propósito: quem escreveu `PORTA` no .env
+   pediu aquela porta, e um `PORT` herdado do ambiente não deve
+   passar por cima de um pedido explícito. */
+const ambiente = {
+  ...process.env,
+  PORTA: process.env.PORTA ?? process.env.PORT,
+};
+
+const resultado = esquema.safeParse(ambiente);
 
 if (!resultado.success) {
   const problemas = resultado.error.issues
@@ -218,6 +254,47 @@ export const env = {
 export const origensPermitidas = env.ORIGENS.split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+
+/* ------------------------------------------------------------
+   CORS para respostas que passam por cima do Fastify
+   ------------------------------------------------------------
+   Achado em 15/09/2026, na PRIMEIRA investigação real depois de
+   duas semanas de prova em jsdom. O navegador recusou a chamada
+   com "No 'Access-Control-Allow-Origin' header is present",
+   enquanto a API anunciava, na partida, exatamente a origem que o
+   navegador estava usando.
+
+   A explicação: as rotas de stream chamam `resposta.hijack()` para
+   escrever SSE direto no socket. Hijack existe para tirar o
+   Fastify do caminho — e o `@fastify/cors` escreve os cabeçalhos
+   num hook do Fastify. Tirar o Fastify do caminho tira o CORS
+   junto. O `preflight` OPTIONS continua passando pelo plugin e
+   respondendo certo, o que torna o defeito mais confuso: a
+   permissão é concedida e depois não aparece na resposta real.
+
+   Nenhuma prova em jsdom veria isto: lá o `fetch` é um stub, e
+   stub não tem política de mesma origem. É um defeito que só
+   existe na presença de um navegador de verdade.
+
+   Por que devolver a origem e não `*`: a sessão viaja em cookie,
+   então o CORS roda com `credentials: true`, e o navegador REJEITA
+   `*` nesse modo. Tem que ser a origem exata — e por isso o `Vary:
+   Origin`, senão um cache intermediário serviria a uma origem o
+   cabeçalho emitido para outra.
+
+   A lista lida aqui é a MESMA que o plugin lê, algumas linhas
+   acima. Uma segunda lista divergiria no primeiro ajuste, e a
+   divergência apareceria como este mesmo erro — só que num
+   ambiente onde ninguém está olhando.
+   ------------------------------------------------------------ */
+export function cabecalhosCorsDeStream(origem: string | undefined): Record<string, string> {
+  if (!origem || !origensPermitidas.includes(origem)) return {};
+  return {
+    'access-control-allow-origin': origem,
+    'access-control-allow-credentials': 'true',
+    vary: 'Origin',
+  };
+}
 
 /* Falhas de configuração que o esquema sozinho não pega, porque
    dependem da combinação entre dois campos. */

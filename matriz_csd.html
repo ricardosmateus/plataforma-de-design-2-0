@@ -436,8 +436,14 @@ body.is-dragging-card *{cursor:grabbing !important}
   color:var(--text-on-primary);
 }
 .idea-icon svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.idea-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary);white-space:pre-line}
-.idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary);white-space:pre-line}
+/* `overflow-wrap:anywhere` junto do `pre-line`: um continua honrando
+   as quebras que a pessoa escreveu, o outro deixa quebrar a palavra
+   que não tem onde quebrar — URL colada, id, token. Sem isso o texto
+   fura o card, que tem largura fixa aqui. Mesma correção que
+   `visao_do_projeto.html` levou em 16/09/2026, quando uma URL de 130
+   caracteres desmontou o board de idéias. */
+.idea-title{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary);white-space:pre-line;overflow-wrap:anywhere}
+.idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary);white-space:pre-line;overflow-wrap:anywhere}
 .idea-title.is-editing,.idea-desc.is-editing{
   cursor:text;
   border-radius:4px;
@@ -1060,6 +1066,24 @@ body.modal-open{overflow:hidden}
 .pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .pf-extrato-valor.is-entrada{color:var(--text-success)}
 .pf-extrato-valor.is-saida{color:var(--text-secondary)}
+/* DIN-014 — consumo medido que não virou lançamento (CREDITOS_COBRAR=nao).
+   Sem sinal e em cor de apoio: ele não mexeu no saldo, e um "− R$ 0,43"
+   igual aos outros faria a pessoa procurar a diferença no saldo. */
+.pf-extrato-valor.is-neutro{color:var(--text-secondary);font-weight:500}
+.pf-extrato-item.is-nao-cobrado{opacity:.85}
+.pf-extrato-etiqueta{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 6px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  font-size:11px;
+  line-height:16px;
+  font-weight:500;
+  color:var(--text-secondary);
+  white-space:nowrap;
+  vertical-align:1px;
+}
 .pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
 
 /* Barra de evolução do crédito: o trecho disponível encolhe conforme

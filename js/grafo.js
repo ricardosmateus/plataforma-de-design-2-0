@@ -45,7 +45,24 @@
   var figura = document.querySelector('.graph');
   if (!figura) return;
 
-  var svgDecorativo = figura.querySelector('svg');
+  /* A caixa que ocupa o lugar do grafo antes de ele existir. Não é
+     mais uma ilustração a esconder: é o estado da carga, e ela sai
+     da tela só quando há grafo de verdade para pôr no lugar. */
+  var estado = document.getElementById('grafoEstado');
+  var estadoTexto = document.getElementById('grafoEstadoTexto');
+
+  /* Carregando gira; vazio e falha não. Ver o CSS de
+     `.graph-estado--parado`. */
+  function mostrarEstado(texto, parado) {
+    if (!estado) return;
+    estado.hidden = false;
+    estado.classList.toggle('graph-estado--parado', !!parado);
+    if (estadoTexto) estadoTexto.textContent = texto;
+  }
+
+  function esconderEstado() {
+    if (estado) estado.hidden = true;
+  }
   var canvas = null;
   var ctx = null;
   var botaoReset = null;
@@ -141,7 +158,19 @@
     window.API.buscar('/empresas/' + encodeURIComponent(empresa) + '/grafo')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (d) {
-        if (!d || !d.nos || !d.nos.length) { avisar(null); return; }   // sem dados: fica a ilustração
+        /* Vazio de verdade: nenhuma idéia finalizada e classificada
+           ainda. Antes esta linha deixava a ilustração do protótipo na
+           tela, o que dizia à pessoa exatamente o contrário do que é
+           verdade sobre a empresa dela. */
+        if (!d || !d.nos || !d.nos.length) {
+          avisar(null);
+          mostrarEstado(
+            'O grafo aparece aqui quando houver idéia finalizada e classificada. ' +
+            'Finalize uma idéia no quadro do projeto para ela entrar no mapa.',
+            true,
+          );
+          return;
+        }
         montar(d.nos, d.arestas || []);
         /* Teto do SERVIDOR (400 idéias por empresa) é outra coisa que
            o teto do CLIENTE (130 ativas na tela): aquele existe para
@@ -160,7 +189,11 @@
            está devolvendo 500" viravam a mesma tela, e a única saída
            era abrir o console. Estado vazio e falha são coisas
            diferentes e precisam parecer diferentes. */
-        avisar('Não foi possível carregar o grafo agora. As pastas abaixo continuam válidas.');
+        avisar(null);
+        mostrarEstado(
+          'Não foi possível carregar o grafo agora. As pastas abaixo continuam válidas.',
+          true,
+        );
       });
   }
 
@@ -201,7 +234,7 @@
     dobrarExcedente();
 
     prepararCanvas(L, A);
-    if (svgDecorativo) svgDecorativo.style.display = 'none';
+    esconderEstado();
 
     /* Nova carga, nova vista: um zoom/pan deixado de uma consulta
        anterior não faz sentido para um grafo com outro formato. */

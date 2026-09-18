@@ -1,6 +1,7 @@
 # Regras de Negócio — Quadro de Idéias
 
-> **Versão:** 1.0.0 · **Status:** Regras definidas; implementação não iniciada
+> **Versão:** 1.0.1 · **Status:** Implementado · conferência parcial
+> **Conferido em:** 13/09/2026, na conferência de `visao_do_projeto.html` contra o código: IDEIA-ISO, IDEIA-QUADRO e IDEIA-VAZIO conferidas; IDEIA-BUSCA ainda não
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`../projetos/projetos-listagem.md`](../projetos/projetos-listagem.md) — de onde vem o projeto que contém tudo aqui · [`ideias-movimentacao.md`](ideias-movimentacao.md) · [`ideias-criacao.md`](ideias-criacao.md) · [`ideias-exclusao.md`](ideias-exclusao.md)
@@ -152,4 +153,5 @@ Os limites de 60 e 280 vêm do `maxlength` que o protótipo já usa nos campos �
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.0.1 | 2026-09-13 | Sem mudança de regra. Cabeçalho corrigido: dizia "implementação não iniciada" com o quadro no ar desde então. Conferidas IDEIA-ISO-002/003/004, IDEIA-QUADRO-005/007/008 e IDEIA-VAZIO-002/003 — todas cumpridas. IDEIA-BUSCA fica para uma próxima conferência. |
 | 1.0.0 | 2026-08-24 | Documento criado. Regras de isolamento (IDEIA-ISO), quadro (IDEIA-QUADRO), busca (IDEIA-BUSCA) e estado vazio (IDEIA-VAZIO) definidas, junto das decisões I1 a I4. |

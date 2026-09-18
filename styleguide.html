@@ -639,6 +639,10 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospa
   border-radius:4px;
 }
 .link:hover{text-decoration:underline}
+.link--sublinhado{text-decoration:underline;text-underline-offset:2px}
+.link--sublinhado:hover{color:var(--fill-accent-hover)}
+.link--apoio{color:var(--text-secondary);font-weight:500}
+.link--apoio:hover{color:var(--text-primary)}
 
 /* ---- Divisor ---- */
 .divider{
@@ -1680,7 +1684,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospa
         <h1 class="sg-title" tabindex="-1">Checkbox &amp; link</h1>
         <p class="sg-lede">
           Os dois átomos que formam a linha "lembrar de mim / esqueci minha
-          senha" do formulário.
+          senha" do formulário — mais as variantes do link para quando ele
+          aparece dentro de texto corrido.
         </p>
       </header>
       <div class="sg-rule"></div>
@@ -1707,13 +1712,67 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospa
             <a class="link" href="#componentes">Esqueci minha senha</a>
             <span class="sg-comp-variant-label">link</span>
           </div>
+          <div class="sg-comp-variant">
+            <a class="link link--sublinhado" href="#componentes">Ver as fontes</a>
+            <span class="sg-comp-variant-label">sublinhado</span>
+          </div>
+          <div class="sg-comp-variant">
+            <a class="link link--sublinhado link--apoio" href="#componentes">Agora não</a>
+            <span class="sg-comp-variant-label">sublinhado · apoio</span>
+          </div>
         </div>
+      <div class="sg-note sg-note--info">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div class="sg-note-body">
+          <strong>Quando sublinhar sempre.</strong> O link padrão vive onde é a única
+          coisa azul da área — "Esqueci minha senha" embaixo de um campo, "Editar" ao
+          lado de uma lista — e ali a cor basta para dizer que é clicável. Dentro de
+          texto corrido não basta: o olho está lendo, e cor sozinha some para quem não
+          distingue azul. <code class="mono">.link--sublinhado</code> é o que sobra de
+          sinal quando a cor não chega. É o que a conversa do assistente de IA usa
+          desde 16/09/2026, no lugar dos botões que tinha antes.
+        </div>
+      </div>
+      <div class="sg-note sg-note--info">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div class="sg-note-body">
+          <strong>Duas ações lado a lado.</strong> Quando uma delas é "não fazer", ela
+          leva <code class="mono">.link--apoio</code> junto: mesma forma, peso de apoio.
+          Sem isso as duas competem pela mesma atenção e a escolha fica sem
+          recomendação.
+        </div>
+      </div>
+      <div class="sg-note sg-note--info">
+        <span class="sg-note-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div class="sg-note-body">
+          <strong>&lt;a&gt; ou &lt;button&gt;.</strong> O desenho é o mesmo; o elemento
+          muda conforme o clique. Vai para outra tela, é
+          <code class="mono">&lt;a href&gt;</code> — e aí a pessoa vê o destino antes de
+          clicar, abre em outra aba, e o teclado trata como navegação. Faz algo aqui
+          dentro, é <code class="mono">&lt;button type="button"&gt;</code> com as mesmas
+          classes. Um <code class="mono">&lt;a&gt;</code> sem
+          <code class="mono">href</code> não é link para ninguém que use leitor de tela.
+        </div>
+      </div>
         <pre class="sg-comp-code mono" id="codeCheckLink"><code>&lt;label class="checkbox" for="lembrar"&gt;
   &lt;input type="checkbox" id="lembrar" name="lembrar"&gt;
   &lt;span&gt;Lembrar de mim&lt;/span&gt;
 &lt;/label&gt;
 
-&lt;a class="link" href="#"&gt;Esqueci minha senha&lt;/a&gt;</code></pre>
+&lt;a class="link" href="#"&gt;Esqueci minha senha&lt;/a&gt;
+
+&lt;!-- dentro de texto corrido: sublinhado sempre --&gt;
+&lt;a class="link link--sublinhado" href="#"&gt;Ver as fontes&lt;/a&gt;
+
+&lt;!-- ação que acontece aqui, não navegação --&gt;
+&lt;button type="button" class="link link--sublinhado"&gt;Trazer o resultado&lt;/button&gt;
+&lt;button type="button" class="link link--sublinhado link--apoio"&gt;Agora não&lt;/button&gt;</code></pre>
       </div>
     </section>
 

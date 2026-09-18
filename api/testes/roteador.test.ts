@@ -1,242 +1,208 @@
-/* ============================================================
-   O roteador, coberto pelos exemplos reais
+/* Corpus do roteador — `src/pesquisa/roteador.ts`
    ============================================================
-   As perguntas aqui são as que o usuário descreveu ao pedir o
-   módulo (planejamento-pesquisa-concorrentes.md §1), escritas como
-   ele escreveu. Teste de roteador com pergunta inventada por quem
-   escreveu o roteador prova pouco: casa com a heurística porque
-   nasceu dela.
+   Puro: sem banco, sem rede, sem provedor.
 
-   O par que importa está em "o mesmo 'quantas unidades'": as duas
-   perguntas pedem o mesmo número, e uma custa dez vezes a outra.
-   Se essa distinção quebrar, o custo do módulo muda sem ninguém ver.
-   ============================================================ */
+   POR QUE ESTE ARQUIVO EXISTE
+   ---------------------------------------------------------
+   O roteador é um portão de custo: ele decide se uma tarefa vira
+   busca paga, consulta de lugares, recusa por termos de uso, ou
+   nada. Mexer nele sem medida é trocar um falso negativo por um
+   falso positivo e só descobrir na fatura — ou pior, num usuário
+   que desiste porque o botão não faz nada.
+
+   O corpus é a medida. Ele não afirma que a heurística está certa:
+   ele afirma **onde ela está hoje**, nas duas direções.
+
+   AS DUAS ASSERÇÕES, E POR QUE A SEGUNDA IMPORTA MAIS
+   ---------------------------------------------------------
+   1. Todo caso SEM a marca `quebrado` precisa continuar passando.
+      É a proteção contra regressão.
+
+   2. Todo caso COM a marca `quebrado` precisa continuar falhando —
+      e falhar do jeito registrado. Parece absurdo até se ver o que
+      acontece sem isso: alguém conserta a heurística na Fase 1, o
+      caso passa a funcionar, e ninguém fica sabendo. A marca é uma
+      dívida declarada; o teste é o cobrador. Quando ele acusar
+      "isto foi consertado", a ação é tirar a marca, não mexer no
+      código.
+
+   O ESTADO DE HOJE: 14 de 18
+   ---------------------------------------------------------
+   Os quatro que falham são a mesma falha, quatro vezes: a tarefa
+   diz um verbo de levantamento e nomeia um alvo externo, mas o
+   alvo é nome próprio ou categoria de produto, e `SUJEITO_EXTERNO`
+   é uma lista fechada de substantivos genéricos ("concorrentes",
+   "players", "mercado"). Nome próprio não está na lista, então não
+   passa — e "Pesquisar outras logitechs" cai em `conhecimento`,
+   que hoje é recusa.
+
+   A Fase 0 NÃO conserta isso. Ela tira o beco sem saída
+   (BOARD-PESQUISA-012): a pessoa passa a poder dizer "busca assim
+   mesmo". A heurística só muda na Fase 1, quando um modelo barato
+   substitui o portão — e é este corpus que vai dizer se a troca
+   melhorou ou só mudou de erro.
+
+   Ver `planejamento-pesquisa-v2.md`, limites L1 e L2. */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { planejarConsulta, type Nivel } from '../src/pesquisa/roteador.js';
 
-import { planejarConsulta, type Entidade } from '../src/pesquisa/roteador.js';
+type Caso = {
+  frase: string;
+  esperado: Nivel;
+  porque: string;
+  /* Presente = falha hoje, de propósito registrado. O texto diz o
+     que o roteador devolve no lugar do esperado. */
+  quebrado?: { veio: Nivel; motivo: string };
+};
 
-/* Uma sessão que já descobriu três concorrentes — o estado em que
-   as perguntas 2 em diante do §1 acontecem. */
-const SESSAO: Entidade[] = [
-  { apelido: 'concorrente 01', nome: 'Cafeteria Grão Nobre' },
-  { apelido: 'concorrente 02', nome: 'Rede Expresso Café' },
-  { apelido: 'concorrente 03', nome: 'Casa do Café Ltda' },
+const CORPUS: Caso[] = [
+  /* ---- Levantamento com alvo externo: onde a heurística cega ---- */
+  {
+    frase: 'Pesquisar outras logitechs que atuam aqui no brasil.',
+    esperado: 'busca',
+    porque: 'a tarefa que motivou o plano — marca nomeada, verbo de levantamento',
+    quebrado: { veio: 'conhecimento', motivo: '"logitechs" não está em SUJEITO_EXTERNO (lista fechada de genéricos)' },
+  },
+  {
+    frase: 'Pesquisar concorrentes da Logitech no Brasil',
+    esperado: 'busca',
+    porque: 'mesma pergunta, com a palavra genérica que a lista conhece',
+  },
+  {
+    frase: 'Levantar quem vende mouse gamer no Brasil',
+    esperado: 'busca',
+    porque: 'verbo de levantamento + categoria de produto',
+    quebrado: { veio: 'conhecimento', motivo: '"mouse gamer" é produto, não substantivo genérico de concorrência' },
+  },
+  {
+    frase: 'Mapear players de periféricos no mercado brasileiro',
+    esperado: 'busca',
+    porque: 'tem "players" e "mercado", ambos na lista',
+  },
+  {
+    frase: 'Pesquisar a Nike e a Adidas',
+    esperado: 'busca',
+    porque: 'duas marcas nomeadas, nada mais',
+    quebrado: { veio: 'conhecimento', motivo: 'nome próprio sozinho não aciona FATO nem ATRIBUTO_PUBLICO' },
+  },
+  {
+    frase: 'Descobrir quantas lojas a Centauro tem',
+    esperado: 'busca',
+    porque: '"quantas" aciona FATO',
+  },
+  {
+    frase: 'Listar fabricantes de teclado mecânico',
+    esperado: 'busca',
+    porque: 'verbo + categoria de produto',
+    quebrado: { veio: 'conhecimento', motivo: '"fabricantes" não está na lista; "teclado mecânico" é produto' },
+  },
+  {
+    frase: 'Pesquisar o slogan dos concorrentes',
+    esperado: 'busca',
+    porque: 'ATRIBUTO_PUBLICO — já funcionava',
+  },
+
+  /* ---- Reflexão interna: tem que CONTINUAR em conhecimento ----
+     Estes são o outro lado da medida. Uma correção que faça os
+     quatro de cima passarem e quebrar um destes não é correção:
+     é gastar dinheiro do usuário para buscar na web o que só
+     existe dentro da cabeça dele. */
+  { frase: 'Definir nossa proposta de valor', esperado: 'conhecimento', porque: 'criação interna' },
+  { frase: 'Criar um slogan para a marca', esperado: 'conhecimento', porque: 'criação — o veto de VERBO_CRIACAO tem que segurar' },
+  { frase: 'Mapear certezas, suposições e dúvidas', esperado: 'conhecimento', porque: 'reflexão interna, apesar do verbo de levantamento' },
+  { frase: 'Escrever a visão do produto', esperado: 'conhecimento', porque: 'criação' },
+  { frase: 'Levantar informação sobre a nossa suposição mais crítica', esperado: 'conhecimento', porque: 'reflexão, com verbo enganoso' },
+  { frase: 'Definir as personas do produto', esperado: 'conhecimento', porque: 'criação interna' },
+  { frase: 'Priorizar o backlog da próxima sprint', esperado: 'conhecimento', porque: 'trabalho interno' },
+
+  /* ---- Lugares ---- */
+  { frase: 'Quantas unidades da Centauro tem no meu bairro', esperado: 'lugares', porque: 'proximidade' },
+  { frase: 'Quais as lojas dele no google maps', esperado: 'lugares', porque: 'mapa + lugar físico' },
+
+  /* ---- Navegação: recusa por termos de uso (PES-005) ---- */
+  { frase: 'Entrar no LinkedIn deles e ver os funcionários', esperado: 'navegacao', porque: 'destino específico' },
 ];
 
-/* De quem a conversa está tratando. Nas perguntas 2 em diante do §1
-   o usuário diz "ele", não repete o apelido — é a sessão que sabe a
-   quem isso se refere. */
-const FOCO = SESSAO[0];
+describe('roteador — o corpus que mede o portão de custo', () => {
+  const saudaveis = CORPUS.filter((c) => !c.quebrado);
+  const quebrados = CORPUS.filter((c) => c.quebrado);
 
-describe('os quatro exemplos do §1', () => {
-  test('1 — "quem são meus concorrentes" não gasta busca', () => {
-    const p = planejarConsulta('Quem são meus concorrentes?');
-    assert.equal(p.nivel, 'conhecimento');
-    assert.equal(p.decidido, true);
+  test('o corpus tem os dois lados — senão ele não mede nada', () => {
+    /* Um corpus só de casos que deveriam virar busca premiaria uma
+       heurística que manda tudo para busca. */
+    const niveis = new Set(CORPUS.map((c) => c.esperado));
+    assert.ok(niveis.has('busca') && niveis.has('conhecimento'), 'faltou um dos dois lados');
+    assert.ok(niveis.has('lugares') && niveis.has('navegacao'), 'faltou lugares ou navegação');
   });
 
-  test('2 — fato sobre concorrente citado vai para busca com fonte', () => {
-    const p = planejarConsulta(
-      'quero saber mais sobre o concorrente 01, quantas unidades ele tem no Brasil, qual região',
-      SESSAO,
-    );
-    assert.equal(p.nivel, 'busca');
-    assert.equal(p.decidido, true);
-  });
-
-  test('3 — google maps no meu bairro vai para lugares', () => {
-    const p = planejarConsulta(
-      'busque no google maps quantas unidades do concorrente 02 tem aqui no meu bairro',
-      SESSAO,
-    );
-    assert.equal(p.nivel, 'lugares');
-    assert.equal(p.decidido, true);
-  });
-
-  test('4 — "entre no linkedin dele" é navegação', () => {
-    const p = planejarConsulta('entre no linkedin do concorrente 01', SESSAO);
-    assert.equal(p.nivel, 'navegacao');
-  });
-
-  test('4 — "acesse o site e veja a reclamação" é navegação', () => {
-    const p = planejarConsulta(
-      'acesse o site reclame aqui e pesquise qual a principal reclamação que ele recebe',
-      SESSAO,
-    );
-    assert.equal(p.nivel, 'navegacao');
-  });
-});
-
-describe('o mesmo "quantas unidades", dois níveis de custo', () => {
-  test('no Brasil é busca — pergunta de fato, sem geografia', () => {
-    const p = planejarConsulta('quantas unidades ele tem no Brasil', SESSAO, FOCO);
-    assert.equal(p.nivel, 'busca');
-  });
-
-  test('no meu bairro é lugares — proximidade de quem pergunta', () => {
-    const p = planejarConsulta('quantas unidades ele tem aqui no meu bairro', SESSAO, FOCO);
-    assert.equal(p.nivel, 'lugares');
-  });
-
-  test('na minha região também é lugares', () => {
-    const p = planejarConsulta('quais unidades existem na minha região', SESSAO);
-    assert.equal(p.nivel, 'lugares');
-  });
-
-  test('"em que região do Brasil" NÃO é proximidade', () => {
-    const p = planejarConsulta('em que região do Brasil ele atua', SESSAO, FOCO);
-    assert.equal(p.nivel, 'busca');
-  });
-});
-
-describe('referências resolvem contra a sessão — PES-004', () => {
-  test('o apelido some e o nome real vai ao provedor', () => {
-    const p = planejarConsulta('quantas unidades o concorrente 02 tem', SESSAO);
-    assert.ok(
-      p.pergunta.includes('Rede Expresso Café'),
-      `a pergunta ainda cita o apelido: "${p.pergunta}"`,
-    );
-    assert.deepEqual(p.citadas, ['Rede Expresso Café']);
-    assert.deepEqual(p.naoResolvidas, []);
-  });
-
-  test('"concorrente 2" casa com "concorrente 02" — zero à esquerda não separa', () => {
-    const p = planejarConsulta('fale do concorrente 2', SESSAO);
-    assert.deepEqual(p.citadas, ['Rede Expresso Café']);
-  });
-
-  test('referência inexistente é denunciada, não ignorada', () => {
-    const p = planejarConsulta('quantas unidades o concorrente 05 tem', SESSAO);
-    assert.deepEqual(p.naoResolvidas, ['concorrente 05']);
-    assert.deepEqual(p.citadas, []);
-  });
-
-  test('sessão vazia: toda referência fica não resolvida', () => {
-    const p = planejarConsulta('fale do concorrente 01', []);
-    assert.deepEqual(p.naoResolvidas, ['concorrente 01']);
-  });
-
-  test('entidade citada pelo nome conta, mesmo sem apelido', () => {
-    const p = planejarConsulta('o que dizem da Casa do Café Ltda', SESSAO);
-    assert.deepEqual(p.citadas, ['Casa do Café Ltda']);
-    assert.equal(p.nivel, 'busca');
-  });
-});
-
-describe('o pronome também é referência — PES-004', () => {
-  test('"ele" vira o nome do foco antes de sair para o provedor', () => {
-    const p = planejarConsulta('quantas unidades ele tem no Brasil', SESSAO, FOCO);
-    assert.ok(
-      p.pergunta.includes('Cafeteria Grão Nobre'),
-      `o pronome não foi resolvido: "${p.pergunta}"`,
-    );
-    assert.match(p.pergunta, /^(?!.*\bele\b).*$/i);
-    assert.deepEqual(p.citadas, ['Cafeteria Grão Nobre']);
-  });
-
-  test('"dele" vira "de <nome>", não o nome solto', () => {
-    const p = planejarConsulta('qual o faturamento dele', SESSAO, FOCO);
-    assert.ok(
-      p.pergunta.includes('de Cafeteria Grão Nobre'),
-      `possessivo mal resolvido: "${p.pergunta}"`,
-    );
-  });
-
-  test('sem foco, o pronome é denunciado — pergunta sem sujeito não sai', () => {
-    const p = planejarConsulta('quantas unidades ele tem', SESSAO);
-    assert.deepEqual(p.naoResolvidas, ['ele']);
-  });
-});
-
-describe('quando a heurística não sabe, ela diz', () => {
-  test('navegação e proximidade juntas não decidem sozinhas', () => {
-    const p = planejarConsulta(
-      'acesse o site deles e veja quais unidades tem perto de mim',
-      SESSAO,
-    );
-    assert.equal(p.decidido, false);
-  });
-
-  test('pergunta clara decide sem pedir confirmação', () => {
-    for (const pergunta of [
-      'quem são meus concorrentes',
-      'quantas unidades ele tem no Brasil',
-      'quantas unidades tem no meu bairro',
-      'entre no instagram dele',
-    ]) {
+  test(`os ${saudaveis.length} casos que funcionam continuam funcionando`, () => {
+    for (const c of saudaveis) {
+      const p = planejarConsulta(c.frase, []);
       assert.equal(
-        planejarConsulta(pergunta, SESSAO).decidido,
-        true,
-        `"${pergunta}" não deveria pedir confirmação`,
-      );
-    }
-  });
-});
-
-describe('o verbo sozinho não é navegação', () => {
-  test('"acesse os dados" não manda para o nível caro', () => {
-    const p = planejarConsulta('acesse os dados de faturamento dele', SESSAO, FOCO);
-    assert.notEqual(p.nivel, 'navegacao');
-  });
-});
-
-/* ------------------------------------------------------------
-   Descrição de tarefa, não pergunta de painel
-   ------------------------------------------------------------
-   A tela de atividade manda a DESCRIÇÃO da tarefa para cá, e
-   descrição vem no imperativo: "Pesquisar o slogan dos concorrentes".
-   Nenhuma palavra interrogativa, nenhuma entidade conhecida citada —
-   caía em `conhecimento`, que é o único nível que não executa nada, e
-   a tela pedia para reformular uma frase que já estava correta.
-
-   O par de testes abaixo é o que segura a correção nos dois sentidos:
-   levantamento tem que executar, criação tem que continuar recusando.
-   Um sem o outro deixa passar meia regra. */
-describe('tarefa escrita no imperativo', () => {
-  test('levantar fato sobre concorrente vai para busca', () => {
-    for (const descricao of [
-      'Pesquisar Slogan dos concorrentes da ihouseLog',
-      'Comparar o posicionamento dos concorrentes',
-      'Mapear os players do mercado de gestão de casas',
-      'Descobrir quem fundou a empresa',
-    ]) {
-      assert.equal(
-        planejarConsulta(descricao).nivel,
-        'busca',
-        `"${descricao}" deveria executar busca`,
+        p.nivel,
+        c.esperado,
+        `REGRESSÃO em "${c.frase}"\n` +
+          `  esperado ${c.esperado}, veio ${p.nivel}\n` +
+          `  o caso existe porque: ${c.porque}`,
       );
     }
   });
 
-  test('pedido de criar algo novo continua sem fonte externa', () => {
-    for (const descricao of [
-      'Criar um slogan para a marca ihouseLog',
-      'Escrever 3 slogans alternativos',
-      'Definir o posicionamento da marca',
-    ]) {
+  test(`os ${quebrados.length} casos quebrados continuam quebrados — do jeito registrado`, () => {
+    for (const c of quebrados) {
+      const p = planejarConsulta(c.frase, []);
       assert.equal(
-        planejarConsulta(descricao).nivel,
-        'conhecimento',
-        `"${descricao}" não tem fonte externa possível`,
+        p.nivel,
+        c.quebrado!.veio,
+        `"${c.frase}" mudou de comportamento.\n` +
+          `  Estava indo para ${c.quebrado!.veio} (${c.quebrado!.motivo}).\n` +
+          `  Agora vai para ${p.nivel}.\n` +
+          (p.nivel === c.esperado
+            ? '  ISTO FOI CONSERTADO. Tire a marca `quebrado` deste caso no corpus.'
+            : '  Mudou para um terceiro nível — nem o errado de antes, nem o certo. Investigar.'),
       );
     }
   });
 
-  /* O veto de criação não pode ser cego ao contexto: aqui o verbo
-     "criam" aparece dentro de uma pergunta sobre o que os OUTROS
-     fizeram, que é justamente o tipo de fato que se busca. */
-  test('criação citada dentro de um levantamento ainda é busca', () => {
-    const p = planejarConsulta('Pesquisar como os concorrentes criam seus slogans');
-    assert.equal(p.nivel, 'busca');
+  test('a heurística acerta 14 dos 18 — o número que a Fase 1 tem que subir', () => {
+    const acertos = CORPUS.filter((c) => planejarConsulta(c.frase, []).nivel === c.esperado).length;
+    assert.equal(
+      acertos,
+      saudaveis.length,
+      `o corpus diz ${saudaveis.length} acertos e mediu ${acertos} — as marcas \`quebrado\` estão desatualizadas`,
+    );
+  });
+});
+
+describe('roteador — quando ele admite que não sabe (PES-007)', () => {
+  test('sinal de navegação E de lugar na mesma frase não decide sozinho', () => {
+    /* É o único caso de `decidido: false` que existe hoje, e é o
+       que o 409 de `consultar` serve para resolver. Dois níveis
+       caros disputando a mesma pergunta é exatamente onde errar
+       sai caro. */
+    const p = planejarConsulta('Entrar no site deles e ver as unidades perto de mim', []);
+    assert.equal(p.decidido, false, 'a disputa navegação × lugares tem que chegar indecisa');
   });
 
-  /* O verbo sozinho não basta, mesma disciplina de VERBOS_NAVEGACAO:
-     este é o exemplo real que a skill do orquestrador registra como
-     reflexão interna, não consulta. */
-  test('verbo de levantamento sem sujeito externo não vira busca', () => {
-    const p = planejarConsulta('levantar informação sobre a suposição mais crítica');
-    assert.equal(p.nivel, 'conhecimento');
+  test('tudo que é claro chega decidido — indecisão não pode virar o padrão', () => {
+    for (const c of CORPUS) {
+      const p = planejarConsulta(c.frase, []);
+      assert.equal(p.decidido, true, `"${c.frase}" chegou indecisa, e não deveria`);
+    }
+  });
+});
+
+describe('roteador — referência sem dono (PES-004)', () => {
+  test('"ele" sem ninguém citado antes fica por resolver, não vira chute', () => {
+    const p = planejarConsulta('Quantas lojas ele tem no Brasil', []);
+    assert.ok(p.naoResolvidas.length > 0, 'a referência tinha que ficar registrada como não resolvida');
+  });
+
+  test('"ele" com foco definido vira o nome real', () => {
+    const p = planejarConsulta('Quantas lojas ele tem no Brasil', [], { apelido: 'ele', nome: 'Centauro' });
+    assert.equal(p.naoResolvidas.length, 0, 'com foco, não sobra referência solta');
+    assert.ok(p.pergunta.includes('Centauro'), `a pergunta resolvida devia citar o nome: "${p.pergunta}"`);
   });
 });

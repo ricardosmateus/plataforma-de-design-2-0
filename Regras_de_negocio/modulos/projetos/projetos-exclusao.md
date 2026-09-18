@@ -1,6 +1,7 @@
 # Regras de Negócio — Exclusão de Projeto
 
-> **Versão:** 1.0.0 · **Status:** Regras definidas; implementação não iniciada
+> **Versão:** 1.0.1 · **Status:** Implementado · sem divergências
+> **Conferido em:** 13/09/2026, contra `api/src/rotas/projetos.ts` e `projetos.html`
 > **Módulo:** Projetos · **Página:** `projetos.html` (menu do card → Excluir)
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`projetos-listagem.md`](projetos-listagem.md) · [`projetos-criacao.md`](projetos-criacao.md) · [`../empresas/empresas-exclusao.md`](../empresas/empresas-exclusao.md) — mesmo mecanismo de arquivamento, reaproveitado aqui
@@ -42,7 +43,7 @@
 | Situação | Resposta | O que a tela faz |
 |---|---|---|
 | Excluído | `200` com `{ ok: true }` | Remove o card da grade; se era o último, volta ao estado vazio |
-| Sessão inválida | `401` | Toast, sem tentar renovar sozinho |
+| Sessão inválida | `401` | Toast, sem tentar renovar sozinho — diferente da listagem, que renova (`projetos-listagem.md` PROJ-LIST-008) |
 | Conta suspensa | `403` com `suspensao` | Toast |
 | Vínculo existe, mas é especialista | `403` | "Só proprietário ou membro podem excluir projetos." |
 | `:empresaId` sem vínculo ativo, arquivada, ou inexistente | `404` | "Empresa não encontrada." |
@@ -79,3 +80,4 @@ O botão de confirmação trava enquanto a API responde — mesmo padrão do "Sa
 | Versão | Data | Alteração |
 |---|---|---|
 | 1.0.0 | 2026-08-24 | Documento criado. Regras PROJ-EXCL-001 a 005, contrato de `DELETE` e decisões P5/P6 registradas antes da implementação. |
+| 1.0.1 | 2026-09-13 | Conferência contra o código: as cinco regras e o contrato do `DELETE` conferem, nenhuma mudança de regra. Linha do `401` na §2 ganhou a referência cruzada para PROJ-LIST-008, que registra a assimetria deliberada com a listagem. Cabeçalho atualizado de "implementação não iniciada" para o estado real. |

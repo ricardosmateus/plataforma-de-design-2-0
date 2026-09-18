@@ -262,6 +262,7 @@ export async function classificarIdeiaEmSegundoPlano(ideiaId: string): Promise<v
         modelo: d.modelo,
         uso: d.uso,
         requisicaoId: d.requisicaoId,
+        operacaoId,
       });
     }
 

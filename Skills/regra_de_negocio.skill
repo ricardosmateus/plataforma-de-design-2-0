@@ -5,7 +5,8 @@
 - **Nome:** Guardião de Regras de Negócio por Página
 - **Nome técnico:** `page-business-rules-guardian`
 - **Arquivo:** `guardiao-regras-negocio-pagina.md`
-- **Versão:** 1.0.0
+- **Versão:** 1.2.0
+- **Histórico:** 1.1.0 (13/09/2026) — "Replicação no mapa de regras" em *Atualização da documentação*. 1.2.0 (13/09/2026) — "Skill não é regra" em *Fonte oficial*, e a proibição correspondente.
 - **Execução:** Automática
 - **Prioridade:** Alta
 - **Escopo:** Plataforma de Design 2.0
@@ -65,6 +66,21 @@ Exemplo:
 Esse documento sempre será considerado a fonte oficial da página.
 
 Caso exista divergência entre código e documentação, a documentação deve ser considerada a referência até que o conflito seja resolvido.
+
+## Skill não é regra
+
+Um arquivo de Skill descreve **como** fazer alguma coisa. Ele não registra **o que** o produto faz, e não substitui o documento de regras.
+
+Toda Skill que gera comportamento visível no produto — uma tela, um botão, uma rota, um campo gravado — exige a regra correspondente no módulo da entidade afetada, com ID próprio, antes de a implementação ser dada por concluída.
+
+O critério é simples: **se alguém consegue ver ou acionar aquilo, precisa de regra.** Lógica que só orienta a própria IA a trabalhar — formato de prompt, ordem de leitura, estilo de escrita — não precisa.
+
+Isto está escrito porque já falhou duas vezes, e das duas o Guardião funcionou para tudo que passou pelo caminho normal e não viu o que entrou por fora dele:
+
+- `categorizacao-taxonomia.skill` produziu a limpeza de `assunto`/`tags` ao sair de "finalizado" e a rota de correção manual da pasta. Ficaram no ar sem ID — e a regra publicada, `IDEIA-MOV-002`, passou a afirmar o contrário do que o sistema fazia ("mover altera apenas o campo status"), sobre uma ação que apaga conteúdo publicado em outra tela. Registrado em 13/09/2026: `ideias-movimentacao.md` v1.1.0 e o novo `ideias-taxonomia.md`.
+- `orquestrador-atividades.skill` produziu o botão "Gerar com ajuda da IA" de `atividade.html`, com 722 linhas de lógica de produto no cliente. Ficou no ar sem ID — e a pendência P4 seguiu listada como "ainda não decidido" meses depois de a decisão ter sido tomada na implementação. Registrado em 13/09/2026: `atividade-lista.md` v1.7.0, seção `ATV-GERAR`.
+
+Em ambos os casos a lógica estava bem pensada e bem comentada. O problema nunca foi a qualidade da decisão — foi ela não ter endereço.
 
 ---
 
@@ -364,6 +380,42 @@ Nunca deixar documentação desatualizada.
 
 ---
 
+## Replicação no mapa de regras
+
+Toda alteração em qualquer arquivo sob `Regras_de_negocio/` deve ser
+replicada no mapa visual antes de a tarefa ser considerada concluída.
+
+O mapa é `mapa-regras-negocio.html`, na raiz do repositório. Ele é
+**gerado**, nunca editado à mão: o conteúdo dos `.md` fica embutido
+dentro dele, e editar o HTML faria a visão divergir da fonte oficial.
+
+Comando:
+
+```
+node ferramentas/mapa-regras/gerar.mjs
+```
+
+Durante uma sessão de trabalho na documentação, deixar rodando:
+
+```
+node ferramentas/mapa-regras/gerar.mjs --watch
+```
+
+Nesse modo cada `.md` salvo regenera o mapa sozinho.
+
+O mapa não é servido pela API. A allowlist `PERMITIDO`, em
+`api/src/servidor.ts`, libera apenas `.html`, `.css`, `.js` e imagens —
+`.md` fica de fora de propósito, porque debaixo da mesma raiz vivem
+`api/.env` e a documentação interna. Abrir a allowlist para servir a
+documentação desfaria essa decisão; por isso o conteúdo vai embutido.
+
+Um documento de regra novo entra no mapa sozinho se estiver em
+`Regras_de_negocio/`. Fora dali, acrescentá-lo à lista `AVULSOS` em
+`ferramentas/mapa-regras/gerar.mjs` — a lista é explícita para que um
+`.md` qualquer na raiz não vire regra de negócio por acidente.
+
+---
+
 # Versionamento
 
 Sempre utilizar versionamento semântico.
@@ -435,7 +487,8 @@ A Inteligência Artificial nunca poderá:
 - misturar regras entre módulos;
 - alterar componentes compartilhados sem análise;
 - ignorar estados da interface;
-- concluir implementação sem atualizar documentação.
+- concluir implementação sem atualizar documentação;
+- entregar comportamento vindo de uma Skill sem a regra correspondente.
 
 ---
 

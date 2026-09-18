@@ -1,6 +1,7 @@
 # Regras de Negócio — Movimentação de Idéias entre Colunas
 
-> **Versão:** 1.0.1 · **Status:** Regras definidas; a ponte com `atividade.html` (Acessar / Concluir atividade) está implementada — o resto do movimento dentro do quadro (`visao_do_projeto.html`) segue como antes.
+> **Versão:** 1.1.0 · **Status:** Implementado
+> **Conferido em:** 13/09/2026, contra `api/src/rotas/ideias.ts`, `api/src/ideias/transicao.ts`, `js/ideias.js` e `visao_do_projeto.html`
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`ideias-quadro.md`](ideias-quadro.md) — de onde vêm as colunas e o isolamento · [`ideias-criacao.md`](ideias-criacao.md) · [`ideias-exclusao.md`](ideias-exclusao.md)
@@ -18,12 +19,18 @@ Este é o comportamento que define a tela: a idéia sai de "Minhas idéias", pas
 | ID | Regra | Fonte |
 |---|---|---|
 | IDEIA-MOV-001 | Uma idéia pode ir de **qualquer coluna para qualquer outra**, em qualquer ordem. Não há sequência obrigatória, nem caminho só de ida. | Decisão I5 |
-| IDEIA-MOV-002 | Mover uma idéia altera **apenas** o campo `status`. Título, descrição, importância e data de criação não mudam. | Decorre de IDEIA-MOV-001 |
+| IDEIA-MOV-002 | Mover uma idéia não altera **nada do que a pessoa escreveu**: título, descrição, importância e data de criação ficam como estão. O que muda além do `status` é a taxonomia, que não é texto digitado e sim consequência da coluna — ver IDEIA-MOV-017 e IDEIA-MOV-018. | Decorre de IDEIA-MOV-001; redação corrigida em 13/09/2026 |
 | IDEIA-MOV-003 | Soltar a idéia na coluna onde ela já está não é uma alteração: não chama a API, não emite mensagem e não registra nada. | Interface existente |
 | IDEIA-MOV-004 | Quem pode mover é quem pode criar — proprietário, membro e especialista. Ver `ideias-criacao.md` §1. | Decisão I6 |
 | IDEIA-MOV-005 | O contador de cada coluna reflete o que está visível nela naquele momento, respeitando a busca ativa. | Interface existente |
 
 **Por que o movimento é livre (IDEIA-MOV-001).** Foi uma decisão consciente entre duas alternativas legítimas. A alternativa era amarrar "Finalizado" à conclusão real da atividade correspondente, o que faria a coluna significar algo verificável — o quadro nunca mentiria. Optamos pelo movimento livre porque este quadro é a ferramenta de organização **do próprio usuário**, não um relatório de progresso para terceiros. Uma idéia pode ser considerada resolvida sem nunca ter virado atividade, e travar isso obrigaria a excluir a idéia como única forma de tirá-la da frente — pior resultado que uma coluna imprecisa.
+
+**Por que IDEIA-MOV-002 precisou ser corrigida.** Até a versão 1.0.1 esta regra dizia que mover altera "apenas o campo `status`". Não era verdade desde que a taxonomia entrou: sair de `finalizado` apaga quatro campos e remove linhas de outra tabela. A exceção existia só como comentário no código. Uma regra que descreve o contrário do que o sistema faz é pior do que regra nenhuma — quem a lê decide com base nela.
+
+**O que IDEIA-MOV-017 significa para quem usa.** Arrastar um card para fora de "Finalizado" **remove conteúdo publicado em outra tela**: a idéia some das pastas de "Sobre a empresa" e os recortes dela saem das páginas de tema da empresa. É a contrapartida deliberada da promessa registrada em `../grafo-conhecimento-v2.md` — *"se sair de finalizado, sai do mapa"* —, que só vale se a saída for imediata e completa. Mas é uma consequência destrutiva acionada por um gesto de arrastar, sem confirmação. Ver a pendência aberta na §4.
+
+**Por que na mesma transação.** Apagar a taxonomia "logo depois" abriria uma janela em que `/empresas/:id/temas/Concorrentes` ainda serviria o parágrafo de uma idéia que já saiu de finalizado. A janela seria curta e o bug, intermitente — o pior tipo para diagnosticar.
 
 ### 1.2 Três caminhos, uma porta — `IDEIA-MOV-CAMINHOS`
 
@@ -60,6 +67,10 @@ Quando o usuário conclui a atividade correspondente a uma idéia em `atividade.
 | IDEIA-MOV-014 | Concluir a atividade de uma idéia move essa idéia para `finalizado` automaticamente. É um atalho, não o único caminho (IDEIA-MOV-001). | Decisão I5 |
 | IDEIA-MOV-015 | A idéia afetada é identificada **pelo `id`**, nunca pelo título. | Decidido 24/08/2026 — corrige o protótipo |
 | IDEIA-MOV-016 | A mudança é persistida pela API, como qualquer outra movimentação. Não existe estado que viva só no navegador. | Decidido 24/08/2026 — corrige o protótipo |
+| IDEIA-MOV-017 | **Sair de `finalizado` para qualquer outra coluna apaga a taxonomia da idéia**: `assunto` volta a nulo, `tags` a vazio, `taxonomia_manual` a falso, e os recortes por tema daquela idéia são removidos. Isso acontece na **mesma transação** que muda a coluna — não depois, não em outro pedido. | Registrado 13/09/2026; regra de origem em `../grafo-conhecimento-v2.md` |
+| IDEIA-MOV-018 | **Entrar em `finalizado` dispara a classificação** da idéia (assunto + tags propostos pela IA) em segundo plano. A resposta da movimentação **não espera** por ela: o card anda na hora, e a pasta aparece quando ficar pronta. Falha de classificação não desfaz a movimentação. | Registrado 13/09/2026 |
+| IDEIA-MOV-019 | A limpeza de IDEIA-MOV-017 é definida como **o complemento de `finalizado`**, não como uma lista de destinos. Uma coluna nova acrescentada ao quadro amanhã já nasce limpando, sem alteração de código. | Registrado 13/09/2026, a partir de `ideias/transicao.ts` |
+
 
 **O bug que IDEIA-MOV-015 conserta.** Hoje a ponte é feita por `localStorage`: `atividade.html` grava um objeto com o **título** da idéia, e o quadro procura `IDEAS.find(i => i.title === titulo)`. Isso quebra de três maneiras distintas, todas plausíveis:
 
@@ -72,6 +83,16 @@ Casar por id resolve os três de uma vez: o id não se repete, não muda quando 
 ---
 
 ## 2. Contrato da API — `PATCH /empresas/:empresaId/projetos/:projetoId/ideias/:id/status`
+
+> **O que a transição escreve, além do `status`** (IDEIA-MOV-017/018/019):
+>
+> | De → Para | Efeito |
+> |---|---|
+> | mesma coluna | nada — `200` sem escrita, `atualizado_em` intacto (IDEIA-MOV-003) |
+> | `ideias` ↔ `andamento` | só o `status` |
+> | qualquer → `finalizado` | só o `status`; classificação disparada em segundo plano |
+> | `finalizado` → qualquer | `status` + `assunto := null`, `tags := []`, `taxonomia_manual := false`, e os recortes por tema apagados — tudo numa transação |
+
 
 Requisição autenticada pelo cookie de acesso.
 
@@ -106,6 +127,7 @@ Requisição autenticada pelo cookie de acesso.
 |---|---|
 | Ordem dentro da coluna | Hoje a ordem é dada pela ordenação escolhida na barra (recente/relevância/data), não por posição manual. Arrastar para reordenar **dentro** da mesma coluna não faz nada. Se um dia virar requisito, exige uma coluna de posição no banco — fora do escopo desta versão. |
 | Edição simultânea | Duas pessoas movendo a mesma idéia ao mesmo tempo: a última chamada vence, sem aviso. Aceitável no volume atual; revisitar se o uso colaborativo crescer. |
+| Sair de "Finalizado" apaga sem confirmar | **Aberta.** IDEIA-MOV-017 é destrutiva e visível em outra tela (a idéia sai das pastas de "Sobre a empresa" e os recortes saem das páginas de tema), mas é acionada por um arrasto — o mesmo gesto barato que move um card entre "Minhas idéias" e "Em andamento", onde não apaga nada. Excluir uma idéia pede confirmação (`ideias-exclusao.md`); arrastar para fora de Finalizado apaga mais coisa e não pede. Decidir se cabe confirmação, aviso no card, ou desfazer. Levantada em 13/09/2026. |
 | ~~Contrato da conclusão de atividade~~ | **Resolvido em 28/08/2026** — `atividade.html` agora existe (`atividade-lista.md`). "Acessar" (`ATV-ACESSO-001`) move a idéia para "Em andamento" pela API real; "Concluir atividade" nessa mesma tela move a idéia para "Finalizado" (`IDEIA-MOV-014`), também pela API real, pelo id — nunca por localStorage nem por título (`IDEIA-MOV-015`). |
 
 ---
@@ -116,3 +138,4 @@ Requisição autenticada pelo cookie de acesso.
 |---|---|---|
 | 1.0.1 | 2026-08-28 | Pendência "Contrato da conclusão de atividade" resolvida — `atividade.html` foi implementada (`atividade-lista.md`) e agora chama a API real tanto para `ATV-ACESSO-001` (Acessar → "Em andamento") quanto para `IDEIA-MOV-014` (Concluir atividade → "Finalizado"). Nenhuma regra nova aqui; só o gatilho que faltava passou a existir. |
 | 1.0.0 | 2026-08-24 | Documento criado. Regras de movimentação (IDEIA-MOV), os três caminhos equivalentes, persistência otimista com reversão e a correção da ponte com `atividade.html` (id em vez de título). Decisões I5 a I7. |
+| 1.1.0 | 2026-09-13 | Conferência contra o código. **IDEIA-MOV-002 corrigida**: dizia que mover altera "apenas o campo `status`", o que deixou de ser verdade quando a taxonomia entrou — sair de `finalizado` apaga `assunto`, `tags` e `taxonomia_manual` e remove os recortes por tema. A exceção existia só como comentário em `rotas/ideias.ts`. Registradas IDEIA-MOV-017 (limpeza na mesma transação), IDEIA-MOV-018 (classificação em segundo plano ao entrar em `finalizado`) e IDEIA-MOV-019 (a limpeza é o complemento de `finalizado`, não uma lista de destinos). Tabela de efeitos da transição acrescentada à §2. Aberta pendência sobre o gesto destrutivo sem confirmação. Status do cabeçalho atualizado. |

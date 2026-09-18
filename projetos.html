@@ -917,6 +917,24 @@ body.modal-open{overflow:hidden}
 .pf-extrato-valor{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .pf-extrato-valor.is-entrada{color:var(--text-success)}
 .pf-extrato-valor.is-saida{color:var(--text-secondary)}
+/* DIN-014 — consumo medido que não virou lançamento (CREDITOS_COBRAR=nao).
+   Sem sinal e em cor de apoio: ele não mexeu no saldo, e um "− R$ 0,43"
+   igual aos outros faria a pessoa procurar a diferença no saldo. */
+.pf-extrato-valor.is-neutro{color:var(--text-secondary);font-weight:500}
+.pf-extrato-item.is-nao-cobrado{opacity:.85}
+.pf-extrato-etiqueta{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 6px;
+  border:1px solid var(--border);
+  border-radius:4px;
+  font-size:11px;
+  line-height:16px;
+  font-weight:500;
+  color:var(--text-secondary);
+  white-space:nowrap;
+  vertical-align:1px;
+}
 .pf-extrato-vazio{color:var(--text-muted);font-size:13px;margin:8px 0 0}
 
 /* Barra de evolução do crédito: o trecho disponível encolhe conforme
