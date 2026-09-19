@@ -30,12 +30,31 @@ services:
     region: ohio
     rootDir: api
 
+    # A versão do Node vem de `api/.node-version` (= 22). Sem esse
+    # arquivo o Render lê `engines: >=20` do package.json e escolhe a
+    # mais nova que existir — em 19/09/2026 isso deu Node 26, três
+    # majors à frente da 22 que roda aqui e da `@types/node` ^22 com
+    # que o código é compilado. Desenvolver numa versão e publicar em
+    # outra é adiar o erro para o único lugar onde ele custa caro;
+    # `argon2` ainda por cima compila nativo e depende de haver
+    # binário pronto para a versão em uso.
+
     # `npm ci` e não `npm install`: instala exatamente o que está no
-    # lock. `prisma generate` antes do build porque o TypeScript não
+    # lock.
+    #
+    # `--include=dev` não é enfeite: `NODE_ENV=production` (declarado
+    # mais abaixo) vale TAMBÉM durante o build, e com ele o npm passa
+    # a omitir as devDependencies por conta própria. Só que é lá que
+    # moram `typescript` e `@types/node` — sem eles o `npm run build`
+    # morre em `error TS2688: Cannot find type definition file for
+    # 'node'`, que foi exatamente o que aconteceu em 19/09/2026 e
+    # custou três deploys até alguém desconfiar do NODE_ENV.
+    #
+    # `prisma generate` antes do build porque o TypeScript não
     # compila sem o client. `migrar` é `prisma migrate deploy` —
     # aplica o que falta e nunca cria migração nova (ao contrário de
     # `migrar:dev`, que não deve chegar perto de um servidor).
-    buildCommand: npm ci && npx prisma generate && npm run migrar && npm run build
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run migrar && npm run build
     startCommand: npm run start
 
     # /saude faz `SELECT 1` no banco. É de propósito: um serviço que
