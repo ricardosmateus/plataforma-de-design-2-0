@@ -97,8 +97,14 @@ services:
       #
       # Valor à vista (não é segredo) para haver menos coisa a digitar
       # no painel. Se o endereço do serviço mudar, muda aqui.
+      #
+      # É `app.` e NÃO `www.`: o `www.plataformadedesign.com` é o
+      # site institucional, que continua hospedado na Hostinger e não
+      # tem nada a ver com este serviço. Apontar esta lista para o www
+      # seria autorizar uma origem que nunca chama esta API e deixar
+      # de fora a única que chama.
       - key: ORIGENS
-        value: https://www.plataformadedesign.com
+        value: https://app.plataformadedesign.com
       # Chave da IA. Sem ela o assistente e a pesquisa não funcionam;
       # o resto da plataforma sobe normalmente.
       - key: IA_API_KEY
