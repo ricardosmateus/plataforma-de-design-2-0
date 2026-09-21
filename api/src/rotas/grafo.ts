@@ -182,6 +182,7 @@ export async function rotasGrafo(app: FastifyInstance) {
         assunto: true,
         tags: true,
         projetoId: true,
+        recortes: { select: { categoria: true } },
       },
     });
 
@@ -192,6 +193,9 @@ export async function rotasGrafo(app: FastifyInstance) {
        duas, e é o que faz o grafo dizer algo de longe. */
     const pesoPorCategoria = new Map<string, number>();
     const rotuloPorId = new Map<string, string>();
+    /* Rastreia quais categorias têm recortes. Só categoria com recorte
+       entra no grafo — sem recorte não há conteúdo para mostrar. */
+    const categoriasComTrecho = new Set<string>();
 
     for (const i of ideias) {
       nos.push({
@@ -204,6 +208,12 @@ export async function rotasGrafo(app: FastifyInstance) {
         tags: i.tags ?? [],
         status: i.status,
       });
+
+      /* Categorias que têm recorte sob este nome. Não é o mesmo que
+         `assunto` + `tags`: a classificação abre a pasta olhando a
+         idéia inteira, e a segmentação só recorta onde algum parágrafo
+         é sobre aquele tema. */
+      const comTrecho = new Set((i.recortes ?? []).map((r) => r.categoria));
 
       /* `assunto` é a pasta (uma por idéia); `tags` são as secundárias
          (N por idéia). As duas viram categoria, e a diferença fica no
@@ -222,18 +232,33 @@ export async function rotasGrafo(app: FastifyInstance) {
         pesoPorCategoria.set(idCat, (pesoPorCategoria.get(idCat) ?? 0) + 1);
         if (!rotuloPorId.has(idCat)) rotuloPorId.set(idCat, c.nome);
         arestas.push({ origem: i.id, destino: idCat, tipo: c.tipo });
+        /* Rastreia: esta categoria tem recorte sob este nome */
+        if (comTrecho.has(c.nome)) categoriasComTrecho.add(idCat);
       }
     }
 
     /* Os nós de categoria saem do mapa depois de contados: cada um
-       nasce com o peso final, sem segunda passagem para corrigir. */
+       nasce com o peso final, sem segunda passagem para corrigir.
+       SÓ ENTRA NO GRAFO A CATEGORIA QUE TEM TRECHO DENTRO. */
     for (const [id, peso] of pesoPorCategoria) {
-      nos.push({ id, tipo: 'categoria', rotulo: rotuloPorId.get(id) ?? id, peso });
+      if (categoriasComTrecho.has(id)) {
+        nos.push({ id, tipo: 'categoria', rotulo: rotuloPorId.get(id) ?? id, peso });
+      }
     }
+
+    /* Aresta cujo destino saiu da lista de nós vira ponteiro para o
+       nada. `montar()` em grafo.js já a descartaria (`porId.get` volta
+       undefined e o `.filter` logo abaixo a remove), mas mandá-la é
+       tráfego para ser jogado fora do outro lado — e deixa a resposta
+       dizendo uma coisa que os nós desmentem.
+
+       Toda aresta deste grafo vai de idéia para categoria, então
+       basta conferir o destino. */
+    const arestasVivas = arestas.filter((a) => categoriasComTrecho.has(a.destino));
 
     return resposta.send({
       nos,
-      arestas,
+      arestas: arestasVivas,
       truncado: total > TETO,
       teto: TETO,
     });
