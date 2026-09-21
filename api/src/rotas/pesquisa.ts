@@ -834,8 +834,45 @@ export async function rotasPesquisa(app: FastifyInstance) {
         /* Uma coisa que a tela não deve ter de deduzir: se ainda há
            uma decisão pendente sobre uma busca já paga. */
         rascunho_pendente: temRascunhoPendente(afirmacoesGravadas),
+        /* Se esta investigação já esteve no board. A restauração
+           automática só age quando é `false`: com `true`, board vazio
+           significa que a pessoa apagou, e repor desfaria a decisão
+           dela. */
+        trazida_ao_board: inv.trazidaAoBoard,
       },
     });
+  });
+
+  /* ---------- "Esta investigação já está no board" ----------
+     Chamada pela tela depois de restaurar os quadros — e também
+     quando ela CONSTATA que já havia quadro lá e por isso não
+     restaurou nada. Os dois casos dizem a mesma coisa: daqui para a
+     frente, board vazio é escolha de quem apagou, não resultado
+     perdido.
+
+     Idempotente e sem corpo: é uma marca que só anda para frente, e
+     um segundo `POST` não tem como significar outra coisa. Por isso
+     também não desfaz — quem quiser o resultado de volta depois de
+     apagar faz uma pesquisa nova, que é a regra que esta marca
+     existe para sustentar. */
+  app.post('/pesquisa/sessoes/:sessaoId/investigacao/trazida', async (req, resposta) => {
+    const usuarioId = await quemPede(req);
+    if (!usuarioId) return resposta.code(401).send(erro(null, 'Sessão expirada.'));
+
+    const { sessaoId } = req.params as { sessaoId: string };
+    const sessao = await sessaoDoDono(sessaoId, usuarioId);
+    if (!sessao) return resposta.code(404).send(erro(null, 'Investigação não encontrada.'));
+    if (!sessao.tarefaId) return resposta.code(404).send(erro(null, 'Investigação não encontrada.'));
+
+    const inv = await ultimaInvestigacaoDaTarefa(sessaoId, sessao.tarefaId);
+    if (!inv) return resposta.code(404).send(erro(null, 'Investigação não encontrada.'));
+
+    await db.pesquisaInvestigacao.update({
+      where: { id: inv.id },
+      data: { trazidaAoBoard: true },
+    });
+
+    return resposta.send({ trazida_ao_board: true });
   });
 
   /* ---------- Investigar: em etapas, narrando (Fase 1a) ----------

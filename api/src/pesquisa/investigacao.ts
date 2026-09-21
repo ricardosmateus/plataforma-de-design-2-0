@@ -70,6 +70,10 @@ export type Investigacao = {
   perguntaBusca: string | null;
   estimativaMicros: number | null;
   consultaId: string | null;
+  /* Se esta investigação já esteve no board. É o que faz apagar um
+     quadro valer: com `true`, board vazio passa a ser decisão de quem
+     apagou, e a restauração automática não repõe nada. */
+  trazidaAoBoard: boolean;
   criadoEm: Date;
   encerradoEm: Date | null;
 };

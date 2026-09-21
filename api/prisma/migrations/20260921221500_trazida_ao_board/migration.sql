@@ -1,0 +1,21 @@
+-- A marca que faz APAGAR um quadro valer.
+--
+-- Desde 21/09/2026 a pesquisa volta sozinha para o board quando a
+-- tarefa abre com o board vazio. Sem esta coluna essa restauração não
+-- tem como distinguir dois estados que na tela são idênticos:
+--
+--   · o resultado nunca chegou ao banco (é o defeito que ela conserta);
+--   · o resultado chegou e a pessoa apagou (é uma decisão dela).
+--
+-- Tratar os dois igual traria de volta, a cada carga, exatamente o
+-- que acabou de ser removido — apagar viraria um gesto sem efeito.
+--
+-- `DEFAULT false` é deliberado para as linhas que já existem: as
+-- investigações antigas, cujos quadros nunca foram gravados, ganham
+-- UMA restauração e a marca fecha atrás delas. É o que conserta as
+-- tarefas hoje quebradas sem precisar de backfill.
+--
+-- NOT NULL com default é seguro aqui: o Postgres 11+ não reescreve a
+-- tabela para um default constante, então não há trava de escrita.
+ALTER TABLE "pesquisa_investigacoes"
+  ADD COLUMN "trazida_ao_board" BOOLEAN NOT NULL DEFAULT false;

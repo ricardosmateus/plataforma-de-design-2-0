@@ -1308,6 +1308,22 @@ model PesquisaInvestigacao {
   // entidade que ela aponta.
   consultaId String? @map("consulta_id") @db.Uuid
 
+  // Verdadeiro depois que esta investigação já esteve no board —
+  // trazida pela restauração automática, ou constatada lá quando a
+  // tela abriu e os quadros já existiam.
+  //
+  // É o que faz APAGAR valer. A restauração automática (21/09/2026)
+  // repõe no board vazio o resultado que nunca chegou ao banco; sem
+  // esta marca ela não saberia distinguir "nunca foi trazido" de
+  // "foi trazido e a pessoa apagou", e traria de volta, a cada
+  // carga, exatamente o que ela acabou de tirar. Apagar deixaria de
+  // ser uma decisão e viraria um gesto sem efeito.
+  //
+  // `false` como padrão é o que conserta as tarefas já quebradas: a
+  // investigação antiga é restaurada uma vez e a marca fecha atrás
+  // dela. Depois disso, quadro apagado exige pesquisa nova.
+  trazidaAoBoard Boolean @default(false) @map("trazida_ao_board")
+
   criadoEm    DateTime  @default(now()) @map("criado_em")
   encerradoEm DateTime? @map("encerrado_em")
 

@@ -1804,7 +1804,9 @@
                    é quem monta os quadros nos dois casos. Dois caminhos
                    para o mesmo desenho divergiriam no primeiro ajuste. */
                 narracao().retomar(id, 'Trazendo o resultado guardado.');
-                entregarResultado(guardado(), inv.pergunta, id);
+                /* Trazido à mão conta igual: a partir daqui o board é
+                   a versão que vale, e apagar de lá é decisão. */
+                if (entregarResultado(guardado(), inv.pergunta, id) !== false) marcarTrazida();
               }
             : null,
         };
@@ -1853,17 +1855,45 @@
      está guardado, e mesmo assim a empresa não o vê.
      ------------------------------------------------------------ */
   function restaurarNoBoard(inv, guardado) {
+    /* APAGAR VALE. Uma investigação que já esteve no board não volta:
+       daqui em diante, board vazio significa que a pessoa tirou os
+       quadros de lá, e repô-los desfaria a decisão dela em silêncio,
+       a cada carga. Quem quiser o conteúdo de volta faz uma pesquisa
+       nova — que é uma escolha, e não um efeito colateral. */
+    if (inv.trazida_ao_board) return;
+
     comBoardPronto(function () {
-      if (document.querySelectorAll('#canvasStage .ideas-panel').length) return;
+      if (document.querySelectorAll('#canvasStage .ideas-panel').length) {
+        /* Já está no board — nada a repor. A marca fecha assim mesmo,
+           e é ela que faz o apagar DESTA tarefa valer da próxima vez:
+           sem isto, a primeira vez que o board ficasse vazio seria
+           lida como "nunca foi trazido". */
+        marcarTrazida();
+        return;
+      }
 
       /* Antes de montar: sem isto, numa tarefa concluída
          `criarQuadro*` devolve `null` e o autosave recusa em
          silêncio — o laço de trazer o resultado e perdê-lo. */
       if (window.iniciarRestauroPesquisa) window.iniciarRestauroPesquisa();
 
-      entregarResultado(guardado(), inv.pergunta,
+      var montou = entregarResultado(guardado(), inv.pergunta,
         narracao().abrir('Investigação anterior', inv.pergunta));
+
+      /* Só marca quando montou. Se a entrega falhou, o resultado
+         continua sem chegar ao board — e fechar a marca ali o
+         condenaria a nunca mais voltar. */
+      if (montou !== false) marcarTrazida();
     });
+  }
+
+  /* Uma marca que só anda para frente, e cuja falha só adia: se o
+     POST não for, a próxima carga tenta de novo, e no intervalo
+     restaurar continua sendo a resposta certa para um board vazio. */
+  function marcarTrazida() {
+    if (!sessaoId) return;
+    chamar('/pesquisa/sessoes/' + sessaoId + '/investigacao/trazida', { metodo: 'POST' })
+      .catch(function () {});
   }
 
   /* O board carrega por uma estrada e a investigação por outra.
