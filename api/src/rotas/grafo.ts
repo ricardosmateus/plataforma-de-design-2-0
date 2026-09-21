@@ -251,8 +251,43 @@ export async function rotasGrafo(app: FastifyInstance) {
 
      Formato lido do próprio front-end:
        { assuntos: [{ categoria, assunto, quantidade, finalizadas }],
+         total_finalizadas: number,
          sem_categoria: number,
          cobertura: { total, cobertos, dominios: [{ nome, ideias }] } }
+
+     ------------------------------------------------------------
+     SÓ ENTRA NA LISTA A PASTA QUE TEM TRECHO DENTRO
+     ------------------------------------------------------------
+     Classificar e recortar respondem perguntas diferentes: a
+     classificação diz de que a idéia fala (e abre a pasta), a
+     segmentação diz que parágrafo, lido sozinho, é sobre aquele
+     tema (e enche a pasta). Onde as duas divergem nascia uma pasta
+     com nome, contagem e botão "Acessar" que abria sem nada —
+     comum nas tags secundárias, que quase nunca ganham parágrafo
+     próprio.
+
+     Tentamos primeiro a via honesta: a pasta abria e explicava a
+     divergência. Não resolveu o incômodo, porque o problema não era
+     a falta de explicação — era a pasta existir. Uma gaveta vazia
+     com etiqueta continua sendo trabalho para quem abre.
+
+     Então a regra passa a ser: pasta é lugar onde há texto. Sem
+     nenhum recorte sob aquele nome, ela não entra na lista. Nada se
+     perde — a classificação continua no banco, a idéia continua no
+     grafo e nas suas outras pastas, e se a segmentação rodar depois
+     e recortar algo ali, a pasta aparece sozinha no próximo ciclo
+     do polling.
+
+     O espelho disto é `total_trechos` em `/temas/:categoria`: uma
+     pasta listada aqui é uma pasta que abre com conteúdo lá. A
+     conferência é a mesma — recorte de idéia finalizada, não
+     arquivada, em projeto não arquivado.
+
+     `cobertura` NÃO segue esta regra, de propósito. Ela mede o que
+     já foi finalizado por domínio, e a frase que ela escreve é
+     "ainda sem nada finalizado em X". Filtrar por trecho tornaria
+     essa frase falsa justamente onde há conhecimento validado — o
+     anel responde outra pergunta, e continua respondendo a dela.
      ------------------------------------------------------------ */
   app.get('/empresas/:empresaId/sobre', async (req, resposta) => {
     const usuarioId = await quemPede(req);
@@ -292,11 +327,12 @@ export async function rotasGrafo(app: FastifyInstance) {
         status: true,
         _count: { select: { recortes: true } },
         /* Só a categoria de cada recorte, sem o texto. É o que
-           permite saber, POR PASTA, quais idéias caíram ali pela
-           classificação e não têm trecho recortado sob aquele nome —
-           `_count` acima só diz se a idéia tem algum recorte, em
-           qualquer tema, e é justamente a diferença entre os dois
-           números que a pasta vazia expõe. */
+           permite saber, POR PASTA, se existe trecho recortado sob
+           aquele nome — e é essa resposta que decide se a pasta
+           entra na lista. `_count` acima não serve: ele diz que a
+           idéia tem algum recorte em algum tema, e uma idéia com
+           trecho em Mercado e nenhum em Benchmark contaria as duas
+           pastas como cheias. */
         recortes: { select: { categoria: true } },
       },
     });
@@ -329,7 +365,7 @@ export async function rotasGrafo(app: FastifyInstance) {
        ------------------------------------------------------------ */
     const porPasta = new Map<
       string,
-      { quantidade: number; finalizadas: number; principais: number; semTrecho: number }
+      { quantidade: number; finalizadas: number; principais: number; comTrecho: number }
     >();
     let semCategoria = 0;
 
@@ -348,7 +384,21 @@ export async function rotasGrafo(app: FastifyInstance) {
        por onde pedir os trechos. */
     let semRecortes = 0;
 
+    /* Quantas finalizadas existem, ponto — independente de pasta, de
+       tag e de recorte. É o único número que responde à pergunta que
+       o estado vazio da tela FAZ ("nenhuma atividade finalizada
+       ainda"), e é por isso que ele viaja.
+
+       A alternativa era o cliente deduzir da soma de `sem_categoria`
+       com `sem_recortes`, e a dedução tem um furo: um recorte cuja
+       categoria saiu das tags da idéia depois (edição manual da
+       classificação) deixa a idéia fora dos dois contadores e fora
+       de qualquer pasta. Raro, mas o preço do erro é a tela dizer a
+       uma empresa cheia de trabalho que ela não fez nada. */
+    let totalFinalizadas = 0;
+
     for (const i of ideias) {
+      if (i.status === 'finalizado') totalFinalizadas++;
       const principal = (i.assunto ?? '').trim();
 
       /* Set: uma tag que repete o assunto contaria a mesma idéia
@@ -391,13 +441,16 @@ export async function rotasGrafo(app: FastifyInstance) {
 
       for (const nome of categorias) {
         const atual = porPasta.get(nome)
-          ?? { quantidade: 0, finalizadas: 0, principais: 0, semTrecho: 0 };
+          ?? { quantidade: 0, finalizadas: 0, principais: 0, comTrecho: 0 };
         atual.quantidade++;
         if (i.status === 'finalizado') atual.finalizadas++;
         if (nome === principal) atual.principais++;
-        /* Classificada nesta pasta e sem trecho nela. É o número que
-           deixa a tela dizer a verdade em vez de "nada escrito". */
-        if (i.status === 'finalizado' && !comTrecho.has(nome)) atual.semTrecho++;
+        /* O número que decide se a pasta existe. `finalizado` aqui
+           não é zelo: é a mesma condição que `/temas/:categoria`
+           aplica para montar os blocos. Se as duas divergirem, volta
+           a existir pasta que promete e não entrega — só que agora
+           pelo motivo inverso. */
+        if (i.status === 'finalizado' && comTrecho.has(nome)) atual.comTrecho++;
         porPasta.set(nome, atual);
       }
     }
@@ -406,6 +459,11 @@ export async function rotasGrafo(app: FastifyInstance) {
        desempate, duas pastas com a mesma contagem trocariam de lugar
        entre ciclos do polling e a tela redesenharia à toa. */
     const assuntos = Array.from(porPasta.entries())
+      /* Aqui a pasta vazia deixa de existir para a tela. Antes do
+         `.map` porque o que não vai ser mostrado não precisa nem ser
+         montado, e antes do `.sort` porque ordenar o que será
+         descartado é trabalho jogado fora a cada ciclo do polling. */
+      .filter(([, c]) => c.comTrecho > 0)
       .map(([nome, c]) => ({
         categoria: nome,
         /* Mesmo rótulo sob os dois nomes: `criarItem` lê
@@ -420,12 +478,6 @@ export async function rotasGrafo(app: FastifyInstance) {
            pastas com a mesma contagem, a que é assunto principal de
            alguma coisa vem antes da que só é mencionada. */
         principais: c.principais,
-        /* Quantas finalizadas caíram nesta pasta pela classificação
-           sem ter trecho recortado aqui. Igual a `finalizadas`
-           significa pasta que abre sem nenhum trecho — e a tela
-           precisa saber disso ANTES de a pessoa entrar, para não
-           prometer conteúdo que não existe. */
-        sem_trecho: c.semTrecho,
       }))
       .sort(
         (a, b) =>
@@ -438,6 +490,8 @@ export async function rotasGrafo(app: FastifyInstance) {
        existe: a própria tela escreve "Ainda sem nada finalizado em".
        Um domínio cheio de hipóteses continua descoberto, e é essa a
        informação útil — mostra onde falta conhecimento firme. */
+    /* `porPasta`, e não `assuntos`: o anel conta finalização, não
+       recorte — ver a nota sobre `cobertura` no topo da rota. */
     const finalizadasPorPasta = new Map<string, number>();
     for (const [nome, c] of porPasta) {
       if (c.finalizadas > 0) finalizadasPorPasta.set(nome, c.finalizadas);
@@ -453,6 +507,7 @@ export async function rotasGrafo(app: FastifyInstance) {
 
     return resposta.send({
       assuntos,
+      total_finalizadas: totalFinalizadas,
       sem_categoria: semCategoria,
       sem_recortes: semRecortes,
       cobertura: {

@@ -17,6 +17,7 @@
 
   var semCat       = document.getElementById('semCategoria');
   var semCatTitulo = document.getElementById('semCategoriaTitulo');
+  var semCatDesc   = semCat ? semCat.querySelector('.sem-cat-desc') : null;
   var semCatBtn    = document.getElementById('semCategoriaBtn');
 
   var ring     = document.getElementById('contextoRing');
@@ -86,7 +87,7 @@
         ritmo = RITMO_MIN;
         ultimoEstado = assinatura;
         jaRenderizou = true;
-        renderizar((dados && dados.assuntos) || [], p);
+        renderizar((dados && dados.assuntos) || [], p, dados);
         renderizarSemCategoria(
           (dados && dados.sem_categoria) || 0,
           (dados && dados.sem_recortes) || 0
@@ -113,8 +114,8 @@
       });
   }
 
-  function renderizar(assuntos, p) {
-    if (!assuntos.length) { mostrarEmptyState(); return; }
+  function renderizar(assuntos, p, dados) {
+    if (!assuntos.length) { mostrarEmptyState(dados); return; }
 
     if (emptyState) emptyState.style.display = 'none';
     if (!taskList) return;
@@ -128,8 +129,6 @@
   function criarItem(assunto, p) {
     var categoria  = String(assunto.categoria || assunto.assunto || '');
     var quantidade = Number(assunto.quantidade || 0);
-    var finalizadas = Number(assunto.finalizadas || 0);
-    var semTrecho   = Number(assunto.sem_trecho || 0);
 
     var li = document.createElement('li');
     li.className = 'task';
@@ -168,13 +167,12 @@
     contagem.style.marginLeft = '10px';
     contagem.textContent = quantidade + (quantidade === 1 ? ' ideia' : ' ideias');
 
-    /* Toda finalizada desta pasta caiu aqui pela classificação e
-       nenhuma tem trecho recortado sob este nome — a pasta abre sem
-       citação nenhuma. Dizer isto ANTES do clique poupa a viagem; a
-       página do tema explica o porquê e leva às idéias. */
-    if (finalizadas > 0 && semTrecho >= finalizadas) {
-      contagem.textContent += ' · sem trecho recortado';
-    }
+    /* Aqui existiu um "· sem trecho recortado", que avisava antes do
+       clique que a pasta abriria vazia. Saiu junto com a pasta: a
+       rota `/sobre` não lista mais categoria sem nenhum recorte, e
+       um aviso que nunca pode disparar é pior que nenhum — lido por
+       quem mexer no código depois, ele descreve um estado que a
+       tela não tem mais. */
 
     /* ------------------------------------------------------------
        "Acessar pasta" agora ENTRA na pasta
@@ -269,6 +267,20 @@
       );
     }
     semCatTitulo.textContent = partes.join(' · ');
+
+    /* O texto fixo do HTML — "ainda não têm pasta no mapa" — só
+       descreve a primeira causa. Para a segunda ele é falso: a pasta
+       foi atribuída, o que falta é o recorte, e é justamente por
+       faltar o recorte que a pasta não está na lista. Dizer isso
+       aqui é o que liga o aviso à ausência que a pessoa está vendo
+       logo acima. */
+    if (semCatDesc) {
+      semCatDesc.textContent = semPasta && semRecortes
+        ? 'Umas não têm pasta no mapa; outras têm pasta, mas nenhum trecho recortado — e pasta sem trecho não entra na lista.'
+        : semPasta
+          ? 'Elas estão finalizadas, mas ainda não têm pasta no mapa.'
+          : 'Elas estão finalizadas e classificadas, mas nenhum trecho foi recortado — e pasta sem trecho não entra na lista.';
+    }
 
     /* O botão diz o que vai fazer. "Tentar classificar" numa idéia
        que já tem pasta faria a pessoa achar que ia perder a
@@ -384,9 +396,33 @@
     taskList.appendChild(li);
   }
 
-  function mostrarEmptyState() {
+  /* ------------------------------------------------------------
+     Lista vazia não é a mesma coisa que empresa vazia
+     ------------------------------------------------------------
+     O estado vazio diz "Nenhuma atividade finalizada ainda" e
+     ensina a finalizar a primeira. Isso era sempre verdade enquanto
+     toda finalizada virava pasta. Agora que a pasta sem trecho não
+     aparece, a lista pode estar vazia com dez atividades
+     finalizadas dentro — e mandar a pessoa "criar uma atividade"
+     seria mandá-la refazer o que ela já fez.
+
+     Quem responde é `total_finalizadas`, que a rota manda justamente
+     para isto: a frase é sobre finalização, então quem a autoriza
+     tem que ser a contagem de finalizadas — não a de pastas, que
+     agora é outra coisa. Havendo material, quem explica o que falta
+     é o aviso logo abaixo da lista, com o botão que resolve. Duas
+     caixas dizendo coisas opostas no mesmo palmo de tela é o que
+     estamos evitando aqui.
+
+     Resposta velha (sem o campo) cai no `|| 0` e volta ao
+     comportamento antigo: mostra o estado vazio. Preferível ao
+     contrário — uma tela em branco sem explicação nenhuma.
+     ------------------------------------------------------------ */
+  function mostrarEmptyState(dados) {
     if (taskList) taskList.innerHTML = '';
-    if (emptyState) emptyState.style.display = 'block';
+    if (!emptyState) return;
+    var finalizadas = dados ? Number(dados.total_finalizadas || 0) : 0;
+    emptyState.style.display = finalizadas > 0 ? 'none' : 'block';
   }
 
   function slug(t) {
