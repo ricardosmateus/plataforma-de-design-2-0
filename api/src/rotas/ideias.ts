@@ -466,15 +466,9 @@ export async function rotasIdeias(app: FastifyInstance) {
        chamada ao modelo leva segundos e pode falhar. O `catch` vazio
        é intencional — a própria função já registra o que deu errado,
        e uma promessa rejeitada solta aqui derrubaria o processo. */
-      if (plano.classificar) {
-  void classificarIdeiaEmSegundoPlano(ideia.id).catch(() => {});
-  /* Após a classificação, os temas estão assinados. Agora segmentar
-     o texto por tema para criar os recortes que aparecem nas páginas
-     de tema e em "Sobre a empresa". A classificação e segmentação
-     correm em paralelo — a segmentação espera a classificação estar
-     pronta, mas a resposta HTTP sai antes dos dois terminarem. */
-  void segmentarIdeiaEmSegundoPlano(ideia.id).catch(() => {});
-}
+    if (plano.classificar) {
+      void classificarIdeiaEmSegundoPlano(ideia.id).catch(() => {});
+    }
 
     return resposta.send({ ideia: ideiaParaResposta(ideia) });
   });
