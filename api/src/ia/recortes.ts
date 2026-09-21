@@ -86,7 +86,22 @@ export async function blocosDaIdeia(ideiaId: string): Promise<Bloco[]> {
     },
   });
 
-  const blocos: Bloco[] = [];
+  /* Duas listas, e não um `continue` que descarta o curto na hora.
+
+     `MINIMO_UTIL` existe para a página de tema não virar catálogo de
+     fragmentos, e continua valendo sempre que houver registro longo.
+     Mas como filtro ÚNICO ele tem um custo que só aparece no caso
+     extremo: uma atividade inteira feita de post-its curtos produz
+     zero blocos, a segmentação sai sem chamar o modelo, e a pasta
+     abre vazia — sem log, sem custo, sem sintoma que se possa
+     perseguir. Vazio é pior que curto: o trecho curto a pessoa lê e
+     sabe de onde veio; a pasta vazia não diz nada nem dá o que
+     corrigir.
+
+     Por isso o curto é guardado, não descartado, e só entra quando
+     não existe nenhum longo. Preferência pelo bom, com piso. */
+  const bons: Bloco[] = [];
+  const curtos: Bloco[] = [];
 
   for (const t of tarefas) {
     for (const q of t.quadros) {
@@ -98,23 +113,29 @@ export async function blocosDaIdeia(ideiaId: string): Promise<Bloco[]> {
              o título é o cabeçalho da seção, e separá-los deixaria o
              trecho começando no meio de uma frase. */
           const texto = (r.descricao ? `${r.titulo}\n\n${r.descricao}` : r.titulo).trim();
-          if (texto.length < MINIMO_UTIL) continue;
+          if (!texto) continue;
 
-          blocos.push({
-            n: blocos.length + 1,
+          /* `n` nasce zerado de propósito. A numeração é o contrato
+             com a resposta do modelo e precisa ser 1..N contígua na
+             lista que de fato for usada; como só no fim se sabe qual
+             das duas vai, numerar agora deixaria buracos. */
+          const bloco: Bloco = {
+            n: 0,
             texto,
             tarefaId: t.id,
             quadroId: q.id,
             registroId: r.id,
-          });
+          };
 
-          if (blocos.length >= TETO_BLOCOS) return blocos;
+          const destino = texto.length >= MINIMO_UTIL ? bons : curtos;
+          if (destino.length < TETO_BLOCOS) destino.push(bloco);
         }
       }
     }
   }
 
-  return blocos;
+  const escolhidos = bons.length ? bons : curtos;
+  return escolhidos.map((b, i) => ({ ...b, n: i + 1 }));
 }
 
 /* ------------------------------------------------------------
@@ -267,12 +288,22 @@ export async function segmentarIdeiaEmSegundoPlano(ideiaId: string): Promise<voi
         projeto: { select: { empresaId: true } },
       },
     });
-    if (!ideia || ideia.status !== 'finalizado' || ideia.arquivadoEm) return;
+    /* As três saídas abaixo são as únicas que terminam a segmentação
+       sem chamar o modelo — e portanto sem custo, sem registro em
+       `creditos` e, até aqui, sem log. Era isso que tornava a pasta
+       vazia impossível de diagnosticar em produção: o sintoma
+       aparecia na tela e o servidor não dizia uma palavra. Cada uma
+       agora se anuncia, com o motivo exato. */
+    if (!ideia || ideia.status !== 'finalizado' || ideia.arquivadoEm) {
+      console.warn(`[recortes] ${ideiaId} fora de "finalizado" ou arquivada — não segmentou`);
+      return;
+    }
 
     const categorias = [ideia.assunto, ...(ideia.tags ?? [])].filter(
       (c): c is string => typeof c === 'string' && c.trim() !== '',
     );
     if (!categorias.length) {
+      console.warn(`[recortes] ${ideia.id} sem assunto nem tags — recortes apagados`);
       await apagarRecortes(ideia.id);
       return;
     }
@@ -282,9 +313,17 @@ export async function segmentarIdeiaEmSegundoPlano(ideiaId: string): Promise<voi
       /* Sem conteúdo nos quadros não há o que recortar. Apagar o que
          existia é o certo: os quadros podem ter sido esvaziados, e o
          recorte antigo passaria a citar texto que não existe mais. */
+      console.warn(
+        `[recortes] ${ideia.id} sem blocos aproveitáveis ` +
+          '(idéia sem tarefas, quadros vazios ou só "Perguntas em aberto") — recortes apagados',
+      );
       await apagarRecortes(ideia.id);
       return;
     }
+
+    console.info(
+      `[recortes] ${ideia.id} segmentando ${blocos.length} bloco(s) em [${categorias.join(', ')}]`,
+    );
 
     /* Mesma reserva da classificação (IA-CUSTO-002). Sem saldo, a
        segmentação simplesmente não acontece agora — a idéia fica
