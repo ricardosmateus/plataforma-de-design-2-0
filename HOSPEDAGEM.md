@@ -82,12 +82,16 @@ seus dados e você continua livre para quebrar o seu.
 
 ## 3. Criar o serviço
 
-1. **Empurre o repositório.** Os arquivos ainda estão só na sua máquina —
-   ver §5.
-2. No Render: **New → Blueprint**, aponte para
-   `ricardosmateus/plataforma-de-design-workspace`. Ele lê o `render.yaml` e
-   já vem com o serviço montado.
-3. O Render vai pedir os valores marcados como `sync: false`:
+1. ~~**Empurre o repositório.**~~ **Feito em 17/09/2026** — commit `7fe242a`,
+   126 arquivos. Ver §5 se precisar repetir o preparo.
+2. ~~Confira o branch.~~ **Resolvido mudando de repositório** — ver §5.1. O
+   código da 2.0 vive em `ricardosmateus/plataforma-de-design-2-0`, no branch
+   `main`, sozinho.
+
+3. No Render: **New → Blueprint**, aponte para
+   `ricardosmateus/plataforma-de-design-2-0`. Ele lê o `render.yaml` e já vem
+   com o serviço montado.
+4. O Render vai pedir os valores marcados como `sync: false`:
 
    | Variável | O que pôr |
    |---|---|
@@ -99,7 +103,7 @@ seus dados e você continua livre para quebrar o seu.
    reaproveite os do seu `.env`**: segredo de desenvolvimento circula em
    máquina, backup e histórico de terminal.
 
-4. O primeiro deploy demora alguns minutos (instala, gera o client, migra,
+5. O primeiro deploy demora alguns minutos (instala, gera o client, migra,
    compila). Se ele falhar, o log diz em qual dos quatro passos.
 
 Ordem importa: o `ORIGENS` precisa da URL final, e a URL final só existe
@@ -219,14 +223,69 @@ MSG
 ```
 
 ```
-git push -u origin master
+git push -u origin main
 ```
+
+O `-u origin main` vale a partir de 18/09/2026, quando o branch local passou a
+se chamar `main` e o remoto mudou para o repositório próprio da aplicação —
+ver §5.1.
 
 Se o passo 4 achar alguma coisa, **pare** e me diga o que apareceu.
 
 Duas sobras inofensivas na sua máquina, ambas ignoradas pelo Git: `api/dist`
 com o build antigo na hierarquia errada, e `_to_delete/prova-deploy-17-09/`
 com o pacote que usei para provar o servidor antes de subir.
+
+---
+
+### 5.1 Por que a aplicação mudou de repositório (duas vezes)
+
+Descoberto em 18/09/2026, logo depois do primeiro `push`: o repositório
+`plataforma-de-design-workspace` já tinha um branch `main` com **outro
+projeto** — `banco_de_dados`, `docs`, `pesquisas`, `regras_de_negocio`,
+`sobre_a_empresa`. Dois commits, e `git merge-base` não acha ancestral comum
+com o nosso: são histórias independentes que dividiam um endereço.
+
+Isso quebraria o deploy de um jeito difícil de diagnosticar. O Render lê o
+`render.yaml` do **branch padrão**, e o padrão era `main` — ele procuraria no
+projeto errado e diria que não achou `render.yaml`, o que soa como arquivo
+faltando, não como branch trocado.
+
+Dava para contornar apontando o Render para `master`. Não foi o caminho
+escolhido: o contorno some do lugar onde se pensa nele, e o próximo deploy
+(ou a próxima pessoa) tropeça de novo. A aplicação ganhou repositório próprio,
+`ricardosmateus/plataforma-de-design`, com `main` sendo o código e nada mais.
+O workspace continua onde sempre esteve, intacto.
+
+**E na segunda tentativa, outra surpresa.** O nome óbvio para o repositório
+novo — `plataforma-de-design` — **já existia**, e não estava vazio: Next.js,
+Prisma, Storybook, pnpm workspace, 6 commits entre 29/06 e 27/07/2026, com
+canvas, kanban, integração Obsidian e assistente de IA. Um deles se chama
+"plataforma de design — estado atual do MVP".
+
+É a **geração anterior do mesmo produto**. Sem ancestral comum com a nossa,
+parada há sete semanas, enquanto a 2.0 (HTML/JS puro + Fastify) começou em
+setembro — o que o próprio nome da pasta local já dizia.
+
+O `push` foi recusado, e foi sorte: um `--force` ali teria apagado junho e
+julho. A 2.0 foi para `plataforma-de-design-2-0`, e a 1.0 ficou intocada.
+
+**Três remotos, e é de propósito:**
+
+```
+git remote -v
+```
+
+| Nome | Aponta para | O que é |
+|---|---|---|
+| `origin` | `plataforma-de-design-2-0` | a aplicação de hoje, e o que o Render publica |
+| `v1` | `plataforma-de-design` | a geração Next.js, jun–jul/2026 |
+| `workspace` | `plataforma-de-design-workspace` | documentação, pesquisas e planilhas |
+
+`origin` deixou de apontar para a 1.0 **de propósito**: um `push --force`
+distraído com aquele endereço no lugar do `origin` custaria sete semanas de
+trabalho. O branch `master` empurrado em 17/09 continua no `workspace`, como
+cópia; apagá-lo é opcional e é decisão sua.
 
 ---
 
