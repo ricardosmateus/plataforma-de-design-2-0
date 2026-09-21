@@ -128,6 +128,8 @@
   function criarItem(assunto, p) {
     var categoria  = String(assunto.categoria || assunto.assunto || '');
     var quantidade = Number(assunto.quantidade || 0);
+    var finalizadas = Number(assunto.finalizadas || 0);
+    var semTrecho   = Number(assunto.sem_trecho || 0);
 
     var li = document.createElement('li');
     li.className = 'task';
@@ -165,6 +167,14 @@
     contagem.style.fontSize = '13px';
     contagem.style.marginLeft = '10px';
     contagem.textContent = quantidade + (quantidade === 1 ? ' ideia' : ' ideias');
+
+    /* Toda finalizada desta pasta caiu aqui pela classificação e
+       nenhuma tem trecho recortado sob este nome — a pasta abre sem
+       citação nenhuma. Dizer isto ANTES do clique poupa a viagem; a
+       página do tema explica o porquê e leva às idéias. */
+    if (finalizadas > 0 && semTrecho >= finalizadas) {
+      contagem.textContent += ' · sem trecho recortado';
+    }
 
     /* ------------------------------------------------------------
        "Acessar pasta" agora ENTRA na pasta

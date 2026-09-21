@@ -210,6 +210,16 @@
       '&tarefa='  + encodeURIComponent(b.tarefa_id);
   }
 
+  /* A idéia sem trecho não tem tarefa de origem para apontar — não
+     há recorte, e é o recorte que guarda de onde o texto veio. O
+     destino honesto é o quadro de idéias do projeto, que existe
+     sempre. */
+  function linkDaIdeia(i) {
+    if (!empresaId || !i.projeto_id) return null;
+    return 'visao_do_projeto.html?empresa=' + encodeURIComponent(empresaId) +
+      '&projeto=' + encodeURIComponent(i.projeto_id);
+  }
+
   function frase(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
 
   /* ------------------------------------------------------------
@@ -387,8 +397,87 @@
     return art;
   }
 
+  /* ------------------------------------------------------------
+     Classificadas aqui, sem trecho próprio
+     ------------------------------------------------------------
+     A pasta e o trecho respondem a perguntas diferentes. A
+     classificação olha a IDÉIA — "de que isto fala?" — e é ela que
+     abre a pasta. A segmentação olha o BLOCO — "este parágrafo é
+     sobre quê?" — e cada bloco cai em UMA categoria só.
+
+     Uma idéia pode ser sobre Mercado sem ter um parágrafo que, lido
+     sozinho, seja sobre Mercado. Quando isso acontece, esta página
+     dizia "Nada escrito sobre Mercado ainda" — e era falso: estava
+     escrito, só não recortado sob este nome.
+
+     Nada some (a classificação é informação real) e nada é forjado
+     (um trecho atribuído à força faria a página deixar de ser
+     confiável). A tela assume a diferença e leva à idéia.
+
+     Só classes que `desenharBloco` já usa: a seção herda o desenho
+     de um bloco sem precisar de CSS novo.
+     ------------------------------------------------------------ */
+  function desenharSemTrecho(categoria, lista) {
+    var art = document.createElement('article');
+    art.className = 'tema-bloco';
+
+    var origem = document.createElement('div');
+    origem.className = 'tema-bloco-origem';
+
+    var h = document.createElement('h2');
+    h.className = 'tema-bloco-ideia';
+    h.textContent = lista.length === 1
+      ? 'Uma idéia classificada em ' + categoria + ', sem trecho próprio'
+      : lista.length + ' idéias classificadas em ' + categoria + ', sem trecho próprio';
+    origem.appendChild(h);
+    art.appendChild(origem);
+
+    var nota = document.createElement('p');
+    nota.className = 'tema-trecho';
+    nota.textContent = (lista.length === 1 ? 'Ela fala' : 'Elas falam') +
+      ' de ' + categoria + ', mas nenhum parágrafo, lido sozinho, é sobre este ' +
+      'tema — então não há o que citar aqui. O conteúdo está na idéia.';
+    art.appendChild(nota);
+
+    lista.forEach(function (i) {
+      var pe = document.createElement('div');
+      pe.className = 'tema-bloco-pe';
+
+      var titulo = i.ideia_titulo || 'Idéia sem título';
+      var href = linkDaIdeia(i);
+
+      if (href) {
+        var a = document.createElement('a');
+        a.className = 'tema-voltar';
+        a.href = href;
+        a.textContent = titulo;
+        pe.appendChild(a);
+      } else {
+        /* Sem projeto não há para onde ir, e link morto é pior do
+           que nenhum — mesma regra de `desenharBloco`. */
+        var s = document.createElement('span');
+        s.textContent = titulo;
+        pe.appendChild(s);
+      }
+
+      var onde = document.createElement('span');
+      onde.className = 'tema-voltar-nota';
+      /* "Pasta principal" x "tema secundário": o segundo é o caso
+         comum, e dizer qual é evita a leitura de que a
+         classificação errou. */
+      onde.textContent = (i.projeto_nome ? 'em ' + i.projeto_nome + ' · ' : '') +
+        (i.principal ? 'esta é a pasta principal dela' : 'aqui é tema secundário dela');
+      pe.appendChild(onde);
+
+      art.appendChild(pe);
+    });
+
+    return art;
+  }
+
   function desenhar(r) {
     var blocos = (r && r.blocos) || [];
+    var semTrecho = (r && r.sem_trecho) || [];
 
     document.title = r.categoria + ' · Plataforma de Design';
     document.getElementById('trilhaTema').textContent = r.categoria;
@@ -398,7 +487,10 @@
        os dois, sem esperar a resposta para a pessoa ver o texto. */
     mostrarIntro(r.categoria);
 
-    if (!blocos.length) {
+    /* Vazio de verdade é não haver NEM trecho NEM idéia classificada
+       aqui. Com idéia e sem trecho a página tem o que dizer, e dizer
+       "nada escrito" ali seria mentir sobre trabalho que existe. */
+    if (!blocos.length && !semTrecho.length) {
       document.getElementById('temaVazioTitulo').textContent =
         'Nada escrito sobre ' + r.categoria + ' ainda';
       mostrar('vazio');
@@ -408,9 +500,17 @@
 
     elBlocos.innerHTML = '';
     blocos.forEach(function (b) { elBlocos.appendChild(desenharBloco(b)); });
+    if (semTrecho.length) {
+      elBlocos.appendChild(desenharSemTrecho(r.categoria, semTrecho));
+    }
 
     mostrar('lista');
-    live.textContent = r.categoria + ': ' + frase(r.total_trechos || 0, 'trecho', 'trechos') + '.';
+    live.textContent = r.categoria + ': ' +
+      frase(r.total_trechos || 0, 'trecho', 'trechos') +
+      (semTrecho.length
+        ? ', e ' + frase(semTrecho.length, 'idéia classificada sem trecho próprio',
+            'idéias classificadas sem trecho próprio')
+        : '') + '.';
   }
 
   /* ------------------------------------------------------------

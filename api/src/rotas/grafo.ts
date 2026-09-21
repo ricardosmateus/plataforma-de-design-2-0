@@ -291,6 +291,13 @@ export async function rotasGrafo(app: FastifyInstance) {
         tags: true,
         status: true,
         _count: { select: { recortes: true } },
+        /* Só a categoria de cada recorte, sem o texto. É o que
+           permite saber, POR PASTA, quais idéias caíram ali pela
+           classificação e não têm trecho recortado sob aquele nome —
+           `_count` acima só diz se a idéia tem algum recorte, em
+           qualquer tema, e é justamente a diferença entre os dois
+           números que a pasta vazia expõe. */
+        recortes: { select: { categoria: true } },
       },
     });
 
@@ -322,7 +329,7 @@ export async function rotasGrafo(app: FastifyInstance) {
        ------------------------------------------------------------ */
     const porPasta = new Map<
       string,
-      { quantidade: number; finalizadas: number; principais: number }
+      { quantidade: number; finalizadas: number; principais: number; semTrecho: number }
     >();
     let semCategoria = 0;
 
@@ -376,11 +383,21 @@ export async function rotasGrafo(app: FastifyInstance) {
          idéias sem trechos" para uma idéia só. */
       if (i.status === 'finalizado' && i._count.recortes === 0) semRecortes++;
 
+      /* Os temas sob os quais ESTA idéia tem trecho recortado. Não é
+         o mesmo conjunto que `categorias`: a classificação abre a
+         pasta olhando a idéia inteira, e a segmentação só recorta
+         onde algum parágrafo, lido sozinho, é sobre aquele tema. */
+      const comTrecho = new Set((i.recortes ?? []).map((r) => r.categoria));
+
       for (const nome of categorias) {
-        const atual = porPasta.get(nome) ?? { quantidade: 0, finalizadas: 0, principais: 0 };
+        const atual = porPasta.get(nome)
+          ?? { quantidade: 0, finalizadas: 0, principais: 0, semTrecho: 0 };
         atual.quantidade++;
         if (i.status === 'finalizado') atual.finalizadas++;
         if (nome === principal) atual.principais++;
+        /* Classificada nesta pasta e sem trecho nela. É o número que
+           deixa a tela dizer a verdade em vez de "nada escrito". */
+        if (i.status === 'finalizado' && !comTrecho.has(nome)) atual.semTrecho++;
         porPasta.set(nome, atual);
       }
     }
@@ -403,6 +420,12 @@ export async function rotasGrafo(app: FastifyInstance) {
            pastas com a mesma contagem, a que é assunto principal de
            alguma coisa vem antes da que só é mencionada. */
         principais: c.principais,
+        /* Quantas finalizadas caíram nesta pasta pela classificação
+           sem ter trecho recortado aqui. Igual a `finalizadas`
+           significa pasta que abre sem nenhum trecho — e a tela
+           precisa saber disso ANTES de a pessoa entrar, para não
+           prometer conteúdo que não existe. */
+        sem_trecho: c.semTrecho,
       }))
       .sort(
         (a, b) =>
@@ -597,11 +620,66 @@ export async function rotasGrafo(app: FastifyInstance) {
       )
       .map(({ criado_em, ...resto }) => resto);
 
+    /* ---- Classificadas aqui, sem trecho próprio ----
+       A pasta e o trecho não nascem da mesma pergunta, e é por isso
+       que podem discordar:
+
+         a classificação olha a IDÉIA — "de que isto fala?" — e é o
+         que abre a pasta (`/sobre` monta a lista de `assunto` +
+         `tags`);
+
+         a segmentação olha o BLOCO — "este parágrafo é sobre quê?"
+         — e cada bloco cai em UMA categoria só, garantida pela
+         UNIQUE em `registro_id`.
+
+       Uma idéia pode ser SOBRE Mercado sem ter um parágrafo que,
+       lido sozinho, seja sobre Mercado. Quando isso acontece a pasta
+       existe e não tem o que mostrar — e até aqui a página dizia
+       "Nada escrito sobre Mercado ainda", que é falso: está escrito,
+       só não recortado sob este nome.
+
+       Devolver a lista é o que permite à tela dizer a verdade e
+       ainda levar a pessoa à idéia. Não some com a pasta (a
+       classificação é informação real) nem força um trecho onde não
+       há (que faria a página de tema deixar de ser confiável). */
+    const comTrecho = new Set(recortes.map((r) => r.ideiaId));
+
+    const classificadas = await db.ideia.findMany({
+      where: {
+        arquivadoEm: null,
+        status: 'finalizado',
+        projeto: { empresaId: params.data.empresaId, arquivadoEm: null },
+        /* O mesmo critério de `/sobre`: assunto principal OU tag. */
+        OR: [{ assunto: categoria }, { tags: { has: categoria } }],
+      },
+      orderBy: { criadoEm: 'desc' },
+      select: {
+        id: true,
+        titulo: true,
+        assunto: true,
+        projetoId: true,
+        projeto: { select: { tipo: true } },
+      },
+    });
+
+    const semTrecho = classificadas
+      .filter((i) => !comTrecho.has(i.id))
+      .map((i) => ({
+        ideia_id: i.id,
+        ideia_titulo: i.titulo,
+        projeto_id: i.projetoId,
+        projeto_nome: i.projeto ? nomeDoTipo(i.projeto.tipo) : '',
+        /* Distingue "esta é a pasta dela" de "ela só passa por
+           aqui": a segunda é o caso comum e o menos surpreendente. */
+        principal: i.assunto === categoria,
+      }));
+
     return resposta.send({
       categoria,
       dominio,
       total_trechos: recortes.length,
       blocos,
+      sem_trecho: semTrecho,
     });
   });
 
