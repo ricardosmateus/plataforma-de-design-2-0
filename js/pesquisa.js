@@ -630,9 +630,57 @@
       .replace(/\*(.+?)\*/g, '$1')
       .replace(/(^|\s)_(.+?)_(?=\s|$)/g, '$1$2')
       .replace(/^\s{0,3}#{1,6}\s+/gm, '')
-      .replace(/^\s*[-*+]\s+/gm, '')
+      /* `\u2022` junto dos marcadores de markdown: é o que `emParagrafos`
+         deixa no lugar do `-` para a lista ficar legível no documento, e
+         num post-it ele seria a marcação que esta função existe para
+         tirar — um bullet solto no meio de uma frase de uma linha só. */
+      .replace(/^\s*[-*+\u2022]\s+/gm, '')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  /* Espaço horizontal vira um só; três ou mais quebras viram a linha
+     em branco única que separa dois parágrafos; sobra de ponta sai.
+     É o mesmo trabalho do `\s+ -> ' '` de `semMarcacao`, preservando
+     a única coisa que importa para ler: onde um bloco termina e o
+     próximo começa. */
+  function normalizarBlocos(t) {
+    return String(t == null ? '' : t)
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t\u00a0]+/g, ' ')
+      .replace(/ *\n */g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  /* Mesma limpeza de marcação que `semMarcacao`, menos o colapso de
+     TODO espaço branco — e essa diferença é a razão de existir da
+     função.
+
+     Colapsar tudo é certo para post-it (anotação curta, lida de
+     relance) e errado para o quadro-documento, que é texto para ler
+     do começo ao fim. O `.doc-corpo` já desenha com
+     `white-space: pre-wrap` esperando encontrar as quebras; quem as
+     apagava era esta etapa, antes de o texto chegar lá. O resultado
+     era a resposta inteira num parágrafo só — parede de texto.
+
+     Aqui o parágrafo sobrevive, e item de lista vira linha própria
+     com marcador de texto em vez de ser emendado na frase anterior.
+     O caminho dos post-its não muda: `cardsDaResposta` chama
+     `semMarcacao` na primeira linha e renormaliza o que receber. */
+  function emParagrafos(t) {
+    return normalizarBlocos(
+      String(t == null ? '' : t)
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/__(.+?)__/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/(^|[ \t])_(.+?)_(?=[ \t]|$)/gm, '$1$2')
+        .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+        .replace(/^([ \t]*)[-*+][ \t]+/gm, '$1\u2022 ')
+    );
   }
 
   /* Uma pergunta longa costuma ser núcleo + qualificação: "Qual modal
@@ -811,7 +859,7 @@
            a evidencia de qual assunto cita qual fonte. */
         return {
           titulo: sec.titulo,
-          corpo: semMarcacao(cru),
+          corpo: emParagrafos(cru),
           bruto: cru,
           inicio: sec.inicio,
           fim: sec.fim,
@@ -848,7 +896,7 @@
     var texto = corpo;
     perguntas.forEach(function (q) { texto = texto.split(q).join(' '); });
     return {
-      texto: texto.replace(/\s+/g, ' ').trim(),
+      texto: normalizarBlocos(texto),
       perguntas: cardsDePerguntas(perguntas),
     };
   }
@@ -924,7 +972,7 @@
     if (nomeadas.length < 2) {
       secoes = [{
         titulo: '',
-        corpo: semMarcacao(bruto),
+        corpo: emParagrafos(bruto),
         bruto: bruto,
         inicio: 0,
         fim: String(bruto == null ? '' : bruto).length,

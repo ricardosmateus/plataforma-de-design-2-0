@@ -4490,6 +4490,56 @@ body.modal-open{overflow:hidden}
     texto_el.textContent = texto || '';
     corpo.appendChild(texto_el);
 
+    /* O texto do documento se edita direto no quadro — e ate 21/09/2026
+       essa edicao nao chegava ao banco. Dois furos, um em cima do outro.
+
+       O primeiro e este: `.doc-corpo` ja nasce `contenteditable`, e o
+       clique que liga a edicao inline casa `.idea-title, .idea-desc` e
+       ainda sai cedo quando o elemento ja e editavel. Nunca passava por
+       aqui, entao nada chamava `dispararAutosave` — a pessoa escrevia,
+       saia, e o servidor devolvia a versao de antes.
+
+       O segundo e a quebra de linha. Enter num contenteditable vira
+       `<br>`/`<div>`, e `textContent` — que e o que `lerDaTela` le —
+       descarta os dois e emenda os paragrafos. Normalizar aqui, no
+       blur, devolve o corpo a um text node unico com "\n" de verdade:
+       e o mesmo que `encerrarEdicaoTexto` faz com titulo e descricao,
+       pelo mesmo motivo.
+
+       Grava no blur, e nao a cada tecla: `dispararAutosave` nao tem
+       represa de tempo, entao um PUT por caractere digitado. */
+    texto_el.addEventListener('focus', function(){
+      texto_el.dataset.textoOriginal = texto_el.textContent;
+    });
+
+    texto_el.addEventListener('blur', function(){
+      var original = texto_el.dataset.textoOriginal;
+      delete texto_el.dataset.textoOriginal;
+
+      var novo = texto_el.innerText !== undefined
+        ? texto_el.innerText
+        : texto_el.textContent;
+
+      /* O navegador insere `\u00a0` no lugar do espaco no fim da linha
+         enquanto se digita. Gravado assim, volta como espaco que nao
+         quebra e desalinha o texto na releitura. */
+      novo = String(novo == null ? '' : novo)
+        .replace(/\u00a0/g, ' ')
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+\n/g, '\n')
+        /* Enter produz `<div><br></div>`, e `innerText` conta a quebra
+           do `<br>` E a do bloco: dois Enter viravam tres linhas em
+           branco, que se acumulavam a cada edicao. */
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/\s+$/, '');
+
+      texto_el.textContent = novo;
+
+      /* `undefined` e blur sem focus antes — nao houve edicao para
+         gravar, e disparar aqui poria um PUT no ar a cada passagem. */
+      if(original !== undefined && novo !== original) dispararAutosave();
+    });
+
     montarBlocoReferencias(corpo, (fontes || []).filter(Boolean));
 
     return q;

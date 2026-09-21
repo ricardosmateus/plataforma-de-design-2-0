@@ -236,10 +236,43 @@
         var titulo = tituloEl ? tituloEl.textContent.trim() : '';
         var registros = [];
 
+        /* `innerText`, nao `textContent`: enquanto a pessoa edita, a
+           quebra de linha vive no DOM como `<br>`/`<div>`, e
+           `textContent` descarta os dois — o documento voltava do banco
+           com os paragrafos emendados numa parede de texto.
+
+           O blur do `.doc-corpo` normaliza o corpo de volta para texto
+           puro, mas o autosave pode sair antes disso: a aba some
+           (`pagehide`), outro quadro e arrastado, a pesquisa termina. E
+           nesses casos que a leitura daqui decide se a quebra se salva
+           ou se perde.
+
+           Se `innerText` vier vazio, vale `textContent`: `innerText`
+           devolve string vazia quando o elemento nao esta sendo
+           renderizado, e gravar isso apagaria o documento inteiro. */
+        var corpoTexto = '';
+        if (corpoEl) {
+          corpoTexto = corpoEl.innerText != null ? corpoEl.innerText : corpoEl.textContent;
+          corpoTexto = String(corpoTexto == null ? '' : corpoTexto);
+          if (!corpoTexto.trim()) corpoTexto = corpoEl.textContent || '';
+        /* Enter dentro de um contenteditable produz `<div><br></div>`, e
+           `innerText` conta a quebra do `<br>` E a do bloco: dois Enter
+           viravam tres linhas em branco, que se acumulavam a cada
+           edicao. Colapsar aqui deixa o espacamento igual ao que
+           `js/pesquisa.js` grava — uma linha em branco entre
+           paragrafos, sempre. */
+        corpoTexto = corpoTexto
+            .replace(/\u00a0/g, ' ')
+            .replace(/\r\n?/g, '\n')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+        }
+
         if (titulo) {
           registros.push({
             titulo: titulo,
-            descricao: corpoEl ? corpoEl.textContent.trim() : '',
+            descricao: corpoTexto,
           });
         }
 
