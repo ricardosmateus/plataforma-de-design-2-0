@@ -1758,6 +1758,11 @@
         var terminada = inv.estado !== 'correndo' && inv.estado !== 'aguardando';
         if (terminada && !idN && !aPedido) {
           devolverCaderno();
+          /* A pesquisa volta para o board sozinha (21/09/2026). Até
+             aqui a narração calava e o resultado só reaparecia por um
+             clique; `restaurarNoBoard` decide olhando o board, que é
+             onde a resposta realmente está. */
+          if (temResultado && !descartado) restaurarNoBoard(inv, guardado);
           return;
         }
 
@@ -1825,6 +1830,59 @@
            inteira. Um erro aqui na cara de quem acabou de abrir a
            tela seria pior do que o silêncio. */
       });
+  }
+
+  /* ------------------------------------------------------------
+     A pesquisa volta sozinha para o board
+     ------------------------------------------------------------
+     Até 21/09/2026 o resultado só virava quadro por um clique em
+     "Trazer o resultado para o quadro" (BOARD-PESQUISA-003). O medo
+     registrado lá era duplicar: quem viu os quadros nascerem antes
+     de recarregar receberia uma segunda cópia.
+
+     O medo tem cura mais simples do que um botão — olhar o board.
+     Com quadro na tela não se traz nada, porque não há o que
+     duplicar; com o board vazio o resultado não está em lugar
+     nenhum, e trazer é a ÚNICA forma de ele voltar a existir.
+
+     O que o botão custava não era um clique. Uma idéia finalizada
+     cuja pesquisa nunca foi trazida chega à segmentação sem registro
+     nenhum: a pasta nasce em "Sobre a empresa" — a classificação lê
+     título e descrição, que existem — e abre vazia, porque recorte
+     cita registro, e registro não há. A busca foi paga, o resultado
+     está guardado, e mesmo assim a empresa não o vê.
+     ------------------------------------------------------------ */
+  function restaurarNoBoard(inv, guardado) {
+    comBoardPronto(function () {
+      if (document.querySelectorAll('#canvasStage .ideas-panel').length) return;
+
+      /* Antes de montar: sem isto, numa tarefa concluída
+         `criarQuadro*` devolve `null` e o autosave recusa em
+         silêncio — o laço de trazer o resultado e perdê-lo. */
+      if (window.iniciarRestauroPesquisa) window.iniciarRestauroPesquisa();
+
+      entregarResultado(guardado(), inv.pergunta,
+        narracao().abrir('Investigação anterior', inv.pergunta));
+    });
+  }
+
+  /* O board carrega por uma estrada e a investigação por outra.
+     Perguntar "tem quadro?" antes de a carga terminar leria uma tela
+     vazia que significa "ainda não chegou" — e traria uma segunda
+     cópia por cima da que estava vindo, que é exatamente a
+     duplicação que BOARD-PESQUISA-003 queria evitar.
+
+     Desiste depois de ~10 s: se a carga não veio até aí, ela falhou,
+     e insistir não a conserta. */
+  function comBoardPronto(fn, tentativas) {
+    var t = tentativas || 0;
+    var pronto = window.BoardAcoes &&
+      typeof window.BoardAcoes.pronto === 'function' &&
+      window.BoardAcoes.pronto();
+
+    if (pronto) return fn();
+    if (t >= 40) return;
+    setTimeout(function () { comBoardPronto(fn, t + 1); }, 250);
   }
 
   /* Só procura quando há tarefa — sem ela não existe investigação a

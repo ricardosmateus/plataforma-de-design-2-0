@@ -2809,6 +2809,25 @@ body.modal-open{overflow:hidden}
     if(reabrirBtn) reabrirBtn.hidden = false;
   }
 
+  /* ---------- Trinco do restauro de pesquisa ----------
+     Tarefa concluída é congelada, e isso está certo para trabalho
+     NOVO. Mas o resultado de uma busca já paga, que pertence a esta
+     tarefa e nunca chegou ao banco, não é trabalho novo — é uma
+     gravação que faltou. Sem esta exceção ele fica órfão para
+     sempre: `criarQuadro*` devolve `null`, `dispararAutosave` recusa
+     em silêncio, e a pessoa fica no laço de trazer o resultado para
+     a tela e perdê-lo a cada volta (relatado em 21/09/2026). Pior:
+     a idéia finalizada chega à segmentação sem registro nenhum, e a
+     pasta em "Sobre a empresa" nasce vazia.
+
+     É um TRINCO, não uma janela síncrona: fica aberto até UMA
+     gravação confirmar. `dispararAutosave` pode enfileirar o pedido
+     quando outro está no ar (BOARD-SALVA-002) e rodar depois — com
+     uma janela, a segunda tentativa chegaria com o trinco fechado e
+     seria recusada, que é exatamente o defeito que isto conserta. */
+  var restauroPendente = false;
+  window.iniciarRestauroPesquisa = function(){ restauroPendente = true; };
+
   /* ---------- Assistente: abrir / fechar ---------- */
   var assistantInner  = document.getElementById('assistantInner');
   var assistantToggle = document.getElementById('assistantToggle');
@@ -3838,7 +3857,8 @@ body.modal-open{overflow:hidden}
      chamada real: some quando o servidor confirma, e o erro (se
      houver) é avisado por BoardAcoes.salvar. */
   function dispararAutosave(){
-    if(modoLeitura) return;
+    /* `restauroPendente` abre a exceção do trinco lá de cima. */
+    if(modoLeitura && !restauroPendente) return;
     if(!window.BoardAcoes) return;
     /* BOARD-SALVA-006: enquanto o quadro não chegou do servidor, a
        tela vazia não representa nada — gravar aqui apagaria o que
@@ -3864,10 +3884,17 @@ body.modal-open{overflow:hidden}
     voltarLabel.textContent = 'Salvando...';
     clearTimeout(autoTimer);
 
-    function terminou(){
+    function terminou(gravou){
       btnVoltar.classList.remove('is-saving');
       voltarLabel.textContent = 'Voltar';
       window.__autosaveDisparado = false;
+
+      /* O trinco do restauro fecha na CONFIRMAÇÃO, não na tentativa.
+         Falhou — rede caiu, 400 do servidor —, ele fica aberto: o
+         resultado continua só na tela, e a próxima chance de gravar
+         não pode esbarrar num congelamento que só existe para
+         impedir trabalho novo. */
+      if(gravou) restauroPendente = false;
 
       /* Alguém pediu para salvar enquanto este salvava: aquele pedido
          enxergou um estado mais novo que o gravado, então roda agora. */
@@ -3888,8 +3915,8 @@ body.modal-open{overflow:hidden}
        em vez de resolver criaria rejeição não tratada em todos os
        outros pontos de chamada, que são muitos. */
     return window.BoardAcoes.salvar().then(
-      function(){ terminou(); return true; },
-      function(){ terminou(); return false; }
+      function(){ terminou(true); return true; },
+      function(){ terminou(false); return false; }
     );
   }
 
@@ -4470,8 +4497,11 @@ body.modal-open{overflow:hidden}
 
        Duas portas para a mesma regra, e só uma a cumpria. Devolver
        `null` põe esta no mesmo caminho da irmã: quem chama já sabe
-       dizer "Tarefa concluída não recebe resultado novo". */
-    if(modoLeitura) return null;
+       dizer "Tarefa concluída não recebe resultado novo".
+
+       `restauroPendente` abre a exceção: repor no board uma pesquisa
+       que já era desta tarefa não é "resultado novo". */
+    if(modoLeitura && !restauroPendente) return null;
 
     var q = criarQuadro(titulo || 'Documento', 1, ['']);
     q.classList.add('ideas-panel--doc');
@@ -4653,8 +4683,10 @@ body.modal-open{overflow:hidden}
      ------------------------------------------------------------ */
   window.criarQuadroResultado = function(titulo, itens){
     /* BOARD-LEITURA-003: tarefa concluída não recebe resultado novo —
-       seria reescrever o que a conclusão congelou. */
-    if(modoLeitura) return null;
+       seria reescrever o que a conclusão congelou. `restauroPendente`
+       abre a exceção, pela mesma razão da irmã acima: repor o que já
+       era desta tarefa não é resultado novo. */
+    if(modoLeitura && !restauroPendente) return null;
 
     var lista = itens || [];
     if(!lista.length) return null;
