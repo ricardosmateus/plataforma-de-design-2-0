@@ -422,8 +422,35 @@ export async function rotasIdeias(app: FastifyInstance) {
 
     /* IDEIA-MOV-003: soltar na coluna onde já está não é alteração.
        Devolve 200 sem escrever, para não mexer no `atualizado_em`
-       por um gesto que não mudou nada. */
+       por um gesto que não mudou nada.
+
+       Com uma exceção: pedir "finalizado" a uma idéia JÁ finalizada.
+       O quadro de idéias nunca manda isso — a tela corta o no-op antes
+       de chamar (visao_do_projeto.html, mesma IDEIA-MOV-003). Quem
+       manda é "Concluir atividade": a tela de atividade não conhece o
+       status da idéia e oferece o botão sempre.
+
+       Quem clica ali acabou de escrever no quadro e está dizendo que
+       o conteúdo está pronto. Devolver 200 mudo fazia a tela anunciar
+       "atividade concluída" enquanto o registro recém-criado continuava
+       fora de "Sobre a empresa", sem gesto nenhum que o alcançasse —
+       falso sucesso, que é pior que um erro: não dá o que corrigir.
+
+       Só a segmentação roda. O que mudou foi o conteúdo do quadro, e
+       assunto/tags saem do título e da descrição, que continuam os
+       mesmos — reclassificar seria pagar pela resposta que já está
+       gravada. A exceção é a idéia finalizada sem pasta: sem assunto a
+       segmentação sai cedo por não ter onde encaixar os trechos, então
+       ali quem destrava é a classificação, que encadeia a segmentação
+       ao terminar (taxonomia.ts). */
     if (existente.status === dados.data.status) {
+      if (dados.data.status === 'finalizado') {
+        if (existente.assunto) {
+          void segmentarIdeiaEmSegundoPlano(existente.id).catch(() => {});
+        } else {
+          void classificarIdeiaEmSegundoPlano(existente.id).catch(() => {});
+        }
+      }
       return resposta.send({ ideia: ideiaParaResposta(existente) });
     }
 
