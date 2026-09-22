@@ -309,13 +309,34 @@ cópia; apagá-lo é opcional e é decisão sua.
 
 ## 7. O que fica pendente
 
-- **Pix real.** `PSP_DRIVER=sandbox` no `render.yaml`. Para valer são o token
-  de produção do Mercado Pago, `MERCADO_PAGO_WEBHOOK_SECRET`, e o webhook
-  apontando para `https://SEU-DOMINIO/webhooks/pix/mercado-pago` (`SEG-PAG-003` exige HTTPS
-  público válido — o que este deploy passa a ter).
-- **Cobrança.** `CREDITOS_COBRAR=nao`. Enquanto estiver assim, o consumo é
-  medido e aparece no Histórico de uso marcado como "medido, não cobrado"
-  (`DIN-014`).
+- **Pix real — passo 1, preparado em 22/09/2026.** `render.yaml` já está com
+  `PSP_DRIVER=mercado_pago` e as duas credenciais como `sync: false`. Falta,
+  no painel: preencher `MERCADO_PAGO_ACCESS_TOKEN` e
+  `MERCADO_PAGO_WEBHOOK_SECRET` no Render, e cadastrar o webhook no Mercado
+  Pago apontando para
+  `https://app.plataformadedesign.com/webhooks/pix/mercado-pago`
+  (`SEG-PAG-003` exige HTTPS público válido — o que este deploy tem).
+  **Cuidado:** `env.ts` faz `process.exit(1)` se o driver for `mercado_pago`
+  e alguma credencial estiver vazia. Subir sem preencher tira a API do ar,
+  não degrada. Confirme com um Pix de valor baixo antes do passo 2 — foi
+  assim que a Fase 4 foi validada em 01/09/2026.
+- **Cobrança — passo 2, ainda não dado.** `CREDITOS_COBRAR=nao`. Enquanto
+  estiver assim, o consumo é medido e aparece no Histórico de uso marcado
+  como "medido, não cobrado" (`DIN-011`/`DIN-014`) — esse rótulo é o
+  comportamento esperado, não defeito.
+
+  **Não vire esta chave antes do passo 1 estar confirmado.** Não existe saldo
+  inicial nem crédito de boas-vindas no produto: toda conta começa em zero.
+  Ligar a cobrança sem compra funcionando bloqueia assistente, pesquisa,
+  classificação e recortes para todo mundo na primeira chamada, sem caminho
+  para destravar. Antes de virar, credite as contas ativas com
+  `npm run creditar -- email@dominio.com 50 "motivo"` (`SEG-PAG-006`).
+
+  E vale saber o que a chave desligada custa hoje: com ela em `nao`,
+  `reservar()` volta na primeira linha — nada é debitado, não existe
+  `SaldoInsuficiente` e, desde que o teto por investigação saiu (`18d58cb`),
+  a pesquisa não tem limite algum. O gasto real segue acontecendo na conta do
+  provedor de IA. O passo 2 é o que rearma essa proteção.
 - **Plano do Render.** `starter` não dorme. Se trocar para o gratuito, o
   serviço hiberna depois de 15 minutos de inatividade: a primeira visita
   espera o processo subir, e a confirmação de um pagamento chega atrasada.

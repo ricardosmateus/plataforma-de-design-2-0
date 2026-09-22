@@ -111,10 +111,49 @@ services:
         sync: false
 
       # ---- Cobrança e pagamento ----
-      # Ambiente de demonstração: cobrança desligada mede sem lançar
-      # (DIN-011) e o Histórico de uso mostra o consumo marcado como
-      # "medido, não cobrado" (DIN-014). Para valer, mude para `sim`.
+      #
+      # A ORDEM IMPORTA, e é por isso que estas duas chaves não viram
+      # juntas. Não existe saldo inicial nem crédito de boas-vindas em
+      # lugar nenhum do produto: toda conta começa em zero. Ligar a
+      # cobrança antes de a compra funcionar de verdade bloqueia
+      # assistente, pesquisa, classificação e recortes para todo mundo
+      # na primeira chamada, sem caminho para destravar.
+      #
+      # Passo 1 (este commit): Pix real. PSP_DRIVER=mercado_pago, com as
+      #   credenciais preenchidas no painel do Render (abaixo) e a URL
+      #   do webhook cadastrada no painel do Mercado Pago:
+      #     https://app.plataformadedesign.com/webhooks/pix/mercado-pago
+      #   Confirmar com um Pix de valor baixo antes de seguir.
+      #
+      # Passo 2 (depois, e só depois): CREDITOS_COBRAR=sim. Com saldo
+      #   já creditado nas contas ativas — `npm run creditar -- email 50
+      #   "motivo"` (SEG-PAG-006) —, ninguém para no meio do trabalho.
+      #
+      # Enquanto o passo 2 não acontece, `reservar()` volta na primeira
+      # linha: nada é debitado, não existe SaldoInsuficiente e, desde
+      # que o teto por investigação saiu (18d58cb), a pesquisa não tem
+      # limite nenhum. O gasto real continua na conta do provedor de IA.
+      # É o passo 2 que rearma essa proteção.
+      #
+      # Sintoma de hoje, esperado: o Histórico de uso mostra o consumo
+      # medido com a etiqueta "medido, não cobrado" (DIN-011/DIN-014).
       - key: CREDITOS_COBRAR
         value: nao
+
+      # Pix de verdade. `env.ts` derruba o boot (process.exit) se este
+      # valor for `mercado_pago` e alguma das duas credenciais abaixo
+      # estiver vazia — trocar o driver sem preenchê-las não degrada,
+      # tira a API do ar.
       - key: PSP_DRIVER
-        value: sandbox
+        value: mercado_pago
+      # Suas integrações → Credenciais, no painel do Mercado Pago.
+      # `sync: false`: o valor é preenchido no painel do Render e nunca
+      # entra no repositório.
+      - key: MERCADO_PAGO_ACCESS_TOKEN
+        sync: false
+      # Segredo do HMAC que assina o webhook deles (SEG-PAG-001). Sai
+      # junto com o cadastro da URL do webhook no painel do Mercado
+      # Pago. Diferente de WEBHOOK_PIX_SECRET, que é do PSP sandbox:
+      # cada Psp assina do seu jeito.
+      - key: MERCADO_PAGO_WEBHOOK_SECRET
+        sync: false

@@ -158,6 +158,22 @@ certo.
 **nenhuma tela chegou a oferecer esse pedido**: a coluna nunca recebeu
 valor em produção. A migração que a derruba não perde dado.
 
+**Ressalva descoberta em 22/09/2026, e ela importa.** O parágrafo acima
+diz que a trava do saldo "continua inteira". Isso é verdade no código, e
+condicional na configuração: `reservar()` começa com
+`if (!cobrancaLigada()) return`, e produção roda hoje com
+`CREDITOS_COBRAR=nao` (`render.yaml`). Com a chave desligada não há
+reserva, não há `SaldoInsuficiente` e, sem o teto por investigação, a
+pesquisa **não tem limite nenhum** — o gasto real segue acontecendo na
+conta do provedor de IA.
+
+Isso não reabre a decisão de remover o teto: ele barrava com saldo de
+sobra, e barrar no meio de uma investigação continua sendo o erro maior.
+O que muda é a urgência de ligar a cobrança — ela deixou de ser só sobre
+a tela do Histórico de uso e passou a ser o que rearma a única proteção
+que sobrou. Os passos e a ordem estão em `HOSPEDAGEM.md` §7; a ordem não
+é detalhe, porque nenhuma conta tem saldo inicial.
+
 **`PES-007` continua valendo, e não é isto.** Ela pede que o custo
 estimado apareça **antes** de gastar — transparência, não bloqueio. O
 que saiu foi a cerca; mostrar o número antes segue sendo a regra.
