@@ -16,7 +16,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { interpretar, type Bloco } from '../src/ia/recortes-leitura.js';
+import {
+  interpretar,
+  escolherBlocos,
+  TETO_BLOCOS,
+  type Bloco,
+  type QuadroCru,
+} from '../src/ia/recortes-leitura.js';
 
 const bloco = (n: number): Bloco => ({
   n,
@@ -151,5 +157,98 @@ describe('resposta quebrada', () => {
     const r = interpretar('{"blocos":[]}', BLOCOS, TEMAS);
     assert.notEqual(r, null);
     assert.equal(r?.size, 0);
+  });
+});
+
+
+/* ============================================================
+   Quais registros viram bloco — `escolherBlocos`
+   ============================================================
+   O piso de `MINIMO_UTIL` vale POR QUADRO. A regressão que estes
+   testes fecham: uma atividade com uma tarefa respondida por
+   pesquisa (prosa longa) descartava em silêncio o post-it curto que
+   respondia a outra tarefa. Conteúdo no quadro, nada na página do
+   tema, nenhum log.
+   ============================================================ */
+
+const LONGO = 'Um trecho de prosa com folga acima do mínimo útil de quarenta caracteres.';
+
+function quadro(id: string, tarefaId: string, registros: [string, string][], titulo = 'Quadro'): QuadroCru {
+  return {
+    id,
+    titulo,
+    tarefaId,
+    colunas: [
+      {
+        registros: registros.map(([rid, texto]) => ({ id: rid, titulo: texto, descricao: null })),
+      },
+    ],
+  };
+}
+
+describe('escolherBlocos', () => {
+  test('post-it curto sobrevive a quadro longo de OUTRA tarefa', () => {
+    const blocos = escolherBlocos([
+      quadro('q-pesquisa', 't1', [['r-longo', LONGO]]),
+      quadro('q-manual', 't2', [['r-curto', 'iLovers']]),
+    ]);
+
+    const ids = blocos.map((b) => b.registroId);
+    assert.ok(ids.includes('r-curto'), 'o post-it curto do quadro manual precisa entrar');
+    assert.ok(ids.includes('r-longo'));
+  });
+
+  test('dentro do MESMO quadro, o curto continua cedendo ao longo', () => {
+    const blocos = escolherBlocos([
+      quadro('q', 't1', [
+        ['r-longo', LONGO],
+        ['r-curto', 'Sim.'],
+      ]),
+    ]);
+
+    assert.deepEqual(blocos.map((b) => b.registroId), ['r-longo']);
+  });
+
+  test('quadro só de curtos entrega os curtos — vazio seria pior', () => {
+    const blocos = escolherBlocos([
+      quadro('q', 't1', [
+        ['a', 'iLovers'],
+        ['b', 'iHousers'],
+      ]),
+    ]);
+
+    assert.deepEqual(blocos.map((b) => b.registroId), ['a', 'b']);
+  });
+
+  test('"Perguntas em aberto" fica de fora inteiro', () => {
+    const blocos = escolherBlocos([
+      quadro('q-perg', 't1', [['r', LONGO]], 'Perguntas em aberto'),
+      quadro('q-ok', 't1', [['r2', LONGO]]),
+    ]);
+
+    assert.deepEqual(blocos.map((b) => b.registroId), ['r2']);
+  });
+
+  test('a numeração é 1..N contígua sobre a lista que de fato vai', () => {
+    const blocos = escolherBlocos([
+      quadro('q1', 't1', [['a', LONGO], ['lixo', 'x']]),
+      quadro('q2', 't2', [['b', 'iLovers']]),
+    ]);
+
+    assert.deepEqual(blocos.map((b) => b.n), [1, 2]);
+    assert.deepEqual(blocos.map((b) => b.registroId), ['a', 'b']);
+  });
+
+  test('TETO_BLOCOS limita o total mandado ao modelo', () => {
+    const muitos: [string, string][] = [];
+    for (let i = 0; i < TETO_BLOCOS + 20; i++) muitos.push(['r' + i, LONGO + i]);
+
+    const blocos = escolherBlocos([quadro('q', 't1', muitos)]);
+    assert.equal(blocos.length, TETO_BLOCOS);
+  });
+
+  test('registro sem texto nenhum não vira bloco', () => {
+    const blocos = escolherBlocos([quadro('q', 't1', [['vazio', '   '], ['ok', LONGO]])]);
+    assert.deepEqual(blocos.map((b) => b.registroId), ['ok']);
   });
 });

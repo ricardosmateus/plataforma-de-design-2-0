@@ -119,3 +119,82 @@ export function interpretar(
 
   return saida;
 }
+
+
+/* ------------------------------------------------------------
+   Quais registros viram bloco
+   ------------------------------------------------------------
+   Separada de `blocosDaIdeia` (que lê o banco) pelo mesmo motivo de
+   `transicao.ts`: isto é decisão, não execução, e decisão que só o
+   teste de integração cobre é decisão sem teste.
+
+   `MINIMO_UTIL` continua valendo, com o piso de sempre — mas o piso
+   agora é POR QUADRO, e não por idéia inteira.
+
+   Por que mudou: com o piso valendo para a idéia, bastava UM
+   registro longo em qualquer tarefa para a lista `curtos` inteira
+   ser descartada. Na prática isso significava que uma atividade com
+   uma tarefa respondida por pesquisa (prosa longa) engolia em
+   silêncio o post-it curto que respondia a OUTRA tarefa — e o
+   sintoma era o pior possível: o conteúdo no quadro, nada na página
+   do tema, nenhum log, e a impressão de que "só funciona quando vem
+   da pesquisa".
+
+   O quadro é o recorte certo do piso porque é a superfície que a
+   pessoa montou de uma vez: um quadro feito só de post-its curtos
+   É o conteúdo dele, enquanto um post-it solto ao lado de prosa
+   longa no MESMO quadro continua sendo o pedaço solto que
+   `MINIMO_UTIL` existe para deixar de fora.
+
+   `TETO_BLOCOS` passa a valer sobre o total que de fato vai ao
+   modelo — antes cada lista tinha o seu, e a soma podia passar do
+   teto que o teto existia para garantir.
+   ------------------------------------------------------------ */
+export type RegistroCru = { id: string; titulo: string; descricao: string | null };
+export type QuadroCru = {
+  id: string;
+  titulo: string | null;
+  tarefaId: string;
+  colunas: { registros: RegistroCru[] }[];
+};
+
+export function escolherBlocos(quadros: QuadroCru[]): Bloco[] {
+  const escolhidos: Bloco[] = [];
+
+  for (const q of quadros) {
+    if (QUADRO_DE_PERGUNTAS.test(q.titulo ?? '')) continue;
+
+    const bons: Bloco[] = [];
+    const curtos: Bloco[] = [];
+
+    for (const coluna of q.colunas) {
+      for (const r of coluna.registros) {
+        /* Título e descrição viajam juntos: no quadro de documento
+           o título é o cabeçalho da seção, e separá-los deixaria o
+           trecho começando no meio de uma frase. */
+        const texto = (r.descricao ? `${r.titulo}\n\n${r.descricao}` : r.titulo).trim();
+        if (!texto) continue;
+
+        /* `n` nasce zerado de propósito: a numeração é o contrato
+           com a resposta do modelo e precisa ser 1..N contígua na
+           lista que de fato for usada. Só no fim se sabe qual é. */
+        const bloco: Bloco = {
+          n: 0,
+          texto,
+          tarefaId: q.tarefaId,
+          quadroId: q.id,
+          registroId: r.id,
+        };
+
+        (texto.length >= MINIMO_UTIL ? bons : curtos).push(bloco);
+      }
+    }
+
+    for (const b of bons.length ? bons : curtos) {
+      if (escolhidos.length >= TETO_BLOCOS) break;
+      escolhidos.push(b);
+    }
+  }
+
+  return escolhidos.map((b, i) => ({ ...b, n: i + 1 }));
+}

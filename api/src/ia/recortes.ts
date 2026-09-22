@@ -50,9 +50,7 @@ import { CATEGORIAS } from './taxonomia-vocabulario.js';
 import { enriquecerLeituraEmSegundoPlano } from './enriquecimento.js';
 import { enriquecerGraficosEmSegundoPlano } from './enriquecimento-graficos.js';
 import {
-  TETO_BLOCOS,
-  MINIMO_UTIL,
-  QUADRO_DE_PERGUNTAS,
+  escolherBlocos,
   interpretar,
   type Bloco,
 } from './recortes-leitura.js';
@@ -86,56 +84,20 @@ export async function blocosDaIdeia(ideiaId: string): Promise<Bloco[]> {
     },
   });
 
-  /* Duas listas, e não um `continue` que descarta o curto na hora.
-
-     `MINIMO_UTIL` existe para a página de tema não virar catálogo de
-     fragmentos, e continua valendo sempre que houver registro longo.
-     Mas como filtro ÚNICO ele tem um custo que só aparece no caso
-     extremo: uma atividade inteira feita de post-its curtos produz
-     zero blocos, a segmentação sai sem chamar o modelo, e a pasta
-     abre vazia — sem log, sem custo, sem sintoma que se possa
-     perseguir. Vazio é pior que curto: o trecho curto a pessoa lê e
-     sabe de onde veio; a pasta vazia não diz nada nem dá o que
-     corrigir.
-
-     Por isso o curto é guardado, não descartado, e só entra quando
-     não existe nenhum longo. Preferência pelo bom, com piso. */
-  const bons: Bloco[] = [];
-  const curtos: Bloco[] = [];
-
-  for (const t of tarefas) {
-    for (const q of t.quadros) {
-      if (QUADRO_DE_PERGUNTAS.test(q.titulo ?? '')) continue;
-
-      for (const c of q.colunas) {
-        for (const r of c.registros) {
-          /* Título e descrição viajam juntos: no quadro de documento
-             o título é o cabeçalho da seção, e separá-los deixaria o
-             trecho começando no meio de uma frase. */
-          const texto = (r.descricao ? `${r.titulo}\n\n${r.descricao}` : r.titulo).trim();
-          if (!texto) continue;
-
-          /* `n` nasce zerado de propósito. A numeração é o contrato
-             com a resposta do modelo e precisa ser 1..N contígua na
-             lista que de fato for usada; como só no fim se sabe qual
-             das duas vai, numerar agora deixaria buracos. */
-          const bloco: Bloco = {
-            n: 0,
-            texto,
-            tarefaId: t.id,
-            quadroId: q.id,
-            registroId: r.id,
-          };
-
-          const destino = texto.length >= MINIMO_UTIL ? bons : curtos;
-          if (destino.length < TETO_BLOCOS) destino.push(bloco);
-        }
-      }
-    }
-  }
-
-  const escolhidos = bons.length ? bons : curtos;
-  return escolhidos.map((b, i) => ({ ...b, n: i + 1 }));
+  /* Só a leitura mora aqui. Qual registro vira bloco é decisão, e
+     ela vive em `escolherBlocos` (recortes-leitura.ts), testável sem
+     banco — inclusive o piso de `MINIMO_UTIL`, que vale por quadro
+     e não por idéia. */
+  return escolherBlocos(
+    tarefas.flatMap((t) =>
+      t.quadros.map((q) => ({
+        id: q.id,
+        titulo: q.titulo,
+        tarefaId: t.id,
+        colunas: q.colunas.map((c) => ({ registros: c.registros })),
+      })),
+    ),
+  );
 }
 
 /* ------------------------------------------------------------
