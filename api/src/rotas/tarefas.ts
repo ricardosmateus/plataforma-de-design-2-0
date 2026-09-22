@@ -29,6 +29,7 @@ import { z } from 'zod';
 
 import { db } from '../db.js';
 import * as sessao from '../seguranca/sessao.js';
+import { segmentarIdeiaEmSegundoPlano } from '../ia/recortes.js';
 
 type Erro = { campo: string | null; mensagem: string };
 const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensagem });
@@ -112,6 +113,9 @@ type IdeiaAtiva = {
   id: string;
   titulo: string;
   descricao: string;
+  /* Lido só para decidir se concluir uma tarefa redispara a
+     segmentação — ver a rota de status. */
+  status: string;
 };
 
 type Contexto =
@@ -177,7 +181,7 @@ async function abrirContexto(req: FastifyRequest, comTarefa: boolean): Promise<C
   /* Elo 3 — a idéia existe, está ativa e é deste projeto. */
   const ideia = await db.ideia.findFirst({
     where: { id: ideiaId, projetoId, arquivadoEm: null },
-    select: { id: true, titulo: true, descricao: true },
+    select: { id: true, titulo: true, descricao: true, status: true },
   });
   if (!ideia) return naoEncontrado;
 
@@ -389,6 +393,30 @@ export async function rotasTarefas(app: FastifyInstance) {
       where: { id: existente.id },
       data: { status: dados.data.status },
     });
+
+    /* A segmentação lê os registros dos quadros, e até aqui nada no
+       caminho do board a redisparava: concluir a tarefa mudava
+       `status` e mais nada. Numa idéia já finalizada isso fechava um
+       beco sem saída — o registro escrito depois da finalização não
+       tinha como virar recorte, e nem o botão "Gerar os trechos" o
+       alcançava, porque ele só enfileira idéia com zero recortes
+       (`grafo.ts`). O conteúdo ficava no quadro, invisível para
+       "Sobre a empresa", sem gesto nenhum que o trouxesse de volta.
+
+       Concluir é o momento certo para reler: é quando a pessoa diz
+       que o conteúdo daquela tarefa está pronto. Reabrir não dispara
+       nada — reabrir é voltar a mexer, e chamar o modelo no meio da
+       edição é pagar por um texto que ainda vai mudar.
+
+       Não fere ATV-TAR-CONCLUIR-001: nenhuma outra tarefa é tocada e
+       a idéia não é movida. O que muda é a leitura dela, em segundo
+       plano, como todo disparo de IA deste sistema. A função
+       reconfere status e arquivamento por conta própria; o teste
+       daqui evita a chamada e o log de recusa no caso comum, que é a
+       tarefa concluída numa idéia ainda em andamento. */
+    if (dados.data.status === 'concluida' && ctx.ideia.status === 'finalizado') {
+      void segmentarIdeiaEmSegundoPlano(ctx.ideia.id).catch(() => {});
+    }
 
     return resposta.send({ tarefa: tarefaParaResposta(tarefa) });
   });
