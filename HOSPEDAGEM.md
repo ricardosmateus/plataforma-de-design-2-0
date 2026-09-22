@@ -309,34 +309,43 @@ cópia; apagá-lo é opcional e é decisão sua.
 
 ## 7. O que fica pendente
 
-- **Pix real — passo 1, preparado em 22/09/2026.** `render.yaml` já está com
-  `PSP_DRIVER=mercado_pago` e as duas credenciais como `sync: false`. Falta,
-  no painel: preencher `MERCADO_PAGO_ACCESS_TOKEN` e
-  `MERCADO_PAGO_WEBHOOK_SECRET` no Render, e cadastrar o webhook no Mercado
-  Pago apontando para
-  `https://app.plataformadedesign.com/webhooks/pix/mercado-pago`
-  (`SEG-PAG-003` exige HTTPS público válido — o que este deploy tem).
-  **Cuidado:** `env.ts` faz `process.exit(1)` se o driver for `mercado_pago`
-  e alguma credencial estiver vazia. Subir sem preencher tira a API do ar,
-  não degrada. Confirme com um Pix de valor baixo antes do passo 2 — foi
-  assim que a Fase 4 foi validada em 01/09/2026.
-- **Cobrança — passo 2, ainda não dado.** `CREDITOS_COBRAR=nao`. Enquanto
-  estiver assim, o consumo é medido e aparece no Histórico de uso marcado
-  como "medido, não cobrado" (`DIN-011`/`DIN-014`) — esse rótulo é o
-  comportamento esperado, não defeito.
+- **Pix real e cobrança — prontos no `render.yaml`, aguardando as
+  credenciais (22/09/2026).** `PSP_DRIVER=mercado_pago` e
+  `CREDITOS_COBRAR=sim` já estão no arquivo. Antes do primeiro deploy com
+  isso, três coisas que não são código:
 
-  **Não vire esta chave antes do passo 1 estar confirmado.** Não existe saldo
-  inicial nem crédito de boas-vindas no produto: toda conta começa em zero.
-  Ligar a cobrança sem compra funcionando bloqueia assistente, pesquisa,
-  classificação e recortes para todo mundo na primeira chamada, sem caminho
-  para destravar. Antes de virar, credite as contas ativas com
-  `npm run creditar -- email@dominio.com 50 "motivo"` (`SEG-PAG-006`).
+  1. Preencher `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET`
+     no painel do Render (entram como `sync: false`). **`env.ts` faz
+     `process.exit(1)` se faltarem: a API não sobe, não degrada.**
+  2. Cadastrar o webhook no painel do Mercado Pago apontando para
+     `https://app.plataformadedesign.com/webhooks/pix/mercado-pago`
+     (`SEG-PAG-003` exige HTTPS público válido — o que este deploy tem).
+  3. Confirmar com um Pix de valor baixo, de verdade: cobrança, pagamento,
+     webhook e crédito líquido. Foi assim que a Fase 4 fechou em 01/09/2026.
 
-  E vale saber o que a chave desligada custa hoje: com ela em `nao`,
-  `reservar()` volta na primeira linha — nada é debitado, não existe
-  `SaldoInsuficiente` e, desde que o teto por investigação saiu (`18d58cb`),
-  a pesquisa não tem limite algum. O gasto real segue acontecendo na conta do
-  provedor de IA. O passo 2 é o que rearma essa proteção.
+  **Por que as duas chaves viram juntas.** Não existe saldo inicial nem
+  crédito de boas-vindas no produto: toda conta começa em zero, e ligar a
+  cobrança com contas de terceiros sem saldo trancaria todo mundo na
+  primeira chamada. Em 22/09/2026 isso não se aplica — a única conta ativa
+  é a do Ricardo, com saldo. **Esse cuidado volta a valer** no dia em que
+  houver conta de terceiro sem saldo: aí a ordem é creditar antes
+  (`npm run creditar -- <email> 50 "motivo"`, `SEG-PAG-006`).
+
+  Se der errado no dia da virada, `CREDITOS_COBRAR=nao` devolve o
+  comportamento anterior sem perder nada: mede, não lança, e o Histórico de
+  uso volta a mostrar "medido, não cobrado" (`DIN-011`/`DIN-014`).
+
+- **Desenvolvimento aponta para o banco de produção.** O `api/.env` da
+  máquina do Ricardo tem `DATABASE_URL` no compute de produção
+  (`ep-green-block`) e `CREDITOS_COBRAR=sim`. Consequência visível,
+  diagnosticada em 22/09/2026: o Histórico de uso mistura linhas cobradas
+  (uso pela máquina local) com linhas "medido, não cobrado" (uso pelo site),
+  porque os dois ambientes escrevem na mesma base com chaves diferentes.
+  Existe um `DATABASE_URL_TESTE` separado (`ep-summer-fire`), usado pelos
+  testes — o app em desenvolvimento é que não o usa. Não foi mexido: é
+  decisão do Ricardo, e o risco real é migração ou teste local escrevendo
+  em produção.
+
 - **Plano do Render.** `starter` não dorme. Se trocar para o gratuito, o
   serviço hiberna depois de 15 minutos de inatividade: a primeira visita
   espera o processo subir, e a confirmação de um pagamento chega atrasada.

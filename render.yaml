@@ -112,38 +112,39 @@ services:
 
       # ---- Cobrança e pagamento ----
       #
-      # A ORDEM IMPORTA, e é por isso que estas duas chaves não viram
-      # juntas. Não existe saldo inicial nem crédito de boas-vindas em
-      # lugar nenhum do produto: toda conta começa em zero. Ligar a
-      # cobrança antes de a compra funcionar de verdade bloqueia
-      # assistente, pesquisa, classificação e recortes para todo mundo
-      # na primeira chamada, sem caminho para destravar.
+      # Cobrança LIGADA, junto com o Pix real. As duas viram juntas
+      # porque a única conta ativa hoje é a do Ricardo, e ela tem saldo
+      # (R$ 51,01 em 22/09/2026, conferido por `npm run creditar --
+      # <email> --extrato`). A plataforma abre para o público só depois
+      # que este ciclo estiver confirmado.
       #
-      # Passo 1 (este commit): Pix real. PSP_DRIVER=mercado_pago, com as
-      #   credenciais preenchidas no painel do Render (abaixo) e a URL
-      #   do webhook cadastrada no painel do Mercado Pago:
-      #     https://app.plataformadedesign.com/webhooks/pix/mercado-pago
-      #   Confirmar com um Pix de valor baixo antes de seguir.
+      # O motivo de antes para adiar — não existe saldo inicial nem
+      # crédito de boas-vindas, então ligar a cobrança trancaria todo
+      # mundo na primeira chamada — segue verdadeiro e volta a valer no
+      # dia em que houver conta de terceiro sem saldo. Hoje ele não se
+      # aplica: não há terceiro.
       #
-      # Passo 2 (depois, e só depois): CREDITOS_COBRAR=sim. Com saldo
-      #   já creditado nas contas ativas — `npm run creditar -- email 50
-      #   "motivo"` (SEG-PAG-006) —, ninguém para no meio do trabalho.
+      # O que precisa estar pronto ANTES do primeiro deploy com isto:
+      #   1. MERCADO_PAGO_ACCESS_TOKEN e MERCADO_PAGO_WEBHOOK_SECRET
+      #      preenchidas no painel do Render. `env.ts` faz
+      #      process.exit(1) se faltarem — a API não sobe, não degrada.
+      #   2. Webhook cadastrado no painel do Mercado Pago apontando para
+      #      https://app.plataformadedesign.com/webhooks/pix/mercado-pago
+      #   3. Um Pix de valor baixo, de verdade, confirmando o ciclo
+      #      inteiro: cobrança, pagamento, webhook e crédito líquido.
+      #      Foi assim que a Fase 4 foi validada em 01/09/2026.
       #
-      # Enquanto o passo 2 não acontece, `reservar()` volta na primeira
-      # linha: nada é debitado, não existe SaldoInsuficiente e, desde
-      # que o teto por investigação saiu (18d58cb), a pesquisa não tem
-      # limite nenhum. O gasto real continua na conta do provedor de IA.
-      # É o passo 2 que rearma essa proteção.
+      # Ligada, `reservar()` volta a travar o saldo pelo pior caso antes
+      # de cada chamada de IA e a devolver o que sobra. É essa trava que
+      # passa a ser o único limite da pesquisa, desde que o teto por
+      # investigação saiu (18d58cb).
       #
-      # Sintoma de hoje, esperado: o Histórico de uso mostra o consumo
-      # medido com a etiqueta "medido, não cobrado" (DIN-011/DIN-014).
+      # Se algo der errado no dia da virada, `nao` aqui devolve o
+      # comportamento anterior: mede, não lança, e o Histórico de uso
+      # mostra "medido, não cobrado" (DIN-011/DIN-014).
       - key: CREDITOS_COBRAR
-        value: nao
+        value: sim
 
-      # Pix de verdade. `env.ts` derruba o boot (process.exit) se este
-      # valor for `mercado_pago` e alguma das duas credenciais abaixo
-      # estiver vazia — trocar o driver sem preenchê-las não degrada,
-      # tira a API do ar.
       - key: PSP_DRIVER
         value: mercado_pago
       # Suas integrações → Credenciais, no painel do Mercado Pago.
