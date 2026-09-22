@@ -1030,10 +1030,6 @@ model PesquisaSessao {
 
   titulo String
 
-  // Teto de gasto da investigação inteira (PES-007). Nulo = sem
-  // teto próprio; vale só o saldo do usuário. Em micros, DIN-001.
-  tetoMicros Int? @map("teto_micros")
-
   // De quem a conversa está tratando AGORA. É o que resolve "ele" na
   // pergunta seguinte — sem isso a consulta sai sem sujeito e o
   // provedor responde sobre qualquer um. Aponta para

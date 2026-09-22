@@ -39,7 +39,7 @@ import * as sessaoLogin from '../seguranca/sessao.js';
 import { planejarConsulta, type Entidade, type Nivel } from '../pesquisa/roteador.js';
 import { executavelAgora, impedimentoDe, saidasDe } from '../pesquisa/saidas.js';
 import { planejarEntidades } from '../pesquisa/entidades.js';
-import { decidirFoco, cabeNoTeto, classificarResultado } from '../pesquisa/sessao.js';
+import { decidirFoco, classificarResultado } from '../pesquisa/sessao.js';
 import {
   provedorBuscaAtual,
   provedorLugaresAtual,
@@ -181,8 +181,6 @@ const corpoAbrir = z.object({
   empresaId: z.string().uuid().optional(),
   projetoId: z.string().uuid().optional(),
   tarefaId: z.string().uuid().optional(),
-  /* Teto de gasto da investigação inteira, em micros — PES-007. */
-  tetoMicros: z.number().int().positive().optional(),
 });
 
 /* O que a pessoa decidiu manter. Ids, e só isso: o que ficou de
@@ -234,7 +232,6 @@ export async function rotasPesquisa(app: FastifyInstance) {
         empresaId: corpo.data.empresaId ?? null,
         projetoId: corpo.data.projetoId ?? null,
         tarefaId: corpo.data.tarefaId ?? null,
-        tetoMicros: corpo.data.tetoMicros ?? null,
       },
     });
 
@@ -307,7 +304,6 @@ export async function rotasPesquisa(app: FastifyInstance) {
     return resposta.send({
       id: sessao.id,
       titulo: sessao.titulo,
-      teto_micros: sessao.tetoMicros,
       foco_id: sessao.focoId,
       entidades: entidades.map((e) => ({
         id: e.id,
@@ -492,7 +488,6 @@ export async function rotasPesquisa(app: FastifyInstance) {
        aqui barraria consulta legítima ou deixaria passar consulta
        cara, e as duas coisas são piores do que a trava do saldo, que
        continua valendo em `reserva.ts`. */
-    const gastoMicros = await gastoDaSessao(sessaoId);
 
     /* ---- Quanto esta consulta pode custar, no pior caso ----
        A estimativa era `0`, fixa, com a observação de que a tabela
@@ -532,12 +527,6 @@ export async function rotasPesquisa(app: FastifyInstance) {
       : null;
     const estimativaMicros =
       tetoUsd === null ? 0 : comissaoSobre(usdParaMicrosBrl(tetoUsd, cotacao)).totalMicros;
-
-    if (!cabeNoTeto(gastoMicros, estimativaMicros, sessao.tetoMicros)) {
-      return resposta.code(402).send(
-        erro(null, 'Esta investigação atingiu o teto de gasto combinado. Aumente o teto para continuar.'),
-      );
-    }
 
     /* ---- A reserva ----
        Antes da chamada, como no assistente e na síntese de tema: o
@@ -1004,22 +993,8 @@ export async function rotasPesquisa(app: FastifyInstance) {
       });
     }
 
-    const gastoMicros = await gastoDaSessao(sessaoId);
     const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
 
-    /* Teto de D2: R$ 3 por investigação, decidido pelo Ricardo em
-       14/09/2026. O teto da sessão, quando existe, continua valendo
-       por cima — quem apertou o próprio limite não o perde por
-       causa de um padrão mais folgado. */
-    const tetoDaInvestigacao = Math.min(
-      TETO_INVESTIGACAO_MICROS,
-      sessao.tetoMicros ?? TETO_INVESTIGACAO_MICROS,
-    );
-    if (gastoMicros >= tetoDaInvestigacao) {
-      return resposta.code(402).send(
-        erro(null, 'Esta investigação atingiu o teto de gasto. Aumente o teto para continuar.'),
-      );
-    }
 
     /* ---- Daqui para baixo é stream ---- */
     resposta.hijack();
@@ -1322,17 +1297,7 @@ export async function rotasPesquisa(app: FastifyInstance) {
       return resposta.code(503).send(erro(null, 'A busca não está configurada nesta instalação.'));
     }
 
-    const gastoMicros = await gastoDaSessao(sessaoId);
     const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
-    const tetoDaInvestigacao = Math.min(
-      TETO_INVESTIGACAO_MICROS,
-      sessao.tetoMicros ?? TETO_INVESTIGACAO_MICROS,
-    );
-    if (gastoMicros >= tetoDaInvestigacao) {
-      return resposta.code(402).send(
-        erro(null, 'Esta investigação atingiu o teto de gasto. Aumente o teto para continuar.'),
-      );
-    }
 
     /* ---- O preço, reconferido ----
        A cotação do dólar anda, e entre cotar e confirmar pode ter
@@ -1659,16 +1624,6 @@ export async function rotasPesquisa(app: FastifyInstance) {
     /* O teto da investigação vale aqui também. Sem isto, a conversa
        seria o caminho por onde o gasto escapa do limite que a busca
        respeita. */
-    const gastoMicros = await gastoDaSessao(sessaoId);
-    const tetoDaInvestigacao = Math.min(
-      TETO_INVESTIGACAO_MICROS,
-      sessao.tetoMicros ?? TETO_INVESTIGACAO_MICROS,
-    );
-    if (gastoMicros >= tetoDaInvestigacao) {
-      return resposta.code(402).send(
-        erro(null, 'Esta investigação atingiu o teto de gasto. Aumente o teto para continuar perguntando.'),
-      );
-    }
 
     const afirmacoes = await afirmacoesDaConsulta(consultaId, consulta.fontes.map((f) => f.id));
     const material = materialDoCaderno({
@@ -1773,12 +1728,6 @@ export async function rotasPesquisa(app: FastifyInstance) {
 /* ============================================================
    Apoio da rota `investigar` (Fase 1a)
    ============================================================ */
-
-/* D2, decidido pelo Ricardo em 14/09/2026: R$ 3 por investigação.
-   É teto de INVESTIGAÇÃO, não de consulta — a Fase 1 gasta em duas
-   etapas (planejar e buscar) e vai gastar em mais na 1b; um teto
-   por chamada não diria nada sobre o total. */
-const TETO_INVESTIGACAO_MICROS = 3_000_000;
 
 /* ------------------------------------------------------------
    O contexto interno, lido do banco

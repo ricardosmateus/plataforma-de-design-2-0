@@ -15,7 +15,6 @@ import assert from 'node:assert/strict';
 
 import {
   decidirFoco,
-  cabeNoTeto,
   classificarResultado,
   type Entidade,
 } from '../src/pesquisa/sessao.js';
@@ -84,26 +83,6 @@ describe('o foco — quem "ele" vai significar na próxima pergunta', () => {
     /* 3. "quantas unidades ELE tem no Brasil" — sem citar de novo */
     foco = decidirFoco(foco, { citadas: [NOBRE.nome], descobertas: [] }, CONHECIDAS);
     assert.deepEqual(foco, NOBRE, 'o foco tem que sobreviver ao aprofundamento');
-  });
-});
-
-describe('o teto da sessão — PES-007', () => {
-  test('sessão sem teto próprio não barra nada', () => {
-    assert.equal(cabeNoTeto(9_000_000, 5_000_000, null), true);
-  });
-
-  test('conta o gasto já feito MAIS a próxima consulta', () => {
-    /* Gastou 8, o teto é 10, a próxima custa 3: não cabe. Olhar só o
-       gasto diria que ainda há espaço. */
-    assert.equal(cabeNoTeto(8_000_000, 3_000_000, 10_000_000), false);
-  });
-
-  test('bater exatamente no teto ainda cabe', () => {
-    assert.equal(cabeNoTeto(7_000_000, 3_000_000, 10_000_000), true);
-  });
-
-  test('sessão nova com teto aceita a primeira consulta', () => {
-    assert.equal(cabeNoTeto(0, 200_000, 10_000_000), true);
   });
 });
 

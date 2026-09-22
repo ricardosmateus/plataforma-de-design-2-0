@@ -9,13 +9,12 @@
    escrita; o que ela pergunta aqui é apenas "o que esta consulta
    significa para a sessão".
 
-   São três decisões, e as três erram em silêncio se ficarem soltas
+   São duas decisões, e as duas erram em silêncio se ficarem soltas
    dentro da rota:
 
    1. DE QUEM a conversa passa a tratar — o foco, que é o que resolve
       "ele" na pergunta seguinte.
-   2. Se a próxima consulta CABE no teto de gasto.
-   3. Se o que voltou foi entrega, vazio ou falha — que PES-008 exige
+   2. Se o que voltou foi entrega, vazio ou falha — que PES-008 exige
       que sejam três coisas distintas.
 
    ------------------------------------------------------------
@@ -98,28 +97,6 @@ export function decidirFoco(
   /* Não citou e não descobriu: nada mudou de assunto. Vale também
      para consulta que falhou — falha não troca o foco. */
   return atual;
-}
-
-/**
- * A próxima consulta cabe no teto da sessão? — PES-007.
- *
- * `teto` nulo significa sessão sem teto próprio: vale só o saldo do
- * usuário, que é conferido em `creditos/reserva.ts` e é a trava de
- * verdade. Este teto é o limite que o usuário combinou para ESTA
- * investigação, para que um aprofundamento longo não consuma o saldo
- * inteiro sem ele perceber.
- *
- * Compara com o gasto JÁ REALIZADO mais a estimativa da próxima —
- * não com o gasto sozinho. Deixar a consulta começar para descobrir
- * que estourou é gastar para descobrir que não podia gastar.
- */
-export function cabeNoTeto(
-  gastoMicros: number,
-  estimativaMicros: number,
-  tetoMicros: number | null,
-): boolean {
-  if (tetoMicros === null) return true;
-  return gastoMicros + estimativaMicros <= tetoMicros;
 }
 
 export type ResultadoConsulta = 'entregue' | 'vazio' | 'falhou';

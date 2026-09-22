@@ -1,0 +1,21 @@
+-- O teto por investigação deixa de existir.
+--
+-- Decisão do Ricardo em 22/09/2026, revendo a D2 de 14/09 (R$ 3 por
+-- investigação). O motivo é de produto: pesquisar é o gesto que a
+-- plataforma existe para provocar, e quem está investigando não
+-- deveria esbarrar num limite no meio do raciocínio — ele volta
+-- depois com menos contexto, ou não volta.
+--
+-- O que protegia contra gasto descontrolado NÃO era este teto: é o
+-- saldo de créditos, conferido em `creditos/reserva.ts` a cada
+-- chamada de IA, que reserva pelo pior caso antes de chamar e
+-- devolve o que sobra. Essa trava continua inteira. O teto por
+-- investigação era uma segunda cerca, mais apertada, por dentro da
+-- primeira — e era ela que aparecia como "atingiu o teto de gasto"
+-- com saldo de sobra na conta.
+--
+-- `teto_micros` era nulo para toda sessão que não pedisse limite
+-- próprio, e nenhuma tela chegou a oferecer esse pedido: a coluna
+-- nunca recebeu valor em produção. Derrubá-la não perde dado.
+ALTER TABLE "pesquisa_sessoes"
+  DROP COLUMN IF EXISTS "teto_micros";
