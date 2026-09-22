@@ -460,16 +460,14 @@ export async function rotasIdeias(app: FastifyInstance) {
         ? [db.recorteTaxonomia.deleteMany({ where: { ideiaId: existente.id } })]
         : []),
     ]);
-    /* Entrar em "finalizado" dispara AMBAS: classificação (assunto/tags
-       pelo título/descrição) E segmentação (recortes dos registros do
-       quadro por tema). São feitas em paralelo, sem esperar, porque
-       mover um card é gesto de interface, e as chamadas ao modelo levam
-       segundos e podem falhar. O `catch` vazio é intencional — as
-       próprias funções registram o que deu errado, e uma promessa
-       rejeitada solta aqui derrubaria o processo. */
+
+    /* Entrar em "finalizado" dispara a classificação, mas a resposta
+       não espera por ela: mover um card é gesto de interface, e a
+       chamada ao modelo leva segundos e pode falhar. O `catch` vazio
+       é intencional — a própria função já registra o que deu errado,
+       e uma promessa rejeitada solta aqui derrubaria o processo. */
     if (plano.classificar) {
       void classificarIdeiaEmSegundoPlano(ideia.id).catch(() => {});
-      void segmentarIdeiaEmSegundoPlano(ideia.id).catch(() => {});
     }
 
     return resposta.send({ ideia: ideiaParaResposta(ideia) });
