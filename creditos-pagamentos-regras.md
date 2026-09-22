@@ -134,6 +134,41 @@ Medido: **31.196 tokens de entrada** contra uma estimativa de ~400. Quase **80 v
 
 ---
 
+## O teto por investigação, revogado (22/09/2026)
+
+O teto de **R$ 3 por investigação** (D2, 14/09/2026) e o teto opcional
+por sessão (`pesquisa_sessoes.teto_micros`) deixaram de existir.
+Decisão do Ricardo, motivada pelo que a regra fazia na prática:
+"Esta investigação atingiu o teto de gasto" aparecia **no meio de uma
+pesquisa, com saldo de sobra na conta**. Quem está investigando e
+esbarra num limite volta depois com menos contexto, ou não volta — e
+pesquisar é o gesto que a plataforma existe para provocar.
+
+**O que NUNCA foi este teto: a proteção contra gasto descontrolado.**
+Quem segura o dinheiro é o saldo de créditos, em `creditos/reserva.ts`,
+a cada uma das três chamadas de IA da pesquisa (planejar, buscar,
+aprofundar): reserva pelo pior caso **antes** de chamar, devolve o que
+sobra, e recusa com `SaldoInsuficiente` quem não tem cobertura. Essa
+trava continua inteira. O teto por investigação era uma segunda cerca
+por dentro dela, mais apertada — e, desde a correção de
+`tetoBuscaUsdMicros`, redundante com uma reserva que passou a estimar
+certo.
+
+`teto_micros` era nulo em toda sessão que não pedisse limite próprio, e
+**nenhuma tela chegou a oferecer esse pedido**: a coluna nunca recebeu
+valor em produção. A migração que a derruba não perde dado.
+
+**`PES-007` continua valendo, e não é isto.** Ela pede que o custo
+estimado apareça **antes** de gastar — transparência, não bloqueio. O
+que saiu foi a cerca; mostrar o número antes segue sendo a regra.
+
+Commit `18d58cb`. Fica em aberto o que a nota de 14/09 já dizia: a
+estimativa de `PES-007` é o número que a pessoa lê, e ela precisa
+continuar verdadeira — agora sem um teto por baixo para mascarar
+subestimativa.
+
+---
+
 ## A alíquota da comissão e sua vigência (DIN-008)
 
 | Vigência | Alíquota | Pontos-base | Decisão |

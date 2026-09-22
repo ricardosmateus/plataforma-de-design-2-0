@@ -130,7 +130,6 @@ PesquisaSessao      — a linha de investigação
   usuarioId, empresaId, projetoId?, tarefaId?
   titulo             — "Concorrentes — rede de cafeterias"
   criadoEm, encerradoEm?
-  tetoMicros?        — teto de gasto da sessão (PES-007)
 
 PesquisaConsulta    — cada pergunta feita
   sessaoId
