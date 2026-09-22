@@ -13,6 +13,7 @@
      o guia não tem como mentir sobre o sistema. -->
 <link rel="stylesheet" href="css/tokens.css?v=4">
 <link rel="stylesheet" href="css/components.css?v=4">
+<link rel="stylesheet" href="css/acordeao.css">
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -914,6 +915,7 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospa
       <a class="sg-nav-link" href="#alerta">Alerta</a>
       <a class="sg-nav-link" href="#checkbox-link">Checkbox &amp; link</a>
       <a class="sg-nav-link" href="#divisor">Divisor</a>
+      <a class="sg-nav-link" href="#acordeao">Acordeão</a>
       <a class="sg-nav-link" href="#forca-senha">Força da senha</a>
       <a class="sg-nav-link" href="#aceite">Aceite de termos</a>
     </div>
@@ -1811,6 +1813,100 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospa
         </div>
         <pre class="sg-comp-code mono" id="codeDivisor"><code>&lt;div class="divider" role="presentation"&gt;ou&lt;/div&gt;</code></pre>
       </div>
+    </section>
+
+    <!-- ========== ACORDEÃO ========== -->
+    <section class="sg-view" id="acordeao" hidden>
+      <a class="sg-back" href="#cores">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-chevron-left"/></svg>
+        Voltar aos fundamentos
+      </a>
+      <header class="sg-head">
+        <span class="sg-eyebrow">Componentes &middot; Molécula</span>
+        <h1 class="sg-title" tabindex="-1">Acordeão</h1>
+        <p class="sg-lede">
+          Lista em categorias que abrem e fecham. Nasceu para a lateral da modal
+          &ldquo;Novo projeto&rdquo; (<code>projetos.html</code>), onde 39 itens em
+          12 categorias não cabem abertos. Vive em <code>css/acordeao.css</code> e
+          <code>js/acordeao.js</code> — fora de <code>components.css</code> porque
+          <code>projetos.html</code> não carrega aquele arquivo, pelo mesmo conflito
+          de <code>.btn</code> anotado na seção Botões.
+        </p>
+      </header>
+      <div class="sg-rule"></div>
+      <div class="sg-comp">
+        <div class="sg-comp-head">
+          <div class="sg-comp-name">
+            <b>Acordeão</b>
+            <span class="sg-chip sg-chip--molecule">Molécula</span>
+          </div>
+          <button type="button" class="sg-comp-copy" data-copy-target="codeAcordeao">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="img/icones.svg#icon-copiar"/></svg>
+            Copiar
+          </button>
+        </div>
+        <div class="sg-comp-demo">
+          <div class="sg-comp-variant">
+            <div class="acordeao" style="width:220px" data-acordeao data-acordeao-exclusivo data-acordeao-selecao aria-label="Exemplo">
+              <div>
+                <button type="button" class="acc-trigger" aria-expanded="false" aria-controls="sgAccA">
+                  <svg class="acc-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+                  <span class="acc-trigger-rotulo">Digital</span>
+                </button>
+                <div class="acc-panel" id="sgAccA" hidden data-categoria="Digital">
+                  <button type="button" class="acc-opcao" role="radio" aria-checked="false" data-valor="Site">Site</button>
+                  <button type="button" class="acc-opcao" role="radio" aria-checked="false" data-valor="Landing Page">Landing Page</button>
+                </div>
+              </div>
+              <div>
+                <button type="button" class="acc-trigger" aria-expanded="false" aria-controls="sgAccB">
+                  <svg class="acc-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+                  <span class="acc-trigger-rotulo">Marca</span>
+                </button>
+                <div class="acc-panel" id="sgAccB" hidden data-categoria="Marca">
+                  <button type="button" class="acc-opcao" role="radio" aria-checked="false" data-valor="Logotipo">Logotipo</button>
+                </div>
+              </div>
+            </div>
+            <span class="sg-comp-variant-label">acordeao &middot; exclusivo &middot; seleção</span>
+          </div>
+        </div>
+        <pre class="sg-comp-code mono" id="codeAcordeao"><code>&lt;div class="acordeao" data-acordeao data-acordeao-exclusivo data-acordeao-selecao&gt;
+  &lt;div&gt;
+    &lt;button class="acc-trigger" aria-expanded="false" aria-controls="p1"&gt;
+      &lt;svg class="acc-chevron" …&gt;&lt;path d="m9 6 6 6-6 6"/&gt;&lt;/svg&gt;
+      &lt;span class="acc-trigger-rotulo"&gt;Digital&lt;/span&gt;
+    &lt;/button&gt;
+    &lt;div class="acc-panel" id="p1" hidden data-categoria="Digital"&gt;
+      &lt;button class="acc-opcao" role="radio" aria-checked="false"
+              data-valor="Site"&gt;Site&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      </div>
+
+      <div class="sg-rule"></div>
+      <p class="sg-section-desc">
+        <b>Atributos no container.</b>
+        <code>data-acordeao</code> liga o componente;
+        <code>data-acordeao-exclusivo</code> faz abrir um fechar os outros;
+        <code>data-acordeao-selecao</code> transforma as <code>.acc-opcao</code>
+        num grupo de escolha única e dispara <code>acordeao:escolha</code>
+        (<code>detail</code>: <code>valor</code>, <code>categoria</code>,
+        <code>elemento</code>). <code>window.Acordeao.revelarEscolhido(raiz)</code>
+        reabre a categoria do item marcado — serve para reabrir uma modal no
+        estado em que ela foi fechada.
+      </p>
+      <p class="sg-section-desc">
+        <b>Decisões.</b> O painel fechado usa <code>hidden</code>, e não
+        <code>max-height</code>: assim ele sai do fluxo de verdade, e leitor de
+        tela e Ctrl+F não acham texto que a pessoa não está vendo. Perde-se a
+        transição de altura; quem anima é a seta. Os cliques são capturados por
+        delegação no documento, então conteúdo desenhado por JS depois da carga
+        funciona sem religar nada. O item selecionado não se distingue só pela
+        cor de fundo — carrega peso de fonte e <code>aria-checked</code>
+        (WCAG 1.4.1), e <code>prefers-reduced-motion</code> desliga a rotação.
+      </p>
     </section>
 
     <!-- ========== FORÇA DA SENHA ========== -->
@@ -3442,5 +3538,6 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,'Cascadia Mono',monospa
 })();
 </script>
 
+<script src="js/acordeao.js"></script>
 </body>
 </html>

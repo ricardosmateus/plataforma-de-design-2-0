@@ -37,6 +37,15 @@ const criacao = z.object({
   tipo: z.enum(TIPOS_VALIDOS as [TipoProjeto, ...TipoProjeto[]], {
     errorMap: () => ({ message: 'Escolha um tipo de projeto válido.' }),
   }),
+  /* O nome escolhido na lista da modal. Opcional: quem não escolher
+     cai no rótulo do catálogo, que é como a tela funcionava antes da
+     lista existir — nenhuma chamada antiga quebra por isto. */
+  nome: z
+    .string()
+    .trim()
+    .min(1, 'Dê um nome ao projeto.')
+    .max(80, 'O nome do projeto deve ter no máximo 80 caracteres.')
+    .optional(),
 });
 
 const paramsComEmpresa = z.object({ empresaId: z.string().uuid() });
@@ -61,12 +70,18 @@ async function quemPede(req: FastifyRequest): Promise<string | null> {
   return conteudo.usuarioId;
 }
 
-function projetoParaResposta(p: { id: string; tipo: TipoProjeto; criadoEm: Date }, papel: string) {
+function projetoParaResposta(
+  p: { id: string; tipo: TipoProjeto; nome: string | null; criadoEm: Date },
+  papel: string,
+) {
   const info = CATALOGO_TIPOS[p.tipo];
   return {
     id: p.id,
     tipo: p.tipo,
-    nome: info.nome,
+    /* O nome escolhido vence o rótulo do tipo; sem ele, o catálogo
+       responde como sempre respondeu. A `descricao` continua vindo do
+       catálogo em todo caso: ela descreve o TIPO, não o nome. */
+    nome: p.nome ?? info.nome,
     descricao: info.descricao,
     papel,
     criado_em: p.criadoEm.toISOString(),
@@ -172,6 +187,7 @@ export async function rotasProjetos(app: FastifyInstance) {
       data: {
         empresaId: params.data.empresaId,
         tipo: dados.data.tipo,
+        nome: dados.data.nome ?? null,
         criadoPor: usuarioId,
       },
     });
@@ -224,7 +240,7 @@ export async function rotasProjetos(app: FastifyInstance) {
 
     const projeto = await db.projeto.update({
       where: { id: existente.id },
-      data: { tipo: dados.data.tipo },
+      data: { tipo: dados.data.tipo, nome: dados.data.nome ?? null },
     });
 
     return resposta.send({ projeto: projetoParaResposta(projeto, vinculo.papel) });

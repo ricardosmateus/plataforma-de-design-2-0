@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/esqueleto.css">
+<link rel="stylesheet" href="css/acordeao.css">
 <style>
 /* ============================================================
    TOKENS — Hierarquia CDS (Base → Theme → Purpose)
@@ -483,6 +484,17 @@ body.modal-open{overflow:hidden}
 .np-close:hover{background:var(--surface-0);color:var(--text-primary)}
 .np-close:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 .np-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* A linha que devolve o que foi escolhido na lateral. Sem ela a
+   escolha acontece de um lado da modal e o botão "Salvar" fica do
+   outro, sem nada dizendo o que será salvo. */
+.np-escolha{
+  flex-shrink:0;
+  margin:-16px 0 0;
+  font-size:14px;line-height:20px;
+  color:var(--text-secondary);
+}
+.np-escolha strong{color:var(--text-primary);font-weight:600}
 
 /* ---------- Lista de tipos de projeto ---------- */
 /* Altura fixa do Figma (433px) com rolagem: os itens excedentes
@@ -1161,6 +1173,14 @@ body.modal-open{overflow:hidden}
 <dialog class="np-modal" id="npModal" aria-labelledby="npTitle">
   <div class="np-shell">
 
+    <!-- Lateral: categorias de projeto (desenhada por JS, a partir de
+         NP_CATEGORIAS — 39 itens em markup literal seriam 200 linhas
+         de HTML que ninguém revisa). -->
+    <nav class="np-side acordeao" id="npCategorias"
+         data-acordeao data-acordeao-exclusivo data-acordeao-selecao
+         aria-label="Categorias de projeto"></nav>
+    <div class="np-divider" aria-hidden="true"></div>
+
     <!-- Conteúdo -->
     <div class="np-main">
 
@@ -1176,6 +1196,11 @@ body.modal-open{overflow:hidden}
           Fechar
         </button>
       </header>
+
+      <p class="np-escolha" id="npEscolha">
+        Escolha um projeto na lista ao lado — o que você escolher vira o
+        nome dele.
+      </p>
 
       <div class="np-list" role="radiogroup" aria-labelledby="npTitle">
 
@@ -1471,12 +1496,102 @@ window.avisoProjetos = mostrarMensagem;
    que "escolher" de fato, mas o fluxo de confirmação fica igual ao
    desenhado, pronto para quando um segundo tipo entrar.
    ------------------------------------------------------------ */
+/* As categorias da modal. Dado de tela, e não catálogo de tipos:
+   nenhum item daqui vira `tipo` de projeto. O que a pessoa escolhe
+   é o NOME do projeto — o `tipo` continua sendo `startup`, único
+   habilitado por PROJ-CRIA-006, e é ele que decide o que o projeto
+   abre por dentro.
+
+   A distinção é o que deixa esta lista existir sem reabrir
+   PROJ-CRIA-007, que exige tela pronta antes de um tipo entrar:
+   "Landing Page" não promete tela de landing page, promete um
+   projeto chamado Landing Page. */
+const NP_CATEGORIAS = [
+  { nome: 'Marca',               itens: ['Logotipo', 'Identidade Visual', 'Rebranding'] },
+  { nome: 'Digital',             itens: ['Site', 'App', 'Landing Page', 'E-commerce'] },
+  { nome: 'Produto',             itens: ['SaaS', 'Plataforma', 'MVP', 'Feature'] },
+  { nome: 'Marketing',           itens: ['Campanha', 'Social Media', 'E-mail'] },
+  { nome: 'Conteúdo',            itens: ['Blog', 'E-book', 'Newsletter'] },
+  { nome: 'IA & Automação',      itens: ['Chatbot', 'Agente IA', 'Automação'] },
+  { nome: 'Negócios',            itens: ['Modelo de Negócio', 'Estratégia', 'Pesquisa'] },
+  { nome: 'Experiência',         itens: ['UX', 'CX', 'Jornada', 'Serviço'] },
+  { nome: 'Comunicação',         itens: ['Apresentação', 'Catálogo', 'Mídia Kit'] },
+  { nome: 'Operações',           itens: ['Dashboard', 'Sistema Interno', 'Workflow'] },
+  { nome: 'Audiovisual',         itens: ['Vídeo', 'Motion', 'Animação'] },
+  { nome: 'Pesquisa & Inovação', itens: ['Discovery', 'Design Sprint', 'POC'] },
+];
+
+const CHEVRON = '<svg class="acc-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+
+/* `textContent`, e não `innerHTML`, para o rótulo: os nomes são
+   dado, e dado nunca vira markup — mesmo vindo de uma constante
+   daqui, porque a constante é editada por gente. */
+function npDesenharCategorias(){
+  const raiz = document.getElementById('npCategorias');
+  if(!raiz) return;
+  raiz.textContent = '';
+
+  NP_CATEGORIAS.forEach(function(cat, i){
+    const grupo = document.createElement('div');
+    const idPainel = 'npCat' + i;
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'acc-trigger';
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', idPainel);
+    trigger.innerHTML = CHEVRON;
+    const rotulo = document.createElement('span');
+    rotulo.className = 'acc-trigger-rotulo';
+    rotulo.textContent = cat.nome;
+    trigger.appendChild(rotulo);
+
+    const painel = document.createElement('div');
+    painel.className = 'acc-panel';
+    painel.id = idPainel;
+    painel.hidden = true;
+    painel.dataset.categoria = cat.nome;
+
+    cat.itens.forEach(function(item){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'acc-opcao';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.dataset.valor = item;
+      b.textContent = item;
+      painel.appendChild(b);
+    });
+
+    grupo.appendChild(trigger);
+    grupo.appendChild(painel);
+    raiz.appendChild(grupo);
+  });
+}
+
+let npNomeEscolhido = null;
+
+document.addEventListener('acordeao:escolha', function(ev){
+  if(ev.target.id !== 'npCategorias') return;
+  npNomeEscolhido = ev.detail.valor;
+  const linha = document.getElementById('npEscolha');
+  if(linha){
+    linha.textContent = 'Nome do projeto: ';
+    const forte = document.createElement('strong');
+    forte.textContent = npNomeEscolhido;
+    linha.appendChild(forte);
+  }
+});
+
 const npModal = document.getElementById('npModal');
 let npTrigger = null;
 
 function npOpen(trigger){
   npTrigger = trigger || null;
+  const raizCat = document.getElementById('npCategorias');
+  if(raizCat && !raizCat.children.length) npDesenharCategorias();
   npModal.showModal();
+  if(window.Acordeao) window.Acordeao.revelarEscolhido(raizCat);
   document.body.classList.add('modal-open');
   const primeiro = npModal.querySelector('.np-option');
   if(primeiro) primeiro.focus();
@@ -1496,7 +1611,13 @@ npSaveBtn.addEventListener('click', () => {
   if(!empresa) return;
 
   npSaveBtn.disabled = true;
-  API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos', { corpo: { tipo: tipo }, metodo: 'POST' })
+  /* Sem escolha na lateral o corpo sai sem `nome`, e o servidor
+     responde com o rótulo do catálogo — que é exatamente como a
+     modal se comportava antes desta lista existir. */
+  const corpo = { tipo: tipo };
+  if(npNomeEscolhido) corpo.nome = npNomeEscolhido;
+
+  API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos', { corpo: corpo, metodo: 'POST' })
     .then(function(r){
       npModal.close();
       window.ProjetosView.acrescentar(r.projeto, empresa.papel);
@@ -2203,6 +2324,7 @@ window.pfAncorarCard = function(row){
 })();
 </script>
 
+<script src="js/acordeao.js"></script>
 <script src="js/api.js"></script>
 <script src="js/projetos.js"></script>
 

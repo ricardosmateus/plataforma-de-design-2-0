@@ -1,0 +1,85 @@
+/* ============================================================
+   ACORDEÃO — lista em categorias que abrem e fecham
+   ============================================================
+   Componente compartilhado. Depende de css/tokens.css; nenhuma cor,
+   raio, sombra ou duração literal mora aqui.
+
+   Uso:  <link rel="stylesheet" href="css/tokens.css">
+         <link rel="stylesheet" href="css/acordeao.css">
+         <script src="js/acordeao.js"></script>
+
+   Ver:  styleguide.html — seção "Acordeão"
+
+   ------------------------------------------------------------
+   POR QUE `hidden` E NÃO `max-height`
+   ------------------------------------------------------------
+   A animação por `max-height` é o caminho conhecido, e ele erra em
+   dois lugares que aparecem na tela: o valor precisa ser chutado
+   maior que o conteúdo real (e um chute pequeno corta o último
+   item), e o painel fechado continua no fluxo de leitura — leitor
+   de tela e Ctrl+F acham texto que a pessoa não está vendo.
+
+   `hidden` tira do fluxo de verdade. O que se perde é a transição
+   de altura; o que se ganha é um painel fechado que está fechado
+   para todo mundo. A seta continua animando, que é o que sinaliza
+   o gesto.
+   ------------------------------------------------------------ */
+
+.acordeao{display:flex;flex-direction:column;gap:2px}
+
+/* ---------- O cabeçalho que abre e fecha ---------- */
+.acc-trigger{
+  display:flex;align-items:center;gap:8px;
+  width:100%;
+  padding:10px 12px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:600;
+  color:var(--text-primary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.acc-trigger:hover{background:var(--surface-0)}
+.acc-trigger:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.acc-trigger-rotulo{flex:1;min-width:0}
+
+/* A seta é o único sinal de estado que se move, então ela não pode
+   ser o único sinal de estado: `aria-expanded` carrega o mesmo
+   recado para quem não vê a rotação. */
+.acc-chevron{
+  width:16px;height:16px;flex-shrink:0;
+  stroke:currentColor;fill:none;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.acc-trigger[aria-expanded="true"] .acc-chevron{transform:rotate(90deg)}
+
+/* Quem pediu para não ver movimento não vê — a seta troca de estado
+   sem girar, e `aria-expanded` segue dizendo o que importa. */
+@media (prefers-reduced-motion: reduce){
+  .acc-chevron{transition:none}
+}
+
+/* ---------- O painel ---------- */
+.acc-panel{display:flex;flex-direction:column;gap:2px;padding:2px 0 6px}
+
+/* ---------- Cada opção ---------- */
+.acc-opcao{
+  display:flex;align-items:center;
+  width:100%;
+  padding:8px 12px 8px 36px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  text-align:left;
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.acc-opcao:hover{background:var(--surface-0);color:var(--text-primary)}
+.acc-opcao:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+
+/* Selecionado. O fundo sozinho reprovaria em "não sinalize só por
+   cor" (WCAG 1.4.1), então vem com peso de fonte e `aria-checked`. */
+.acc-opcao[aria-checked="true"]{
+  background:var(--bg-accent);
+  color:var(--text-accent);
+  font-weight:600;
+}

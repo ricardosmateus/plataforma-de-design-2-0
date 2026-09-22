@@ -246,6 +246,13 @@ model Projeto {
   empresaId String      @map("empresa_id") @db.Uuid
   tipo      TipoProjeto
 
+  // O nome que a pessoa escolheu na modal ("Landing Page", "Rebranding").
+  // Nulo nos projetos criados antes de a lista existir: para eles vale
+  // o rótulo do catalogo, como sempre valeu (PROJ-CRIA-002). O `tipo`
+  // continua decidindo o que o projeto ABRE por dentro; o nome decide
+  // só como ele se chama.
+  nome String?
+
   criadoPor String    @map("criado_por") @db.Uuid
   criador   Usuario   @relation("criadorProjeto", fields: [criadoPor], references: [id])
 
