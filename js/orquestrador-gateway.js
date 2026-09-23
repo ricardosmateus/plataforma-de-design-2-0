@@ -629,35 +629,114 @@
 
   /* ============================================================
      GATILHO 1 — "Gerar com ajuda da IA" (atividade.html)
-     ============================================================ */
+     ============================================================
+     ATV-GERAR-010 a 016 (revisto em 23/09/2026). O tipo escolhido na
+     lateral do modal é o contexto: o servidor (rota
+     .../tarefas/gerar) chama o Senior Product Designer com os dados
+     da empresa, o que ela já sabe, a atividade e esse tipo, e CRIA a
+     tarefa. Na Referência, já com os sites, logotipos e documentos
+     dos concorrentes. Na Pesquisa, a tela abre o board e a pesquisa
+     começa sozinha.
+
+     A heurística antiga (proporProximaTarefa) continua exportada
+     para quem a usar como diagnóstico, mas não decide mais nada.
+     ------------------------------------------------------------ */
+  var TEXTO_GERANDO = {
+    pesquisa: 'A IA está escrevendo a pergunta da pesquisa a partir do que a empresa já sabe. Depois a pesquisa começa no quadro da tarefa.',
+    matriz_csd: 'A IA está montando a tarefa da Matriz CSD. Depois a matriz abre e as tarefas da atividade já são classificadas.',
+    referencias_visuais: 'A IA está buscando os concorrentes na web e juntando sites, logotipos e documentos de marca. Isso pode levar até um minuto.'
+  };
+
+  function avisoGerando(tipo) {
+    var el = document.getElementById('taskGerandoAviso');
+    if (!el) return;
+    el.textContent = tipo ? (TEXTO_GERANDO[tipo] || 'A IA está gerando a tarefa.') : '';
+    el.hidden = !tipo;
+  }
+
+  function travarModal(ligado) {
+    var form = document.getElementById('taskForm');
+    var salvar = form && form.querySelector('button[type="submit"]');
+    if (salvar) salvar.disabled = ligado;
+    var lateral = document.getElementById('taskTipoLateral');
+    if (lateral) {
+      if (ligado) lateral.setAttribute('aria-busy', 'true');
+      else lateral.removeAttribute('aria-busy');
+      Array.prototype.forEach.call(lateral.querySelectorAll('button'), function (b) { b.disabled = ligado; });
+    }
+  }
+
+  function plural(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
+
+  function resumoReferencias(r) {
+    var ref = r.referencias || { sites: 0, imagens: 0, documentos: 0 };
+    var partes = [];
+    if (ref.sites) partes.push(plural(ref.sites, 'site', 'sites'));
+    if (ref.imagens) partes.push(plural(ref.imagens, 'logotipo', 'logotipos'));
+    if (ref.documentos) partes.push(plural(ref.documentos, 'documento', 'documentos'));
+    if (!partes.length) return 'Tarefa criada, mas a busca não trouxe referências. Você pode adicionar à mão no quadro da tarefa.';
+    var lista = partes.length > 1 ? partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1] : partes[0];
+    return 'Tarefa criada com ' + lista + '.';
+  }
 
   function conectarGatilho1() {
     var btn = document.getElementById('generateWithAIBtn');
     if (!btn) return false;
-
     /* O listener original (fechar este modal e abrir outro) está
        registrado pelo <script> inline da página. Clonar o nó troca o
        comportamento sem editar aquele bloco. */
     var novo = btn.cloneNode(true);
     btn.parentNode.replaceChild(novo, btn);
-
+    var gerando = false;
     novo.addEventListener('click', function () {
-      /* O modal NÃO fecha: é nele que a proposta vai aparecer, e é
-         nele que a pessoa revisa antes de salvar. */
+      if (gerando || !window.AtividadeAcoes || typeof window.AtividadeAcoes.gerar !== 'function') return;
+      var c = campos();
+      var tipo = (c.tipo && c.tipo.value) || 'pesquisa';
+
+      /* O que a pessoa já digitou não se perde: vira orientação para a
+         IA (ajusta o foco, não o formato — ATV-GERAR-013). */
+      var orientacao = [c.titulo, c.desc]
+        .filter(function (el) { return el && !el.disabled && el.value.trim(); })
+        .map(function (el) { return el.value.trim(); })
+        .join('\n');
+
+      gerando = true;
       marcarGerando(true);
+      travarModal(true);
+      avisoGerando(tipo);
 
-      pedirProposta()
-        .then(function (p) {
-          marcarGerando(false);
-          preencher(p);
-          toast('Sugestão preenchida. Revise e salve, ou ajuste o que quiser.');
-        })
-        .catch(function (e) {
-          marcarGerando(false);
-          tratarErro(e, 'Não foi possível sugerir uma tarefa agora.');
-        });
+      window.AtividadeAcoes.gerar(tipo, orientacao).then(function (r) {
+        if (c.titulo) c.titulo.value = '';
+        if (c.desc) c.desc.value = '';
+        if (typeof window.closeTaskModal === 'function') window.closeTaskModal();
+
+        var tarefa = r && r.tarefa;
+        if (r && r.proximo === 'pesquisar' && tarefa && window.AtividadeAcoes.urlDoBoard) {
+          /* ATV-GERAR-012: o clique em "Gerar" já autorizou o gasto —
+             o board recebe `pesquisar=1` e começa a pesquisa sozinho. */
+          location.href = window.AtividadeAcoes.urlDoBoard(tarefa.id) + '&pesquisar=1';
+          return;
+        }
+        if (r && r.proximo === 'classificar' && tarefa && window.AtividadeAcoes.urlDaMatriz) {
+          /* ATV-GERAR-015: a Matriz CSD abre e já classifica. */
+          location.href = window.AtividadeAcoes.urlDaMatriz(tarefa.id) + '&classificar=1';
+          return;
+        }
+        if (r && r.referencias) {
+          toast(resumoReferencias(r));
+          if (r.avisos && r.avisos.length) console.info('[Orquestrador] referências que ficaram de fora:', r.avisos);
+          return;
+        }
+        toast('Tarefa criada com a ajuda da IA. Revise o título e a descrição se quiser ajustar.');
+      }, function (e) {
+        tratarErro(e, 'Não foi possível gerar a tarefa agora.');
+      }).then(function () {
+        gerando = false;
+        marcarGerando(false);
+        travarModal(false);
+        avisoGerando(null);
+      });
     });
-
     return true;
   }
 

@@ -1742,10 +1742,13 @@ export async function rotasPesquisa(app: FastifyInstance) {
 
    Idéia arquivada não entra em nenhuma das duas (IA-CONHEC-004):
    `arquivadoEm: null` nas duas consultas. */
-async function pacoteInternoDa(sessao: {
+export async function pacoteInternoDa(sessao: {
   empresaId: string | null;
   projetoId: string | null;
   tarefaId: string | null;
+  /* ATV-GERAR: a geração de tarefa ainda não tem tarefa — tem a
+     idéia. A categoria sai direto dela. */
+  ideiaId?: string | null;
 }) {
   const empresa = sessao.empresaId
     ? await db.empresa.findUnique({
@@ -1763,7 +1766,10 @@ async function pacoteInternoDa(sessao: {
         select: { ideia: { select: { assunto: true } } },
       })
     : null;
-  const categoriaDaIdeia = tarefa?.ideia?.assunto ?? null;
+  const ideiaDireta = !tarefa && sessao.ideiaId
+    ? await db.ideia.findUnique({ where: { id: sessao.ideiaId }, select: { assunto: true } })
+    : null;
+  const categoriaDaIdeia = tarefa?.ideia?.assunto ?? ideiaDireta?.assunto ?? null;
 
   const categorias = categoriasDaInvestigacao(categoriaDaIdeia);
 

@@ -15,7 +15,7 @@
    S3 — Cloudflare R2 incluído.
    ============================================================ */
 
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 
 import { env } from '../env.js';
@@ -27,12 +27,46 @@ const EXTENSAO: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/svg+xml': 'svg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  /* Documentos de referência — BOARD-REF-008. */
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'application/vnd.oasis.opendocument.spreadsheet': 'ods',
+  'application/vnd.oasis.opendocument.presentation': 'odp',
+  'application/rtf': 'rtf',
+  'text/plain; charset=utf-8': 'txt',
+  'text/csv; charset=utf-8': 'csv',
+  'text/markdown; charset=utf-8': 'md',
 };
 
 export class LogotipoIndisponivel extends Error {}
 
+/* `nomeDownload`: o nome original do arquivo. O objeto no bucket é
+   um UUID; sem isto quem baixa um documento de referência recebe
+   "3f2e….docx" em vez de "Briefing.docx". */
+export type OpcoesEnvio = { nomeDownload?: string };
+
+function disposicao(nome: string): string {
+  const limpo = nome.replace(/[\u0000-\u001f"\\]/g, '').slice(0, 150);
+  const ascii = limpo.replace(/[^\x20-\x7e]/g, '_');
+  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(limpo).replace(/['()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())}`;
+}
+
 export interface ArmazenamentoLogotipo {
-  enviar(dados: Buffer, tipo: string): Promise<string>;
+  /* `pasta` separa os usos no mesmo bucket: logotipos de empresa e
+     imagens de referência visual (BOARD-REF). */
+  enviar(dados: Buffer, tipo: string, pasta?: string, opcoes?: OpcoesEnvio): Promise<string>;
+  /* Apaga um arquivo que ESTE armazenamento enviou, pela URL pública
+     que ele mesmo devolveu. URL de fora é ignorada: nunca apagar o que
+     não foi este código que gravou. */
+  apagar(url: string): Promise<void>;
 }
 
 /* ------------------------------------------------------------
@@ -44,6 +78,10 @@ class ArmazenamentoIndisponivel implements ArmazenamentoLogotipo {
        500. Não ter armazenamento configurado não é uma falha do
        servidor, é uma peça que ainda falta instalar. */
     throw new LogotipoIndisponivel('Envio de logotipo indisponível no momento.');
+  }
+
+  async apagar(): Promise<void> {
+    /* Sem armazenamento não existe arquivo nenhum para apagar. */
   }
 }
 
@@ -72,14 +110,15 @@ class ArmazenamentoS3 implements ArmazenamentoLogotipo {
     });
   }
 
-  async enviar(dados: Buffer, tipo: string): Promise<string> {
-    const nome = `logotipos/${randomUUID()}.${EXTENSAO[tipo] ?? 'bin'}`;
+  async enviar(dados: Buffer, tipo: string, pasta = 'logotipos', opcoes: OpcoesEnvio = {}): Promise<string> {
+    const nome = `${pasta}/${randomUUID()}.${EXTENSAO[tipo] ?? 'bin'}`;
 
     await this.cliente.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: nome,
       Body: dados,
       ContentType: tipo,
+      ...(opcoes.nomeDownload ? { ContentDisposition: disposicao(opcoes.nomeDownload) } : {}),
       /* Uma semana de cache: o nome do arquivo é um UUID novo a
          cada upload, então o arquivo antigo nunca é sobrescrito —
          cache longo é seguro, não existe "versão desatualizada" do
@@ -88,6 +127,16 @@ class ArmazenamentoS3 implements ArmazenamentoLogotipo {
     }));
 
     return `${this.urlPublica.replace(/\/$/, '')}/${nome}`;
+  }
+
+  async apagar(url: string): Promise<void> {
+    const base = `${this.urlPublica.replace(/\/$/, '')}/`;
+    if (!url.startsWith(base)) return;
+    const chave = url.slice(base.length);
+    /* Só nomes que este código gera: pasta/uuid.ext. Qualquer outra
+       coisa (../, chave vazia) não é apagada. */
+    if (!/^[a-z-]+\/[0-9a-f-]{36}\.[a-z]+$/.test(chave)) return;
+    await this.cliente.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: chave }));
   }
 }
 

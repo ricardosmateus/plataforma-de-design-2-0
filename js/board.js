@@ -85,6 +85,25 @@
   function baseQuadros() {
     return baseTarefas() + '/' + encodeURIComponent(tarefaId) + '/quadros';
   }
+  /* BOARD-REF: as referências visuais têm rotas próprias, fora do PUT
+     do quadro (ver api/src/rotas/referencias.ts). */
+  function baseReferencias() {
+    return baseTarefas() + '/' + encodeURIComponent(tarefaId) + '/referencias';
+  }
+  function ehReferencias(t) { return !!t && t.tipo === 'referencias_visuais'; }
+
+  /* Erro de uma ação de referência: os fatais (sessão, suspensão) e a
+     tarefa que sumiu são tratados aqui, como no resto do board; o
+     resto volta para a tela, que mostra a mensagem dentro do quadro
+     onde a pessoa estava. */
+  function falhaDeReferencia(e) {
+    if (tratarErroFatal(e)) throw e;
+    if (e.status === 404 && !(e.dados && /Referência/.test(e.dados.mensagem || ''))) {
+      irPara(urlAtividade());
+      throw e;
+    }
+    throw e;
+  }
 
   /* ============================================================
      BARRA DE PROGRESSO — Feedback visual enquanto os painéis
@@ -343,6 +362,10 @@
          "quadro vazio", é "quadro ainda não chegou". Não gravar é a
          única resposta segura. */
       if (!carregado) return Promise.resolve(null);
+      /* BOARD-REF: o board de referências não tem quadro de post-its.
+         Gravar a tela aqui mandaria uma lista vazia — inofensivo hoje,
+         mas é o mesmo gesto que BOARD-SALVA-006 existe para impedir. */
+      if (ehReferencias(tarefaAtual)) return Promise.resolve([]);
 
       return chamarComRenovacao(baseQuadros(), {
         metodo: 'PUT',
@@ -401,6 +424,56 @@
         if (e.status === 404) { irPara(urlAtividade()); throw e; }
         avisoErro(mensagemDeFalha(e, 'Não foi possível criar a tarefa.'));
         throw e;
+      });
+    },
+
+    /* ---------- Referências — BOARD-REF-002 a 008 ---------- */
+    adicionarSite: function (url, nome) {
+      return chamarComRenovacao(baseReferencias(), {
+        metodo: 'POST',
+        corpo: { url: url, nome: nome || '' },
+      }, false).then(function (r) { return r.referencia; }, falhaDeReferencia);
+    },
+
+    enviarImagem: function (arquivo, nome) {
+      var fd = new FormData();
+      /* O nome vai ANTES do arquivo: o servidor lê as partes em ordem,
+         e um campo depois do arquivo chegaria só depois do upload. */
+      fd.append('nome', nome || '');
+      fd.append('imagem', arquivo);
+      return chamarComRenovacao(baseReferencias() + '/imagem', {
+        metodo: 'POST',
+        corpo: fd,
+      }, false).then(function (r) { return r.referencia; }, falhaDeReferencia);
+    },
+
+    /* BOARD-REF-010: "Pesquisar" numa tarefa de Referência — a IA
+       busca e o servidor devolve só os cards NOVOS. */
+    buscarReferencias: function () {
+      return chamarComRenovacao(baseReferencias() + '/buscar', {
+        metodo: 'POST',
+        corpo: {},
+      }, false).then(function (r) { return r; }, falhaDeReferencia);
+    },
+
+    /* BOARD-REF-008: mesmo desenho da imagem, outra rota. */
+    enviarDocumento: function (arquivo, nome) {
+      var fd = new FormData();
+      fd.append('nome', nome || '');
+      fd.append('documento', arquivo);
+      return chamarComRenovacao(baseReferencias() + '/documento', {
+        metodo: 'POST',
+        corpo: fd,
+      }, false).then(function (r) { return r.referencia; }, falhaDeReferencia);
+    },
+
+    excluirReferencia: function (id) {
+      return chamarComRenovacao(baseReferencias() + '/' + encodeURIComponent(id), {
+        metodo: 'DELETE',
+      }, false).then(function () { return true; }, function (e) {
+        /* Já não existe: o destino é o mesmo do sucesso. */
+        if (e.status === 404 && e.dados && /Referência/.test(e.dados.mensagem || '')) return true;
+        return falhaDeReferencia(e);
       });
     },
 
@@ -533,6 +606,20 @@
             if (!achada) { irPara(urlAtividade()); return; }
             tarefaAtual = achada;
 
+            /* BOARD-REF-001: tarefa de referências visuais desenha os
+               quadros "Sites" e "Imagens" no lugar dos post-its. Só se
+               sabe o tipo depois de ler a tarefa, então as referências
+               vêm num segundo pedido — e card e quadros continuam
+               aparecendo juntos (BOARD-CARGA-002). */
+            if (ehReferencias(achada)) {
+              return chamarComRenovacao(baseReferencias(), {}, false).then(function (rr) {
+                if (window.BoardView) window.BoardView.tarefa(achada);
+                if (window.BoardView) window.BoardView.referencias((rr && rr.referencias) || []);
+                carregado = true;
+                progressoControl.esconder();
+              });
+            }
+
             /* Card e quadros aparecem no MESMO instante: nenhum dos
                dois sai do estado de carregamento sozinho. */
             if (window.BoardView) window.BoardView.tarefa(achada);
@@ -543,6 +630,12 @@
             carregado = true;
             /* Esconde a barra de progresso: tudo carregado, de verdade. */
             progressoControl.esconder();
+
+            /* ATV-GERAR-012: quem precisa agir DEPOIS que a tarefa e os
+               quadros estão na tela (a pesquisa pedida pelo "Gerar com
+               ajuda da IA") espera por este evento — agir antes faria
+               o redesenho dos quadros apagar o que a pesquisa pôs. */
+            document.dispatchEvent(new CustomEvent('board:carregado', { detail: { tarefa: achada } }));
           });
         });
     }, function (e) {

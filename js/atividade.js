@@ -166,10 +166,15 @@
        cujo destino ainda não foi construído — melhor não mostrar o
        botão do que mostrar um que não leva a lugar nenhum (A13). */
     var linkAcessar = null;
-    if (t.tipo === 'pesquisa') {
+    /* `referencias_visuais` abre o MESMO board.html: é o board que,
+       lendo o tipo da tarefa, desenha os quadros "Sites" e "Imagens"
+       no lugar dos post-its (BOARD-REF). */
+    if (t.tipo === 'pesquisa' || t.tipo === 'referencias_visuais') {
       linkAcessar = 'board.html' + contexto + '&tarefa=' + encodeURIComponent(t.id);
     } else if (t.tipo === 'matriz_csd') {
-      linkAcessar = concluida ? 'matriz_csd.html?modo=leitura' : 'matriz_csd.html';
+      /* MATRIZ-003: a matriz agora lê e grava — precisa dos quatro ids,
+         como o board. O modo leitura vem do status da tarefa, lido lá. */
+      linkAcessar = 'matriz_csd.html' + contexto + '&tarefa=' + encodeURIComponent(t.id);
     }
 
     var menu = concluida
@@ -249,6 +254,42 @@
         aviso(mensagemDeFalha(e, 'Não foi possível criar a tarefa.'));
         throw e;
       });
+    },
+
+    /* ATV-GERAR-010: "Gerar com ajuda da IA" com o tipo escolhido na
+       lateral. O SERVIDOR cria a tarefa (e, na Referência, os cards
+       de referência); aqui só se desenha o card que voltou e se
+       devolve a resposta inteira, para quem chamou decidir o passo
+       seguinte (`proximo`). Sem aviso de sucesso aqui: o texto certo
+       depende do tipo, e quem sabe o tipo é quem chamou. */
+    gerar: function (tipo, orientacao) {
+      return chamarComRenovacao(base() + '/gerar', {
+        metodo: 'POST',
+        corpo: { tipo: tipo || 'pesquisa', orientacao: orientacao || undefined },
+      }, false).then(function (r) {
+        if (listEl && r && r.tarefa) listEl.insertAdjacentHTML('beforeend', cardHTML(r.tarefa));
+        return r;
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 404) { irPara(VISAO + '?empresa=' + encodeURIComponent(empresaId) + '&projeto=' + encodeURIComponent(projetoId)); throw e; }
+        throw e;
+      });
+    },
+
+    /* O endereço da Matriz CSD de uma tarefa desta atividade. */
+    urlDaMatriz: function (tarefaId) {
+      return 'matriz_csd.html?empresa=' + encodeURIComponent(empresaId) +
+        '&projeto=' + encodeURIComponent(projetoId) +
+        '&ideia=' + encodeURIComponent(ideiaId) +
+        '&tarefa=' + encodeURIComponent(tarefaId);
+    },
+
+    /* O endereço do board de uma tarefa desta atividade. */
+    urlDoBoard: function (tarefaId) {
+      return 'board.html?empresa=' + encodeURIComponent(empresaId) +
+        '&projeto=' + encodeURIComponent(projetoId) +
+        '&ideia=' + encodeURIComponent(ideiaId) +
+        '&tarefa=' + encodeURIComponent(tarefaId);
     },
 
     /* ATV-TAR-EDITA: grava título e descrição de uma tarefa que já

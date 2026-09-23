@@ -203,6 +203,16 @@ body.is-space-pan .canvas-viewport *{cursor:grab}
 .canvas-back.is-saving .canvas-back-arrow{display:none}
 .canvas-back.is-saving .canvas-back-spinner{display:inline-block;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* "Gerar classificação com IA" enquanto trabalha — o mesmo estado do
+   "Pesquisar" do board: disabled para recusar o segundo clique, mas
+   sem o apagado de .btn:disabled, porque trabalhando não é o mesmo
+   que indisponível. */
+.icon-girando{display:none}
+.btn.is-pesquisando:disabled{opacity:1;cursor:progress}
+.is-pesquisando .icon-ia{display:none}
+.is-pesquisando .icon-girando{display:block;animation:pq-girar 800ms linear infinite}
+@keyframes pq-girar{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.is-pesquisando .icon-girando{animation:none}}
 
 /* ---------- Controles de zoom (centralizados no rodapé do miolo) ---------- */
 .canvas-controls{
@@ -1269,8 +1279,18 @@ body.modal-open{overflow:hidden}
           </ul>
         </div>
 
-        <button type="button" class="btn btn--secondary" id="btnGerarIA">Gerar classificação com IA</button>
-        <button type="button" class="btn btn--primary" id="btnSolicitarDesigner">Solicitar ajudar do Designer</button>
+        <!-- Mesmo formato do "Pesquisar" do board (Ricardo, 23/09/2026):
+             botão principal, ícone à esquerda, e o ícone vira o
+             indicador girando enquanto a IA classifica. -->
+        <button type="button" class="btn btn--primary" id="btnGerarIA">
+          <svg class="icon-ia" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+          <svg class="icon-girando" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <span id="btnGerarIALabel">Gerar classificação com IA</span>
+        </button>
+        <button type="button" class="btn btn--secondary" id="btnSolicitarDesigner">Solicitar ajudar do Designer</button>
       </aside>
 
       <!-- ---------- Board: Matriz CSD ---------- -->
@@ -1324,81 +1344,9 @@ body.modal-open{overflow:hidden}
 
       </section>
 
-      <!-- ---------- Painel "Minhas idéias" (objeto do canvas) ----------
-           Os cards saíram do menu lateral direito e agora ficam aqui
-           dentro do board infinito, de onde são arrastados para as
-           colunas da matriz. -->
-      <aside class="ideas-panel" aria-labelledby="ideasTitle">
-        <div class="ideas-head">
-          <span class="idea-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></span>
-          <h2 class="ideas-title" id="ideasTitle">Meus registros</h2>
-        </div>
-        <div class="ideas-rule" role="presentation"></div>
-
-        <div class="ideas-body">
-          <div class="card-list">
-        <article class="idea">
-          <button type="button" class="idea-menu" aria-haspopup="true" aria-expanded="false" aria-label="Menu de Off-line"><svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg></button>
-          <div class="menu" role="menu">
-            <button role="menuitem" class="danger" data-idea-action="excluir">
-              <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir
-            </button>
-          </div>
-          <div class="idea-head">
-            <span class="idea-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></span>
-            <h3 class="idea-title">Off-line</h3>
-          </div>
-          <p class="idea-desc">Pensar como o serviço vai funcionar off-line, quando houver problemas de conexão ou algo assim.</p>
-        </article>
-
-        <article class="idea">
-          <button type="button" class="idea-menu" aria-haspopup="true" aria-expanded="false" aria-label="Menu de Diminuir inadimplência"><svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg></button>
-          <div class="menu" role="menu">
-            <button role="menuitem" class="danger" data-idea-action="excluir">
-              <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir
-            </button>
-          </div>
-          <div class="idea-head">
-            <span class="idea-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></span>
-            <h3 class="idea-title">Diminuir inadimplência</h3>
-          </div>
-          <p class="idea-desc">Os nossos serviços geram renda interna e podem ajudar a diminuir a inadimplência, pois assim os moradores vão poder ter uma renda extra vendendo em e-commerces.</p>
-        </article>
-
-        <article class="idea">
-          <button type="button" class="idea-menu" aria-haspopup="true" aria-expanded="false" aria-label="Menu de App de entregas"><svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg></button>
-          <div class="menu" role="menu">
-            <button role="menuitem" class="danger" data-idea-action="excluir">
-              <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir
-            </button>
-          </div>
-          <div class="idea-head">
-            <span class="idea-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></span>
-            <h3 class="idea-title">App de entregas</h3>
-          </div>
-          <p class="idea-desc">Criar um aplicativo de entregas local para conectar pequenos comerciantes a clientes da própria região.</p>
-        </article>
-
-        <article class="idea">
-          <button type="button" class="idea-menu" aria-haspopup="true" aria-expanded="false" aria-label="Menu de Meio de transporte das encomendas"><svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg></button>
-          <div class="menu" role="menu">
-            <button role="menuitem" class="danger" data-idea-action="excluir">
-              <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>Excluir
-            </button>
-          </div>
-          <div class="idea-head">
-            <span class="idea-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></span>
-            <h3 class="idea-title">Meio de transporte das encomendas</h3>
-          </div>
-          <p class="idea-desc">Pesquisar todos os meios de transporte que são utilizados para transportar encomendas, desde o nível mais alto, até o nível mais simples.</p>
-        </article>
-          </div>
-          <div class="column-empty" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            <p>Solte um card aqui.</p>
-          </div>
-        </div>
-      </aside>
+      <!-- O painel "Meus registros" saiu em 23/09/2026 (MATRIZ-001): a
+           matriz é o único quadro desta tarefa. Registro novo entra
+           direto na coluna escolhida no modal "Novo registro". -->
 
       </div><!-- /canvas-stage -->
 
@@ -1528,6 +1476,15 @@ body.modal-open{overflow:hidden}
           <textarea class="textarea" id="ideaDesc" name="desc" required maxlength="280"></textarea>
         </div>
 
+        <div class="field">
+          <label class="label" for="ideaColuna">Onde entra na matriz</label>
+          <select class="select" id="ideaColuna" name="coluna">
+            <option value="certeza">Certeza</option>
+            <option value="suposicao">Suposição</option>
+            <option value="duvida" selected>Dúvidas</option>
+          </select>
+        </div>
+
         <div class="modal-footer">
           <button type="submit" class="btn btn--primary">Salvar</button>
         </div>
@@ -1602,11 +1559,15 @@ body.modal-open{overflow:hidden}
      Acessado via ?modo=leitura (tarefa concluída): permite apenas
      visualizar, sem criar, editar, excluir ou mover cards. */
   var modoLeitura = /[?&]modo=leitura\b/.test(location.search);
-  if(modoLeitura){
-    document.body.classList.add('is-readonly');
+  function aplicarLeitura(ligado){
+    modoLeitura = !!ligado;
+    document.body.classList.toggle('is-readonly', modoLeitura);
     var reabrirBtn = document.getElementById('btnReabrirTarefa');
-    if(reabrirBtn) reabrirBtn.hidden = false;
+    if(reabrirBtn) reabrirBtn.hidden = !modoLeitura;
+    var gerar = document.getElementById('btnGerarIA');
+    if(gerar) gerar.disabled = modoLeitura;
   }
+  if(modoLeitura) aplicarLeitura(true);
 
   /* ---------- Assistente: abrir / fechar ---------- */
   var assistantInner  = document.getElementById('assistantInner');
@@ -1888,7 +1849,7 @@ body.modal-open{overflow:hidden}
   // Alvos de soltura: as 3 colunas da matriz e o painel "Minhas idéias".
   // Soltar em qualquer um deles ancora o card na lista correspondente;
   // só o fundo livre do canvas deixa o card solto.
-  var SEL_ALVOS = '.matrix-columns .column-body, .ideas-body';
+  var SEL_ALVOS = '.matrix-columns .column-body';
 
   function atualizarColunas(){
     Array.prototype.forEach.call(document.querySelectorAll(SEL_ALVOS), function(cb){
@@ -1985,27 +1946,18 @@ body.modal-open{overflow:hidden}
     if(!arrasto.ativo){ arrasto = null; return; }
     var card = arrasto.card;
 
+    /* MATRIZ-002: todo card mora numa coluna — é o que a matriz grava.
+       Soltar fora das colunas devolve o card ao lugar de origem (antes
+       ele virava objeto solto no canvas, que não tem onde ser salvo). */
+    var mudou = false;
     if(slot.parentNode){
-      // Caiu numa coluna: entra na lista na posição do indicador
       card.classList.remove('idea--free');
       card.style.left = card.style.top = '';
+      mudou = slot.nextSibling !== card && slot.previousSibling !== card;
       slot.parentNode.insertBefore(card, slot);
-    } else {
-      var alvo = document.elementFromPoint ? document.elementFromPoint(e.clientX, e.clientY) : null;
-      if(alvo && alvo.closest && alvo.closest('#canvasViewport')){
-        // Caiu no canvas: vira objeto livre exatamente onde soltou
-        var r = viewport.getBoundingClientRect();
-        var x = (e.clientX - arrasto.dx - r.left - cv.x) / cv.z;
-        var y = (e.clientY - arrasto.dy - r.top  - cv.y) / cv.z;
-        card.classList.add('idea--free');
-        card.style.left = Math.round(x) + 'px';
-        card.style.top  = Math.round(y) + 'px';
-        stage.appendChild(card);
-      }
-      // Fora do canvas: o card apenas volta ao lugar de origem
     }
     finalizarArrasto();
-    dispararAutosave();
+    if(mudou) dispararAutosave();
   });
 
   document.addEventListener('pointercancel', function(){
@@ -2127,7 +2079,9 @@ body.modal-open{overflow:hidden}
   /* ---------- Modal "Novo registro" ---------- */
   var modal = document.getElementById('modal');
   var form  = document.getElementById('ideaForm');
-  var lista = document.querySelector('.ideas-panel .card-list');
+  function listaDaColuna(coluna){
+    return document.querySelector('.column--' + coluna + ' .card-list');
+  }
 
   var ICON_IDEIA = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>';
   var ICON_LIXO  = '<svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -2178,8 +2132,10 @@ body.modal-open{overflow:hidden}
     if(modoLeitura) return;
     var titulo = document.getElementById('ideaTitle').value.trim();
     var desc   = document.getElementById('ideaDesc').value.trim();
+    var coluna = document.getElementById('ideaColuna').value || 'duvida';
     if(!titulo || !desc) return;
-    lista.insertBefore(criarCard(titulo, desc), lista.firstChild);
+    var destino = listaDaColuna(coluna);
+    destino.appendChild(criarCard(titulo, desc));
     closeModal();
     mostrarMensagem('Registro adicionado com sucesso.');
     atualizarColunas();
@@ -2240,20 +2196,17 @@ body.modal-open{overflow:hidden}
 
   document.getElementById('confirmReopenBtn').addEventListener('click', function(){
     fecharReopen();
-
-    // Desbloqueia a edição: remove o modo somente leitura e reativa as ações
-    modoLeitura = false;
-    document.body.classList.remove('is-readonly');
-
-    // Remove o botão "Reabrir tarefa" do menu inferior e mantém só "Novo registro"
-    if(btnReabrirTarefa && btnReabrirTarefa.parentNode){
-      btnReabrirTarefa.parentNode.removeChild(btnReabrirTarefa);
-      btnReabrirTarefa = null;
-    }
-    var btnNovaIdeia = document.getElementById('btnNovaIdeia');
-    if(btnNovaIdeia) btnNovaIdeia.hidden = false;
-
-    mostrarMensagem('Tarefa reaberta com sucesso. Edição liberada.');
+    /* MATRIZ-006: reabrir é gravado (a mesma rota de ATV-TAR-CONCLUIR).
+       Só depois que o servidor confirma a edição é liberada. */
+    var reabrir = window.MatrizAcoes && window.MatrizAcoes.reabrir
+      ? window.MatrizAcoes.reabrir()
+      : Promise.resolve();
+    reabrir.then(function(){
+      aplicarLeitura(false);
+      var btnNovaIdeia = document.getElementById('btnNovaIdeia');
+      if(btnNovaIdeia) btnNovaIdeia.hidden = false;
+      mostrarMensagem('Tarefa reaberta com sucesso. Edição liberada.');
+    }, function(){ /* o aviso de erro já saiu */ });
   });
 
   /* ---------- Toast de feedback ---------- */
@@ -2296,26 +2249,43 @@ body.modal-open{overflow:hidden}
 
   // Dispara a animação de "salvando" no botão Voltar. Reutilizada
   // sempre que um item é movido/classificado ou ao navegar de volta.
+  /* MATRIZ-003: o "Salvando..." agora é verdade — acompanha a gravação
+     de js/matriz.js (MatrizAcoes.salvar), e não um relógio de 1,4 s. */
+  function mostrarSalvando(ligado){
+    btnVoltar.classList.toggle('is-saving', !!ligado);
+    voltarLabel.textContent = ligado ? 'Salvando...' : 'Voltar';
+  }
   function dispararAutosave(){
     if(modoLeitura) return;
-    if(window.__autosaveDisparado) return; // evita duplicidade dentro do gesto
-    window.__autosaveDisparado = true;
-    btnVoltar.classList.add('is-saving');
-    voltarLabel.textContent = 'Salvando...';
-    clearTimeout(autoTimer);
-    autoTimer = setTimeout(function(){
-      btnVoltar.classList.remove('is-saving');
-      voltarLabel.textContent = 'Voltar';
-      window.__autosaveDisparado = false;
-    }, 1400);
+    if(window.MatrizAcoes && typeof window.MatrizAcoes.salvar === 'function'){
+      window.MatrizAcoes.salvar();
+    }
   }
 
   btnVoltar.addEventListener('click', function(){
-    dispararAutosave();
-    setTimeout(function(){
-      window.location.href = 'atividade.html';
-    }, 1400);
+    if(window.MatrizAcoes && typeof window.MatrizAcoes.voltar === 'function'){
+      window.MatrizAcoes.voltar();
+      return;
+    }
+    window.location.href = 'atividade.html';
   });
+
+  /* ---------- "Gerar classificação com IA" — MATRIZ-IA ---------- */
+  document.getElementById('btnGerarIA').addEventListener('click', function(){
+    if(modoLeitura || !window.MatrizAcoes) return;
+    window.MatrizAcoes.classificar();
+  });
+
+  /* O que js/matriz.js precisa desta tela para desenhar e gravar. */
+  window.MatrizTela = {
+    criarCard: criarCard,
+    listaDaColuna: listaDaColuna,
+    atualizarColunas: atualizarColunas,
+    mostrarMensagem: mostrarMensagem,
+    mostrarSalvando: mostrarSalvando,
+    aplicarLeitura: aplicarLeitura,
+    emLeitura: function(){ return modoLeitura; }
+  };
 })();
 </script>
 
@@ -2953,6 +2923,7 @@ window.pfAncorarCard = function(row){
      vencido em silencio. Sem esta linha, o saldo quebrava aqui. -->
 <script src="js/api.js"></script>
 <script src="js/creditos.js"></script>
+<script src="js/matriz.js"></script>
 
 </body>
 </html>

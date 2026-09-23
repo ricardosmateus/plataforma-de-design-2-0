@@ -149,19 +149,23 @@ async function quemPede(req: FastifyRequest): Promise<string | null> {
    nas tarefas é quem pode mexer no quadro delas. Não haveria razão
    para o quadro ter uma régua própria — ele é o trabalho da
    tarefa, não outra coisa. */
-function podeEscrever(papel: string): boolean {
+export function podeEscrever(papel: string): boolean {
   return papel === 'proprietario' || papel === 'membro' || papel === 'especialista';
 }
 
-type Contexto =
+/* Exportados para rotas/referencias.ts, que é do mesmo módulo (o
+   board de uma tarefa) e precisa da MESMA corrente de isolamento — não
+   de uma segunda cópia dela. `status` e `tipo` vão junto porque as
+   referências recusam tarefa concluída e tarefa de outro tipo. */
+export type Contexto =
   | { ok: false; code: number; corpo: unknown }
-  | { ok: true; usuarioId: string; papel: string; tarefaId: string };
+  | { ok: true; usuarioId: string; papel: string; tarefaId: string; tarefaStatus: string; tarefaTipo: string };
 
 /* A corrente inteira — empresa -> projeto -> idéia -> tarefa. Tudo o
    que falha depois da autenticação devolve 404 com a mesma
    mensagem, mesmo raciocínio de IDEIA-ISO-004: não contar a quem
    está adivinhando ids se a coisa não existe ou só não é dele. */
-async function abrirContexto(req: FastifyRequest): Promise<Contexto> {
+export async function abrirContexto(req: FastifyRequest): Promise<Contexto> {
   const naoEncontrado = {
     ok: false as const,
     code: 404,
@@ -220,11 +224,18 @@ async function abrirContexto(req: FastifyRequest): Promise<Contexto> {
   /* Elo 4 — a tarefa pertence à idéia já validada. */
   const tarefa = await db.tarefa.findFirst({
     where: { id: tarefaId, ideiaId: ideia.id },
-    select: { id: true },
+    select: { id: true, status: true, tipo: true },
   });
   if (!tarefa) return naoEncontrado;
 
-  return { ok: true, usuarioId, papel: vinculo.papel, tarefaId: tarefa.id };
+  return {
+    ok: true,
+    usuarioId,
+    papel: vinculo.papel,
+    tarefaId: tarefa.id,
+    tarefaStatus: tarefa.status,
+    tarefaTipo: tarefa.tipo,
+  };
 }
 
 /* Sempre a mesma leitura, em ordem estável, para o GET e para a

@@ -711,6 +711,146 @@ body.is-dragging-card *{cursor:grabbing !important}
    da Matriz CSD (tom 100 no card). */
 .ideas-panel .card-list .idea{background:var(--postit-suposicao);border-color:transparent}
 
+/* ---------- Referências — BOARD-REF ----------
+   A tarefa `referencias_visuais` troca os post-its por UM quadro,
+   "Referências", onde a pessoa escolhe o que adicionar (site,
+   documento ou imagem) e tudo cai na mesma lista de cards. Mesma
+   casca visual do .ideas-panel, com classes próprias de propósito:
+   tudo que é .ideas-panel entra no PUT do quadro (lerDaTela), é
+   arrastado pelo cabeçalho e reorganizado — e nada disso vale para
+   uma referência, que tem rota própria. */
+.ref-coluna{
+  position:absolute;left:456px;top:64px;
+  width:816px;
+  display:flex;flex-direction:column;gap:32px;
+}
+.ref-panel{
+  width:100%;
+  display:flex;flex-direction:column;gap:24px;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  padding:24px;
+  transition:outline-color var(--dur-fast) var(--ease-out);
+  outline:2px dashed transparent;outline-offset:-2px;
+}
+.ref-panel.is-drop{outline-color:var(--fill-accent);background:var(--sky-100)}
+.ref-head{display:flex;flex-direction:column;gap:4px}
+.ref-titulo{display:flex;align-items:baseline;gap:8px;font-size:18px;line-height:28px;font-weight:600;color:var(--text-primary)}
+.ref-conta{font-size:14px;line-height:20px;font-weight:500;color:var(--text-muted)}
+.ref-ajuda{font-size:14px;line-height:22px;color:var(--text-secondary);max-width:680px}
+.ref-rule{height:1px;flex-shrink:0;background:var(--border)}
+/* O que adicionar: três opções num trilho, a marcada em relevo. */
+.ref-tipos{
+  display:inline-flex;align-self:flex-start;gap:4px;
+  padding:4px;
+  background:var(--neutral-100);
+  border-radius:var(--radius-lg);
+}
+.ref-tipo{
+  display:inline-flex;align-items:center;gap:8px;
+  height:36px;padding:0 16px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:20px;font-weight:500;
+  color:var(--text-secondary);
+  transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out);
+}
+.ref-tipo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.ref-tipo:hover{color:var(--text-primary)}
+.ref-tipo[aria-checked="true"]{background:var(--surface-1);color:var(--text-primary);box-shadow:var(--shadow-xs)}
+.ref-tipo:focus-visible{outline:2px solid var(--fill-accent);outline-offset:2px}
+.ref-add{display:flex;align-items:flex-end;gap:12px}
+.ref-add[hidden]{display:none}
+.ref-add .field{flex:1;min-width:0}
+.ref-add .field--nome{flex:0 0 220px}
+.ref-add .btn{width:auto;flex-shrink:0}
+.ref-add--arquivo{align-items:center}
+.ref-dica{font-size:14px;line-height:20px;color:var(--text-muted)}
+.ref-erro{font-size:14px;line-height:20px;color:var(--text-danger);margin-top:-12px}
+.ref-erro[hidden]{display:none}
+/* A área do que já foi adicionado: fundo cinza claro separa a lista
+   dos controles de adicionar. `grid-auto-rows:1fr` iguala TODAS as
+   linhas à mais alta — um card de site ao lado de um de imagem fica
+   com a mesma altura, e a grade não desalinha de uma linha para a
+   outra. */
+.ref-lista{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-auto-rows:1fr;
+  gap:24px;
+  padding:24px;
+  background:var(--neutral-100);
+  border-radius:var(--radius-lg);
+}
+.ref-lista:empty{display:none}
+.ref-vazio{
+  padding:32px 16px;text-align:center;
+  border:1px dashed var(--border-strong);border-radius:var(--radius-lg);
+  font-size:14px;line-height:22px;color:var(--text-muted);
+}
+.ref-vazio[hidden]{display:none}
+.ref-card{
+  position:relative;min-width:0;
+  display:flex;flex-direction:column;gap:6px;
+  background:var(--surface-1);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-xs);
+  padding:16px;
+  transition:box-shadow var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out);
+}
+.ref-card:hover{box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+.ref-card:has(.menu.is-open){border-color:var(--border-strong);box-shadow:var(--shadow-lg);z-index:40}
+.ref-card .menu{top:44px;right:8px}
+.ref-card-img-link{display:block;margin-bottom:6px;border-radius:var(--radius);overflow:hidden;background:var(--surface-0)}
+.ref-card-img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+/* No card de imagem o ⋮ fica por cima da foto: fundo claro para não
+   sumir numa imagem escura. */
+.ref-card--imagem .idea-menu,
+.ref-card--documento .idea-menu{top:24px;right:24px;background:rgba(255,255,255,.9)}
+.ref-card--imagem .menu,
+.ref-card--documento .menu{top:60px;right:24px}
+/* Capa do documento: a mesma proporção da miniatura da imagem, para
+   os cards de arquivo ficarem do mesmo tamanho na grade. */
+.ref-card-doc{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  aspect-ratio:4/3;margin-bottom:6px;
+  border-radius:var(--radius);
+  background:var(--neutral-100);
+  color:var(--text-muted);
+  text-decoration:none;
+}
+.ref-card-doc svg{width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.ref-card-ext{
+  position:absolute;left:12px;bottom:12px;
+  padding:2px 8px;border-radius:var(--radius-sm, 6px);
+  background:var(--surface-1);border:1px solid var(--border);
+  font-size:12px;line-height:16px;font-weight:600;letter-spacing:.02em;
+  color:var(--text-secondary);
+}
+.ref-card-meta{font-size:13px;line-height:18px;color:var(--text-muted)}
+.ref-card-nome{font-size:15px;line-height:22px;font-weight:600;color:var(--text-primary);overflow-wrap:anywhere}
+.ref-card--site .ref-card-nome{padding-right:36px}
+.ref-card-url{
+  font-size:13px;line-height:18px;color:var(--text-accent);
+  text-decoration:none;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.ref-card-url:hover{text-decoration:underline}
+.ref-card--enviando{opacity:.6;pointer-events:none}
+.ref-card--enviando .ref-card-img-link{aspect-ratio:4/3}
+/* Tarefa concluída (BOARD-LEITURA): some o que escreve. O ⋮ já some
+   pela regra .is-readonly .idea-menu. */
+.is-readonly .ref-add,
+.is-readonly .ref-tipos{display:none}
+/* O que só existe para post-its e pesquisa sai de cena no board de
+   referências. Por CSS, como o modo leitura: reabrir a tarefa redesenha
+   o painel e não pode trazer esses botões de volta. */
+.is-referencias #btnNovaIdeia,
+.is-referencias #btnNovoQuadro,
+.is-referencias #tabPesquisa{display:none !important}
+
 /* ---------- Quadro com colunas (criado via "Novo quadro") ----------
    Cada coluna tem título opcional e é um alvo de soltura próprio. */
 .quadro-colunas{
@@ -2580,6 +2720,36 @@ body.modal-open{overflow:hidden}
           Excluir
         </button>
         <button type="button" class="btn btn--secondary" id="cancelIdeaDeleteBtn">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- ===================== MODAL EXCLUIR REFERÊNCIA (BOARD-REF-004) ===================== -->
+<dialog class="modal modal--stacked" id="refDeleteModal" aria-labelledby="refDeleteTitle">
+  <div class="modal-shell">
+
+    <header class="modal-header">
+      <h2 class="modal-title" id="refDeleteTitle">
+        <span class="modal-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+        </span>
+        Excluir referência
+      </h2>
+      <button type="button" class="modal-close" id="closeRefDeleteBtn" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-confirm">
+      <p class="modal-confirm-text" id="refDeleteTexto">Tem certeza que deseja excluir essa referência? Esta ação não pode ser desfeita.</p>
+      <div class="modal-confirm-actions">
+        <button type="button" class="btn btn--danger" id="confirmRefDeleteBtn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M9 6V4h6v2"/><path d="M6 6v14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
+          Excluir
+        </button>
+        <button type="button" class="btn btn--secondary" id="cancelRefDeleteBtn">Cancelar</button>
       </div>
     </div>
 
@@ -4744,6 +4914,491 @@ body.modal-open{overflow:hidden}
     requestAnimationFrame(function(){ window.enquadrarBoard(); });
   }
 
+  /* ============================================================
+     Referências — BOARD-REF-001 a 008
+     ============================================================
+     A tarefa `referencias_visuais` não tem post-its. O canvas mostra
+     UM quadro, "Referências" (revisto em 23/09/2026 — eram dois,
+     "Sites" e "Imagens"). No topo do quadro a pessoa escolhe o que vai
+     adicionar — Endereço do site, Documento ou Imagem — e cada
+     referência adicionada vira um card na mesma lista, com ⋮ para
+     abrir ou excluir. Quem fala com a API é js/board.js
+     (BoardAcoes.adicionarSite / enviarDocumento / enviarImagem /
+     excluirReferencia); aqui só se desenha e se reage aos gestos.
+
+     Todo texto que veio de fora (nome, URL) entra por textContent ou
+     atributo, nunca por innerHTML.
+     ============================================================ */
+  var REF_FORMATOS = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  var REF_TAMANHO_MAX = 5 * 1024 * 1024;
+  /* Espelho de EXTENSOES_DOCUMENTO em api/src/referencias/regras.ts.
+     Aqui é só para responder na hora; quem decide é o servidor. */
+  var REF_DOC_EXTENSOES = ['pdf','doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp','rtf','txt','csv','md'];
+  var REF_DOC_TAMANHO_MAX = 20 * 1024 * 1024;
+  var REF_DOC_FORMATOS_TEXTO = 'PDF, Word, Excel, PowerPoint, TXT, CSV, MD ou RTF';
+
+  var REF_ESCOLHAS = [
+    { tipo: 'site', rotulo: 'Endereço do site',
+      icone: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>' },
+    { tipo: 'documento', rotulo: 'Documento',
+      icone: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>' },
+    { tipo: 'imagem', rotulo: 'Imagem',
+      icone: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>' }
+  ];
+  var ICON_ENVIAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>';
+  var ICON_DOC_GRANDE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+  var ICON_ABRIR = '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
+  var ICON_KEBAB = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>';
+
+  var refQuadro = null;
+  var refExcluindo = null;
+
+  function refEl(tag, cls, texto){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(texto != null) e.textContent = texto;
+    return e;
+  }
+  function refDominio(url){
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch(_) { return url; }
+  }
+  function refExtensao(nomeOuUrl){
+    var semBusca = String(nomeOuUrl || '').split(/[?#]/)[0];
+    var m = /\.([a-z0-9]{1,5})$/i.exec(semBusca);
+    return m ? m[1].toLowerCase() : '';
+  }
+  function refLinkExterno(a, url){
+    a.href = url;
+    a.target = '_blank';
+    /* noopener: a página aberta não ganha acesso a esta aba.
+       noreferrer: o site de referência não fica sabendo de onde veio. */
+    a.rel = 'noopener noreferrer';
+  }
+
+  var REF_ROTULO_PADRAO = { site: '', documento: 'Documento', imagem: 'Imagem' };
+  var REF_ABRIR = { site: 'Abrir site', documento: 'Abrir documento', imagem: 'Abrir imagem' };
+
+  function refCard(ref){
+    var tipo = ref.tipo;
+    var rotulo = ref.nome || (tipo === 'site' ? refDominio(ref.url) : REF_ROTULO_PADRAO[tipo] || 'Referência');
+    var card = refEl('article', 'ref-card ref-card--' + tipo);
+    if(ref.id) card.dataset.id = ref.id;
+    card.dataset.tipo = tipo;
+    card.dataset.url = ref.url || '';
+    card.dataset.rotulo = rotulo;
+
+    if(ref.id){
+      var kebab = refEl('button', 'idea-menu');
+      kebab.type = 'button';
+      kebab.setAttribute('aria-haspopup', 'true');
+      kebab.setAttribute('aria-expanded', 'false');
+      kebab.setAttribute('aria-label', 'Mais ações de ' + rotulo);
+      kebab.innerHTML = ICON_KEBAB;
+      var menu = refEl('div', 'menu');
+      menu.setAttribute('role', 'menu');
+      menu.innerHTML =
+        '<button role="menuitem" data-ref-action="abrir">' + ICON_ABRIR + (REF_ABRIR[tipo] || 'Abrir') + '</button>' +
+        '<button role="menuitem" class="danger" data-ref-action="excluir">' + ICON_LIXO + 'Excluir</button>';
+      card.appendChild(kebab);
+      card.appendChild(menu);
+    }
+
+    if(tipo === 'imagem'){
+      var moldura = refEl('a', 'ref-card-img-link');
+      if(ref.url){
+        refLinkExterno(moldura, ref.url);
+        var img = refEl('img', 'ref-card-img');
+        img.src = ref.url;
+        img.alt = ref.nome || 'Imagem de referência';
+        img.loading = 'lazy';
+        moldura.appendChild(img);
+      }
+      card.appendChild(moldura);
+    } else if(tipo === 'documento'){
+      var ext = refExtensao(ref.url) || refExtensao(ref.arquivo);
+      var capa = refEl('a', 'ref-card-doc');
+      if(ref.url) refLinkExterno(capa, ref.url);
+      capa.setAttribute('aria-hidden', 'true');
+      capa.tabIndex = -1;
+      capa.innerHTML = ICON_DOC_GRANDE;
+      if(ext) capa.appendChild(refEl('span', 'ref-card-ext', ext.toUpperCase()));
+      card.appendChild(capa);
+    }
+
+    card.appendChild(refEl('h3', 'ref-card-nome', rotulo));
+
+    if(tipo === 'site'){
+      var link = refEl('a', 'ref-card-url', ref.url);
+      refLinkExterno(link, ref.url);
+      card.appendChild(link);
+    } else {
+      var extMeta = tipo === 'documento' ? (refExtensao(ref.url) || refExtensao(ref.arquivo)) : '';
+      card.appendChild(refEl('span', 'ref-card-meta',
+        tipo === 'documento' ? ('Documento' + (extMeta ? ' · ' + extMeta.toUpperCase() : '')) : 'Imagem'));
+    }
+    return card;
+  }
+
+  function refAtualizarEstado(){
+    if(!refQuadro) return;
+    var n = refQuadro.querySelectorAll('.ref-lista .ref-card:not(.ref-card--enviando)').length;
+    refQuadro.querySelector('.ref-vazio').hidden = n > 0 || !!refQuadro.querySelector('.ref-card--enviando');
+    refQuadro.querySelector('.ref-conta').textContent = n ? String(n) : '';
+  }
+
+  function refErro(msg){
+    if(!refQuadro) return;
+    var el = refQuadro.querySelector('.ref-erro');
+    el.textContent = msg || '';
+    el.hidden = !msg;
+  }
+
+  /* A escolha do topo decide qual área de adicionar aparece. Trocar
+     de escolha limpa o erro: ele falava da outra área. */
+  function refEscolher(tipo, focar){
+    if(!refQuadro) return;
+    Array.prototype.forEach.call(refQuadro.querySelectorAll('.ref-tipo'), function(b){
+      var marcado = b.dataset.refEscolha === tipo;
+      b.setAttribute('aria-checked', String(marcado));
+      b.tabIndex = marcado ? 0 : -1;
+      if(marcado && focar) b.focus();
+    });
+    Array.prototype.forEach.call(refQuadro.querySelectorAll('[data-ref-add]'), function(a){
+      a.hidden = a.dataset.refAdd !== tipo;
+    });
+    refErro('');
+  }
+
+  function refMontarQuadro(){
+    var p = refEl('section', 'ref-panel');
+    p.setAttribute('aria-labelledby', 'refTitulo');
+
+    var head = refEl('div', 'ref-head');
+    var h = refEl('h2', 'ref-titulo', 'Referências');
+    h.id = 'refTitulo';
+    h.appendChild(refEl('span', 'ref-conta'));
+    head.appendChild(h);
+    head.appendChild(refEl('p', 'ref-ajuda',
+      'Essas referências passam a fazer parte do contexto da pesquisa, ajudando a IA a compreender melhor o projeto e gerar resultados mais relevantes, consistentes e alinhados às informações fornecidas.'));
+    p.appendChild(head);
+    p.appendChild(refEl('div', 'ref-rule'));
+
+    /* O que adicionar: um radiogroup, não abas — as três opções mudam
+       só o formulário logo abaixo, e a lista é uma só. */
+    var tipos = refEl('div', 'ref-tipos');
+    tipos.setAttribute('role', 'radiogroup');
+    tipos.setAttribute('aria-label', 'O que adicionar');
+    REF_ESCOLHAS.forEach(function(o){
+      var b = refEl('button', 'ref-tipo');
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.dataset.refEscolha = o.tipo;
+      b.innerHTML = o.icone;
+      b.appendChild(document.createTextNode(o.rotulo));
+      tipos.appendChild(b);
+    });
+    p.appendChild(tipos);
+
+    var form = refEl('form', 'ref-add');
+    form.dataset.refAdd = 'site';
+    form.noValidate = true;
+    form.innerHTML =
+      '<div class="field"><label class="label" for="refUrl">Endereço do site</label>' +
+        '<input class="input" type="text" inputmode="url" id="refUrl" autocomplete="off" spellcheck="false" maxlength="2000" placeholder="https://www.exemplo.com.br"></div>' +
+      '<div class="field field--nome"><label class="label" for="refNome">Nome (opcional)</label>' +
+        '<input class="input" type="text" id="refNome" maxlength="120"></div>' +
+      '<button type="submit" class="btn btn--primary">Adicionar</button>';
+    p.appendChild(form);
+
+    var doc = refEl('div', 'ref-add ref-add--arquivo');
+    doc.dataset.refAdd = 'documento';
+    doc.innerHTML =
+      '<input type="file" id="refArquivoDoc" accept="' + REF_DOC_EXTENSOES.map(function(e){ return '.' + e; }).join(',') + '" multiple hidden>' +
+      '<button type="button" class="btn btn--primary" id="refEnviarDocBtn">' + ICON_ENVIAR + 'Enviar documento</button>' +
+      '<span class="ref-dica">' + REF_DOC_FORMATOS_TEXTO + ', até 20MB. Ou arraste para este quadro.</span>';
+    p.appendChild(doc);
+
+    var imagem = refEl('div', 'ref-add ref-add--arquivo');
+    imagem.dataset.refAdd = 'imagem';
+    imagem.innerHTML =
+      '<input type="file" id="refArquivo" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>' +
+      '<button type="button" class="btn btn--primary" id="refEnviarBtn">' + ICON_ENVIAR + 'Enviar imagem</button>' +
+      '<span class="ref-dica">PNG, JPG, WEBP ou GIF, até 5MB. Ou arraste para este quadro.</span>';
+    p.appendChild(imagem);
+
+    var erroEl = refEl('p', 'ref-erro');
+    erroEl.setAttribute('role', 'alert');
+    erroEl.hidden = true;
+    p.appendChild(erroEl);
+    p.appendChild(refEl('div', 'ref-lista'));
+    p.appendChild(refEl('p', 'ref-vazio', 'Nenhuma referência ainda. Escolha acima o que quer adicionar.'));
+    return p;
+  }
+
+  function refAdicionarNaTela(ref){
+    if(!refQuadro) return null;
+    var card = refCard(ref);
+    refQuadro.querySelector('.ref-lista').appendChild(card);
+    refAtualizarEstado();
+    return card;
+  }
+
+  /* ---------- Escolher o que adicionar ---------- */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.ref-panel .ref-tipo') : null;
+    if(!b || modoLeitura) return;
+    refEscolher(b.dataset.refEscolha);
+    var alvo = b.dataset.refEscolha === 'site' ? document.getElementById('refUrl') : null;
+    if(alvo) alvo.focus();
+  });
+  /* Setas movem a escolha, como em qualquer radiogroup. */
+  document.addEventListener('keydown', function(e){
+    var b = e.target.closest ? e.target.closest('.ref-panel .ref-tipo') : null;
+    if(!b || modoLeitura) return;
+    var passo = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 :
+                (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;
+    if(!passo) return;
+    e.preventDefault();
+    var i = REF_ESCOLHAS.map(function(o){ return o.tipo; }).indexOf(b.dataset.refEscolha);
+    var prox = REF_ESCOLHAS[(i + passo + REF_ESCOLHAS.length) % REF_ESCOLHAS.length].tipo;
+    refEscolher(prox, true);
+  });
+
+  /* ---------- Adicionar site — BOARD-REF-002 ---------- */
+  document.addEventListener('submit', function(e){
+    var form = e.target.closest ? e.target.closest('.ref-panel .ref-add') : null;
+    if(!form) return;
+    e.preventDefault();
+    if(modoLeitura || !window.BoardAcoes) return;
+    var campoUrl = form.querySelector('#refUrl');
+    var campoNome = form.querySelector('#refNome');
+    var botao = form.querySelector('button[type="submit"]');
+    var url = campoUrl.value.trim();
+    if(!url){
+      refErro('Informe o endereço do site.');
+      campoUrl.focus();
+      return;
+    }
+    refErro('');
+    botao.disabled = true;
+    window.BoardAcoes.adicionarSite(url, campoNome.value.trim()).then(function(ref){
+      refAdicionarNaTela(ref);
+      campoUrl.value = '';
+      campoNome.value = '';
+      campoUrl.focus();
+      reenquadrar();
+    }, function(err){
+      refErro((err && err.message) || 'Não foi possível adicionar o site.');
+      campoUrl.focus();
+    }).then(function(){ botao.disabled = false; });
+  });
+
+  /* ---------- Enviar imagens e documentos — BOARD-REF-003 e 008 ----------
+     Um arquivo por envio (a rota aceita um), em sequência: vários de
+     uma vez viram várias chamadas, e cada card aparece "enviando" até
+     o seu voltar. Formato e tamanho são conferidos aqui para responder
+     na hora; quem decide de verdade é o servidor, que olha os bytes. */
+  function refNomeDoArquivo(nome){
+    return String(nome || '').replace(/\.[a-z0-9]+$/i, '').replace(/[-_]+/g, ' ').trim().slice(0, 120);
+  }
+
+  /* Arquivo solto no quadro: o tipo vem do próprio arquivo — imagem
+     aceita vai como imagem, o resto tenta ser documento. */
+  function refTipoDoArquivo(f){
+    return REF_FORMATOS.indexOf(f.type) !== -1 ? 'imagem' : 'documento';
+  }
+
+  function refMotivoRecusa(f, tipo){
+    if(tipo === 'imagem'){
+      if(REF_FORMATOS.indexOf(f.type) === -1) return 'formato não aceito (envie PNG, JPG, WEBP ou GIF)';
+      if(f.size > REF_TAMANHO_MAX) return 'maior que 5MB';
+      return null;
+    }
+    if(REF_DOC_EXTENSOES.indexOf(refExtensao(f.name)) === -1) return 'formato não aceito (envie ' + REF_DOC_FORMATOS_TEXTO + ')';
+    if(f.size > REF_DOC_TAMANHO_MAX) return 'maior que 20MB';
+    return null;
+  }
+
+  function refEnviarArquivos(lista, tipoForcado){
+    if(modoLeitura || !window.BoardAcoes || !refQuadro) return;
+    var arquivos = Array.prototype.slice.call(lista || []);
+    if(!arquivos.length) return;
+    refErro('');
+    var recusados = [];
+    var fila = [];
+    arquivos.forEach(function(f){
+      var tipo = tipoForcado || refTipoDoArquivo(f);
+      var motivo = refMotivoRecusa(f, tipo);
+      if(motivo) recusados.push(f.name + ': ' + motivo);
+      else fila.push({ arquivo: f, tipo: tipo });
+    });
+    if(recusados.length) refErro(recusados.join(' · ') + '.');
+
+    var destinoLista = refQuadro.querySelector('.ref-lista');
+    var provisorios = fila.map(function(item){
+      var nome = refNomeDoArquivo(item.arquivo.name);
+      var c = refCard({ tipo: item.tipo, url: '', nome: nome || REF_ROTULO_PADRAO[item.tipo], arquivo: item.arquivo.name });
+      c.classList.add('ref-card--enviando');
+      c.querySelector('.ref-card-nome').textContent = 'Enviando ' + (nome || (item.tipo === 'imagem' ? 'imagem' : 'documento')) + '…';
+      destinoLista.appendChild(c);
+      return c;
+    });
+    refAtualizarEstado();
+    reenquadrar();
+
+    var falhas = [];
+    var cadeia = Promise.resolve();
+    fila.forEach(function(item, i){
+      cadeia = cadeia.then(function(){
+        var nome = refNomeDoArquivo(item.arquivo.name);
+        var envio = item.tipo === 'imagem'
+          ? window.BoardAcoes.enviarImagem(item.arquivo, nome)
+          : window.BoardAcoes.enviarDocumento(item.arquivo, nome);
+        return envio.then(function(ref){
+          var novo = refCard(ref);
+          provisorios[i].parentNode.replaceChild(novo, provisorios[i]);
+        }, function(err){
+          provisorios[i].parentNode.removeChild(provisorios[i]);
+          falhas.push(item.arquivo.name + ': ' + ((err && err.message) || 'não foi enviado'));
+        }).then(function(){ refAtualizarEstado(); });
+      });
+    });
+    cadeia.then(function(){
+      var msgs = recusados.slice();
+      falhas.forEach(function(m){ msgs.push(m); });
+      if(msgs.length) refErro(msgs.join(' · '));
+      reenquadrar();
+    });
+  }
+
+  document.addEventListener('click', function(e){
+    if(!e.target.closest || modoLeitura) return;
+    var input = null;
+    if(e.target.closest('#refEnviarBtn')) input = document.getElementById('refArquivo');
+    else if(e.target.closest('#refEnviarDocBtn')) input = document.getElementById('refArquivoDoc');
+    if(input) input.click();
+  });
+  document.addEventListener('change', function(e){
+    if(!e.target) return;
+    if(e.target.id === 'refArquivo') refEnviarArquivos(e.target.files, 'imagem');
+    else if(e.target.id === 'refArquivoDoc') refEnviarArquivos(e.target.files, 'documento');
+    else return;
+    e.target.value = '';
+  });
+
+  /* Arrastar arquivos do computador para o quadro. */
+  function refQuadroDoEvento(e){
+    return e.target && e.target.closest ? e.target.closest('.ref-panel') : null;
+  }
+  function refTemArquivos(e){
+    var t = e.dataTransfer && e.dataTransfer.types;
+    return !!t && Array.prototype.indexOf.call(t, 'Files') !== -1;
+  }
+  document.addEventListener('dragover', function(e){
+    var p = refQuadroDoEvento(e);
+    if(!p || modoLeitura || !refTemArquivos(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    p.classList.add('is-drop');
+  });
+  document.addEventListener('dragleave', function(e){
+    var p = refQuadroDoEvento(e);
+    if(p && !p.contains(e.relatedTarget)) p.classList.remove('is-drop');
+  });
+  document.addEventListener('drop', function(e){
+    var p = refQuadroDoEvento(e);
+    if(!p || modoLeitura || !refTemArquivos(e)) return;
+    e.preventDefault();
+    p.classList.remove('is-drop');
+    refEnviarArquivos(e.dataTransfer.files);
+  });
+
+  /* ---------- Menu ⋮ do card: abrir e excluir — BOARD-REF-004 ----------
+     Abrir/fechar o menu é o mesmo código dos post-its (o kebab é um
+     .idea-menu); aqui só as duas ações, que têm atributo próprio para
+     não caírem nas ações de post-it. */
+  var refDeleteModal = document.getElementById('refDeleteModal');
+  var refDeleteTexto = document.getElementById('refDeleteTexto');
+  var confirmRefDeleteBtn = document.getElementById('confirmRefDeleteBtn');
+
+  function fecharRefDelete(){
+    if(refDeleteModal.open) refDeleteModal.close();
+    document.body.classList.remove('modal-open');
+    refExcluindo = null;
+  }
+
+  document.addEventListener('click', function(e){
+    var item = e.target.closest ? e.target.closest('.ref-card .menu [data-ref-action]') : null;
+    if(!item) return;
+    var card = item.closest('.ref-card');
+    fecharMenus();
+    if(item.dataset.refAction === 'abrir'){
+      if(card.dataset.url) window.open(card.dataset.url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if(item.dataset.refAction === 'excluir' && !modoLeitura){
+      refExcluindo = card;
+      refDeleteTexto.textContent = 'Tem certeza que deseja excluir a referência “' +
+        (card.dataset.rotulo || '') + '”? Esta ação não pode ser desfeita.';
+      refDeleteModal.showModal();
+      document.body.classList.add('modal-open');
+    }
+  });
+
+  confirmRefDeleteBtn.addEventListener('click', function(){
+    var card = refExcluindo;
+    if(!card || !window.BoardAcoes) return fecharRefDelete();
+    confirmRefDeleteBtn.disabled = true;
+    window.BoardAcoes.excluirReferencia(card.dataset.id).then(function(){
+      if(card.parentNode) card.parentNode.removeChild(card);
+      refErro('');
+      refAtualizarEstado();
+      fecharRefDelete();
+      reenquadrar();
+    }, function(err){
+      fecharRefDelete();
+      refErro((err && err.message) || 'Não foi possível excluir a referência.');
+    }).then(function(){ confirmRefDeleteBtn.disabled = false; });
+  });
+  document.getElementById('cancelRefDeleteBtn').addEventListener('click', fecharRefDelete);
+  document.getElementById('closeRefDeleteBtn').addEventListener('click', fecharRefDelete);
+  refDeleteModal.addEventListener('click', function(e){ if(e.target === refDeleteModal) fecharRefDelete(); });
+  refDeleteModal.addEventListener('close', function(){ document.body.classList.remove('modal-open'); refExcluindo = null; });
+
+  /* BOARD-REF-010: o "Pesquisar" do card da tarefa, numa Referência.
+     Vive aqui porque desenhar card é daqui; o botão (mais abaixo) só
+     decide qual dos dois caminhos seguir. */
+  /* Sem aviso dentro do quadro enquanto trabalha: o próprio botão
+     ("Pesquisando...", girando) já é o retorno (Ricardo, 23/09/2026). */
+  function refPlural(n, um, varios){ return n + ' ' + (n === 1 ? um : varios); }
+  function refResumo(r){
+    var s = (r && r.resumo) || {};
+    var partes = [];
+    if(s.sites) partes.push(refPlural(s.sites, 'site', 'sites'));
+    if(s.imagens) partes.push(refPlural(s.imagens, 'logotipo', 'logotipos'));
+    if(s.documentos) partes.push(refPlural(s.documentos, 'documento', 'documentos'));
+    if(!partes.length) return 'A pesquisa não trouxe referências novas.';
+    var lista = partes.length > 1 ? partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1] : partes[0];
+    return 'Pesquisa concluída. Entraram: ' + lista + '.';
+  }
+  window.RefPesquisa = {
+    executar: function(){
+      if(!window.BoardAcoes || typeof window.BoardAcoes.buscarReferencias !== 'function') return Promise.resolve(false);
+      refErro('');
+      return window.BoardAcoes.buscarReferencias().then(function(r){
+        ((r && r.referencias) || []).forEach(refAdicionarNaTela);
+        refAtualizarEstado();
+        reenquadrar();
+        if(typeof window.mostrarMensagem === 'function') window.mostrarMensagem(refResumo(r));
+        if(r && r.avisos && r.avisos.length) console.info('[Referências] o que ficou de fora:', r.avisos);
+        return true;
+      }, function(err){
+        refErro((err && err.dados && err.dados.mensagem) || (err && err.message) || 'Não foi possível pesquisar as referências agora.');
+        return false;
+      });
+    }
+  };
+
   window.BoardView = {
     /* O painel da esquerda passa a mostrar a tarefa DE VERDADE. Antes
        era texto fixo — e nem batia com a descrição da mesma tarefa em
@@ -4835,6 +5490,34 @@ body.modal-open{overflow:hidden}
       });
 
       revelarPainel();
+    },
+
+    /* BOARD-REF-001: o board de uma tarefa `referencias_visuais`.
+       No lugar dos post-its, um quadro só — "Referências" — à direita
+       do card da tarefa. Chamado por
+       js/board.js depois de `tarefa()`, com a lista do servidor. */
+    referencias: function(lista){
+      var stage = document.getElementById('canvasStage');
+      if(!stage) return;
+      document.body.classList.add('is-referencias');
+
+      Array.prototype.forEach.call(stage.querySelectorAll('.ref-coluna, .ideas-panel'), function(p){
+        p.parentNode.removeChild(p);
+      });
+      /* BOARD-REF-010: o "Pesquisar" aqui busca referências, não
+         post-its — o texto de ajuda do botão diz isso. */
+      var btnPesquisar = document.getElementById('btnGerarIA');
+      if(btnPesquisar) btnPesquisar.title = 'Pesquisar referências: a IA busca na web sites, logotipos e documentos de marca dos concorrentes e acrescenta ao quadro.';
+
+      refQuadro = refMontarQuadro();
+      var coluna = refEl('div', 'ref-coluna');
+      coluna.appendChild(refQuadro);
+      stage.appendChild(coluna);
+      refEscolher('site');
+
+      (lista || []).forEach(refAdicionarNaTela);
+      refAtualizarEstado();
+      reenquadrar();
     },
 
     /* Redesenha o canvas inteiro a partir da resposta do servidor.
@@ -5344,7 +6027,35 @@ body.modal-open{overflow:hidden}
     if(rotulo) rotulo.textContent = ligado ? 'Pesquisando...' : 'Pesquisar';
   }
 
+  /* ATV-GERAR-012: tarefa de Pesquisa criada pelo "Gerar com ajuda da
+     IA" chega com `pesquisar=1`. O clique em "Gerar" já foi o gesto que
+     autoriza o gasto (a mesma leitura de D12: "ele já clicou"), então a
+     pesquisa começa sozinha — UMA vez: o parâmetro sai da barra de
+     endereço antes do clique, e um F5 depois não pesquisa de novo. */
+  document.addEventListener('board:carregado', function(ev){
+    var q = new URLSearchParams(location.search);
+    if(q.get('pesquisar') !== '1') return;
+    q.delete('pesquisar');
+    history.replaceState(null, '', location.pathname + '?' + q.toString());
+    var t = ev.detail && ev.detail.tarefa;
+    if(!t || t.tipo !== 'pesquisa' || t.status === 'concluida' || botao.disabled) return;
+    setTimeout(function(){ botao.click(); }, 0);
+  });
+
   botao.addEventListener('click', function(){
+    /* BOARD-REF-010: numa tarefa de Referência o "Pesquisar" faz o que
+       o "Gerar com ajuda da IA" faz na criação — busca sites,
+       logotipos e documentos de marca dos concorrentes e acrescenta
+       os cards. Não passa pelo painel de pesquisa: ali o resultado
+       vira post-it, e este board não tem post-its. */
+    if(document.body.classList.contains('is-referencias')){
+      if(!window.RefPesquisa) return;
+      carregando(true);
+      window.RefPesquisa.executar()
+        .catch(function(){ return false; })
+        .then(function(){ carregando(false); });
+      return;
+    }
     var painel = window.PesquisaPainel;
     if(!painel || typeof painel.pesquisarNoQuadro !== 'function'){
       /* `mostrarMensagem` mora em outra IIFE desta página e só é

@@ -25,6 +25,8 @@ import { rotasProjetos } from './rotas/projetos.js';
 import { rotasIdeias } from './rotas/ideias.js';
 import { rotasTarefas } from './rotas/tarefas.js';
 import { rotasBoard } from './rotas/board.js';
+import { rotasReferencias } from './rotas/referencias.js';
+import { rotasGerarTarefa } from './rotas/gerar-tarefa.js';
 import { rotasIa } from './rotas/ia.js';
 import { rotasCreditos } from './rotas/creditos.js';
 import { rotasPesquisa } from './rotas/pesquisa.js';
@@ -243,6 +245,8 @@ export async function construirApp() {
   await app.register(rotasIdeias);
   await app.register(rotasTarefas);
   await app.register(rotasBoard);
+  await app.register(rotasReferencias);
+  await app.register(rotasGerarTarefa);
   await app.register(rotasIa);
   await app.register(rotasCreditos);
   await app.register(rotasPesquisa);

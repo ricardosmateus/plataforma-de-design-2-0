@@ -144,9 +144,13 @@ enum StatusTarefa {
 //
 // `sem_tela` foi retirado em 29/08/2026 (decisão A31): toda tarefa
 // tem um espaço de trabalho, e `pesquisa` é o padrão.
+// `referencias_visuais` entrou em 23/09/2026 (ATV-TAR-CRIA-007): a
+// tarefa junta sites, documentos e imagens de referência, e o board
+// dela mostra o quadro "Referências" em vez do canvas de post-its.
 enum TipoTarefa {
   pesquisa
   matriz_csd
+  referencias_visuais
 }
 
 // ------------------------------------------------------------
@@ -480,14 +484,47 @@ model Tarefa {
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  ideia    Ideia              @relation(fields: [ideiaId], references: [id], onDelete: Cascade)
-  quadros  Quadro[]
-  recortes RecorteTaxonomia[]
+  ideia       Ideia              @relation(fields: [ideiaId], references: [id], onDelete: Cascade)
+  quadros     Quadro[]
+  recortes    RecorteTaxonomia[]
+  referencias ReferenciaVisual[]
 
   // Toda listagem busca por idéia, sempre em ordem de prioridade
   // (ATV-TAR-ORDEM-001).
   @@index([ideiaId, ordem])
   @@map("tarefas")
+}
+
+/* Referência visual de uma tarefa `referencias_visuais` — BOARD-REF.
+   Um site (a URL que a pessoa colou) ou uma imagem (a URL pública do
+   arquivo no armazenamento S3/R2, o mesmo dos logotipos). Tabela
+   própria, e não registro de quadro: o PUT do quadro apaga e regrava
+   tudo a cada autosave (BOARD-SALVA-001), e uma imagem já enviada não
+   pode depender de um autosave para continuar existindo. */
+enum TipoReferenciaVisual {
+  site
+  imagem
+  // 23/09/2026 (BOARD-REF-008): PDF, Word, Excel e afins, no mesmo
+  // armazenamento das imagens. `url` é a do arquivo no bucket.
+  documento
+}
+
+model ReferenciaVisual {
+  id       String @id @default(uuid()) @db.Uuid
+  tarefaId String @map("tarefa_id") @db.Uuid
+
+  tipo TipoReferenciaVisual
+  url  String
+  // Opcional: "Site da Nubank". Vazio mostra só o endereço.
+  nome String @default("")
+
+  criadoPor String   @map("criado_por") @db.Uuid
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  tarefa Tarefa @relation(fields: [tarefaId], references: [id], onDelete: Cascade)
+
+  @@index([tarefaId, tipo, criadoEm])
+  @@map("referencias_visuais")
 }
 
 // ------------------------------------------------------------

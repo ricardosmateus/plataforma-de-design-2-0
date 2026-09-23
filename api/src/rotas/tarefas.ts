@@ -36,8 +36,33 @@ const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensage
 
 /* Mesmos limites de idéia (ATV-TAR-CRIA-001, decisão A18) —
    consistência entre módulos, não coincidência. */
-const TIPOS_VALIDOS = ['pesquisa', 'matriz_csd'] as const;
+export const TIPOS_VALIDOS = ['pesquisa', 'matriz_csd', 'referencias_visuais'] as const;
 type TipoTarefa = (typeof TIPOS_VALIDOS)[number];
+
+/* ATV-TAR-CRIA-008: tipo cuja tarefa já se explica sozinha não pede
+   título nem descrição no modal — o servidor preenche. Mora aqui, e
+   não na tela, para que qualquer caminho de criação (modal, IA,
+   proposta da URL) grave o mesmo texto. Quem manda texto próprio
+   continua podendo. */
+const TEXTO_PADRAO: Partial<Record<TipoTarefa, { titulo: string; descricao: string }>> = {
+  referencias_visuais: {
+    titulo: 'Referência',
+    descricao: 'Reunir sites, documentos e imagens de referência do projeto.',
+  },
+};
+
+function comTextoPadrao(corpo: unknown): unknown {
+  if (!corpo || typeof corpo !== 'object') return corpo;
+  const c = corpo as Record<string, unknown>;
+  const padrao = TEXTO_PADRAO[c.tipo as TipoTarefa];
+  if (!padrao) return corpo;
+  const vazio = (v: unknown) => typeof v !== 'string' || !v.trim();
+  return {
+    ...c,
+    titulo: vazio(c.titulo) ? padrao.titulo : c.titulo,
+    descricao: vazio(c.descricao) ? padrao.descricao : c.descricao,
+  };
+}
 
 const conteudoTarefa = z.object({
   titulo: z
@@ -105,7 +130,7 @@ async function quemPede(req: FastifyRequest): Promise<string | null> {
 
 /* Mesma allowlist explícita de ideias.ts — ATV-TAR-CRIA-004 aponta
    para IDEIA-CRIA-PAPEL, os mesmos três papéis. */
-function podeEscrever(papel: string): boolean {
+export function podeEscrever(papel: string): boolean {
   return papel === 'proprietario' || papel === 'membro' || papel === 'especialista';
 }
 
@@ -136,7 +161,7 @@ type Contexto =
    depois da autenticação devolve 404 com a mesma mensagem, mesmo
    raciocínio de IDEIA-ISO-004: não contar a quem está adivinhando
    ids se a coisa não existe ou só não é dele. */
-async function abrirContexto(req: FastifyRequest, comTarefa: boolean): Promise<Contexto> {
+export async function abrirContexto(req: FastifyRequest, comTarefa: boolean): Promise<Contexto> {
   const naoEncontrado = { ok: false as const, code: 404, corpo: erro(null, 'Idéia não encontrada.') };
 
   const usuarioId = await quemPede(req);
@@ -211,7 +236,7 @@ type LinhaTarefa = {
   atualizadoEm: Date;
 };
 
-function tarefaParaResposta(t: LinhaTarefa) {
+export function tarefaParaResposta(t: LinhaTarefa) {
   return {
     id: t.id,
     titulo: t.titulo,
@@ -228,6 +253,34 @@ function primeiroErro(falha: z.ZodError): Erro {
   const problema = falha.issues[0];
   const campo = problema?.path?.[0];
   return erro(typeof campo === 'string' ? campo : null, problema?.message ?? 'Dados inválidos.');
+}
+
+/* ATV-TAR-CRIA-002/003: o único jeito de uma tarefa nascer — no fim
+   da lista (maior `ordem` + 1) e pendente. Exportado para a geração
+   com IA (rotas/gerar-tarefa.ts) não ter uma segunda regra de onde a
+   tarefa nasce. */
+export async function criarTarefaNoFim(
+  ideiaId: string,
+  dados: { titulo: string; descricao: string; tipo: TipoTarefa },
+) {
+  const ultima = await db.tarefa.findFirst({
+    where: { ideiaId },
+    orderBy: { ordem: 'desc' },
+  });
+  const novaOrdem = ultima ? ultima.ordem + 1 : 0;
+
+  /* ATV-TAR-CRIA-003: nasce sempre pendente — `status` não vem do
+     cliente, nem por engano. */
+  return db.tarefa.create({
+    data: {
+      ideiaId,
+      titulo: dados.titulo,
+      descricao: dados.descricao,
+      status: 'pendente',
+      tipo: dados.tipo,
+      ordem: novaOrdem,
+    },
+  });
 }
 
 export async function rotasTarefas(app: FastifyInstance) {
@@ -280,7 +333,7 @@ export async function rotasTarefas(app: FastifyInstance) {
       return resposta.code(403).send(erro(null, 'Seu papel não permite criar tarefas.'));
     }
 
-    const dados = conteudoTarefa.safeParse(req.body);
+    const dados = conteudoTarefa.safeParse(comTextoPadrao(req.body));
     if (!dados.success) return resposta.code(400).send(primeiroErro(dados.error));
 
     /* ATV-TAR-CRIA-002: sempre no fim — maior `ordem` existente + 1.
@@ -289,23 +342,10 @@ export async function rotasTarefas(app: FastifyInstance) {
        tela sempre carrega a lista (e portanto cria a semente) antes
        de oferecer "Nova tarefa", mas o cálculo cobre o caso mesmo
        assim. */
-    const ultima = await db.tarefa.findFirst({
-      where: { ideiaId: ctx.ideia.id },
-      orderBy: { ordem: 'desc' },
-    });
-    const novaOrdem = ultima ? ultima.ordem + 1 : 0;
-
-    /* ATV-TAR-CRIA-003: nasce sempre pendente — `status` não vem do
-       cliente, nem por engano. */
-    const tarefa = await db.tarefa.create({
-      data: {
-        ideiaId: ctx.ideia.id,
-        titulo: dados.data.titulo,
-        descricao: dados.data.descricao,
-        status: 'pendente',
-        tipo: dados.data.tipo ?? 'pesquisa',
-        ordem: novaOrdem,
-      },
+    const tarefa = await criarTarefaNoFim(ctx.ideia.id, {
+      titulo: dados.data.titulo,
+      descricao: dados.data.descricao,
+      tipo: dados.data.tipo ?? 'pesquisa',
     });
 
     return resposta.code(201).send({ tarefa: tarefaParaResposta(tarefa) });

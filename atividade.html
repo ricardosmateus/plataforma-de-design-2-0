@@ -550,6 +550,10 @@ select:focus-visible{
 .task:not([data-destino]) .menu [data-task-action="acessar"]{display:none}
 .task:not([data-destino]) .menu [data-task-action="acessar"] + .sep{display:none}
 .modal-footer .btn--secondary{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px}
+/* `hidden` sozinho perde para o display:flex/inline-flex destas
+   classes — sem isto, os campos e o botão da IA não sumiam no tipo
+   Referências visuais (ATV-TAR-CRIA-008). */
+.field[hidden],.btn[hidden]{display:none}
 
 /* ---------- Modal "Nova tarefa": lateral de categorias ---------- */
 .modal--np{width:825px;height:674px;max-width:calc(100vw - 48px);max-height:calc(100vh - 48px);padding:0;overflow:hidden}
@@ -571,8 +575,33 @@ select:focus-visible{
   transition:background var(--dur-fast) var(--ease-out);
 }
 .modal--np .np-side-item:hover{background:var(--surface-0)}
-.modal--np .np-side-item[aria-current="true"]{background:var(--sky-200)}
+.modal--np .np-side-item[aria-checked="true"]{background:var(--sky-200)}
+.modal--np .np-side-item:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+/* ATV-TAR-EDIT-004: na edição o tipo aparece, mas não muda. */
+.modal--np .np-side[aria-disabled="true"] .np-side-item{cursor:default}
+.modal--np .np-side[aria-disabled="true"] .np-side-item:hover{background:none}
+.modal--np .np-side[aria-disabled="true"] .np-side-item[aria-checked="true"]{background:var(--sky-200)}
+.modal--np .np-side[aria-disabled="true"] .np-side-item[aria-checked="false"]{color:var(--text-muted)}
 .modal--np .np-divider{flex:0 0 1px;background:var(--border)}
+/* Subtítulo e descrição do tipo escolhido na lateral. */
+.np-tipo{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.np-tipo[hidden]{display:none}
+.np-tipo-titulo{font-size:16px;line-height:24px;font-weight:600;color:var(--text-primary)}
+.np-tipo-desc{font-size:14px;line-height:22px;color:var(--text-secondary);max-width:520px;white-space:pre-line}
+.np-gerando{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:12px 16px;border-radius:var(--radius);
+  background:var(--sky-100);color:var(--text-primary);
+  font-size:14px;line-height:22px;
+}
+.np-gerando[hidden]{display:none}
+.np-gerando::before{
+  content:"";flex-shrink:0;width:16px;height:16px;margin-top:3px;
+  border-radius:50%;border:2px solid currentColor;border-right-color:transparent;
+  opacity:.6;animation:np-girar .8s linear infinite;
+}
+@keyframes np-girar{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.np-gerando::before{animation:none}}
 .modal--np .np-main{
   flex:1;min-width:0;
   display:flex;flex-direction:column;
@@ -1547,12 +1576,17 @@ body.modal-open{overflow:hidden}
 <dialog class="modal modal--np" id="taskModal" aria-labelledby="taskModalTitle">
   <div class="np-shell">
 
-    <!-- Lateral: categorias de tarefa -->
-    <nav class="np-side" aria-label="Categorias de tarefa">
-      <button type="button" class="np-side-item" aria-current="true">Mais utilizados</button>
-      <button type="button" class="np-side-item">Pesquisa</button>
-      <button type="button" class="np-side-item">Entregáveis</button>
-      <button type="button" class="np-side-item">Dinâmicas</button>
+    <!-- Lateral: o tipo da tarefa (BOARD-ACESSO-001/002).
+         Era o select "Que tipo de tarefa é esta" dentro do formulário;
+         a lateral tinha quatro categorias que não faziam nada
+         ("Mais utilizados", "Entregáveis", "Dinâmicas"). Agora a
+         lateral É a escolha do tipo, e só com os dois que existem.
+         O valor viaja no input escondido #taskTipo, que o resto da
+         tela e js/orquestrador-gateway.js já liam. -->
+    <nav class="np-side" id="taskTipoLateral" role="radiogroup" aria-label="Tipo de tarefa" aria-describedby="taskTipoDesc">
+      <button type="button" class="np-side-item" role="radio" data-tipo="pesquisa" aria-checked="true" tabindex="0">Pesquisa</button>
+      <button type="button" class="np-side-item" role="radio" data-tipo="matriz_csd" aria-checked="false" tabindex="-1">Matriz CSD</button>
+      <button type="button" class="np-side-item" role="radio" data-tipo="referencias_visuais" aria-checked="false" tabindex="-1">Referência</button>
     </nav>
 
     <div class="np-divider" aria-hidden="true"></div>
@@ -1574,14 +1608,21 @@ body.modal-open{overflow:hidden}
       </header>
 
       <form class="modal-form" id="taskForm" method="dialog">
-        <div class="field">
-          <label class="label" for="taskTitle">Título</label>
-          <input class="input" type="text" id="taskTitle" name="title" placeholder="Ex. Entrevistar moradores do prédio" required maxlength="260">
+        <!-- O tipo escolhido na lateral, com nome e o que ele faz.
+             Texto em TIPOS_TAREFA, no script da página. -->
+        <div class="np-tipo" id="taskTipoInfo">
+          <h3 class="np-tipo-titulo" id="taskTipoTitulo">Pesquisa</h3>
+          <p class="np-tipo-desc" id="taskTipoDesc"></p>
         </div>
 
-        <div class="field">
+        <div class="field" id="taskTitleField">
+          <label class="label" for="taskTitle" id="taskTitleLabel">Título da pesquisa</label>
+          <input class="input" type="text" id="taskTitle" name="title" required maxlength="260">
+        </div>
+
+        <div class="field" id="taskDescField">
           <label class="label" for="taskDesc">Descrição</label>
-          <textarea class="textarea" id="taskDesc" name="desc" placeholder="Explique a tarefa em poucas linhas." required maxlength="280"></textarea>
+          <textarea class="textarea" id="taskDesc" name="desc" required maxlength="280"></textarea>
         </div>
 
         <!-- BOARD-ACESSO-001/002: é este campo que decide o que
@@ -1593,13 +1634,13 @@ body.modal-open{overflow:hidden}
              espaço de trabalho, e o tipo diz QUE trabalho é, não se
              existe trabalho. `pesquisa` é o padrão porque descobrir é
              o primeiro movimento de qualquer atividade. -->
-        <div class="field">
-          <label class="label" for="taskTipo">Que tipo de tarefa é esta</label>
-          <select class="select" id="taskTipo" name="tipo">
-            <option value="pesquisa" selected>Pesquisa — levantar informação e organizar em quadro</option>
-            <option value="matriz_csd">Matriz CSD — certezas, suposições e dúvidas</option>
-          </select>
-        </div>
+        <input type="hidden" id="taskTipo" name="tipo" value="pesquisa">
+
+        <!-- ATV-GERAR-014: enquanto a IA trabalha, o modal diz O QUE ela
+             está fazendo — texto fixo por tipo, sem barra nem
+             percentual (não sabemos quanto falta). Escrito por
+             js/orquestrador-gateway.js. -->
+        <p class="np-gerando" id="taskGerandoAviso" role="status" hidden></p>
 
         <div class="modal-divider"></div>
 
@@ -2049,9 +2090,131 @@ var openTaskBtns = [
 // Card que está sendo editado (null = criação de nova tarefa)
 var tarefaEditando = null;
 
+/* ---------- Tipo da tarefa, escolhido na lateral ----------
+   #taskTipo (input escondido) é a fonte do valor; a lateral só
+   desenha. Quem muda o valor por fora — a proposta da URL e o
+   "Gerar com ajuda da IA" (js/orquestrador-gateway.js, que dispara
+   `change`) — continua funcionando sem saber que o select saiu. */
+var taskTipoInput   = document.getElementById('taskTipo');
+var taskTipoLateral = document.getElementById('taskTipoLateral');
+var taskTipoItens   = Array.prototype.slice.call(taskTipoLateral.querySelectorAll('[role="radio"]'));
+
+/* Nome, descrição e rótulo do título por tipo. O rótulo é SEMPRE
+   "Título d_ <tipo>" (ATV-TAR-CRIA-006). Fica escrito por tipo, e não
+   montado com o nome, porque o artigo e a maiúscula mudam: "da
+   pesquisa", "da Matriz CSD", e um tipo futuro pode pedir "do". Só os tipos do
+   catálogo (BOARD-ACESSO-007); a descrição diz o que a tarefa
+   ABRE, porque é isso que o tipo decide (BOARD-ACESSO-001). */
+var TIPOS_TAREFA = {
+  pesquisa: {
+    nome: 'Pesquisa',
+    descricao: 'Levante informações para responder a uma pergunta do projeto. A IA busca na internet e no que a empresa já sabe, e organiza o resultado em quadros, mostrando a fonte de cada informação.',
+    rotuloTitulo: 'Título da pesquisa'
+  },
+  matriz_csd: {
+    nome: 'Matriz CSD',
+    descricao: 'Organize o que o time sabe sobre o projeto em três colunas: certezas, suposições e dúvidas. Ajuda a ver o que já está validado e o que ainda precisa ser investigado.',
+    rotuloTitulo: 'Título da Matriz CSD'
+  },
+  /* Texto definido pelo Ricardo em 23/09/2026. Atenção: ele promete
+     mais do que existe hoje — o board aceita só sites e imagens, e a
+     IA ainda não lê as referências (a leitura vem numa segunda etapa). */
+  referencias_visuais: {
+    nome: 'Referência',
+    descricao: 'Você também pode adicionar referências próprias para orientar a pesquisa e dar mais contexto à IA. É possível utilizar diferentes tipos de fontes, como URLs, imagens, arquivos de texto, Word, Excel, PDF e outros documentos.\n\nEssas referências passam a fazer parte do contexto da pesquisa, ajudando a IA a compreender melhor o projeto e gerar resultados mais relevantes, consistentes e alinhados às informações fornecidas.',
+    rotuloTitulo: 'Título da referência',
+    /* ATV-TAR-CRIA-008: a tarefa já se explica pelo tipo. Na criação
+       o modal não pede título nem descrição — o servidor grava um
+       texto padrão (TEXTO_PADRAO em api/src/rotas/tarefas.ts). */
+    semCampos: true
+  }
+};
+var taskTipoInfo   = document.getElementById('taskTipoInfo');
+var taskTipoTitulo = document.getElementById('taskTipoTitulo');
+var taskTipoDesc   = document.getElementById('taskTipoDesc');
+var taskTitleLabel = document.getElementById('taskTitleLabel');
+var taskTitleField = document.getElementById('taskTitleField');
+var taskDescField  = document.getElementById('taskDescField');
+
+/* Esconder não basta: um campo `required` escondido ainda barra o
+   envio pela validação do navegador. Desativado, ele sai da validação
+   e do envio. Só na CRIAÇÃO — na edição a lateral está travada e os
+   campos continuam, para quem quiser renomear a tarefa. */
+function aplicarCamposDoTipo(info){
+  var criando = taskTipoLateral.getAttribute('aria-disabled') !== 'true';
+  var sem = !!(info && info.semCampos && criando);
+  [taskTitleField, taskDescField].forEach(function(f){
+    f.hidden = sem;
+    var campo = f.querySelector('input, textarea');
+    if(campo) campo.disabled = sem;
+  });
+  /* ATV-GERAR-010: "Gerar com ajuda da IA" vale para TODOS os tipos,
+     Referência incluída — ali ela busca os concorrentes e monta os
+     cards. Só some na edição: gerar cria uma tarefa NOVA, e no modo
+     edição isso seria outra coisa do que a pessoa abriu para fazer.
+     Lido pelo id a cada vez: js/orquestrador-gateway.js troca o nó
+     do botão (clone) depois que esta página carrega. */
+  var gerar = document.getElementById('generateWithAIBtn');
+  if(gerar) gerar.hidden = !criando;
+}
+
+function pintarInfoTipo(tipo){
+  var info = TIPOS_TAREFA[tipo];
+  /* Tipo fora do catálogo (tarefa antiga): sem subtítulo, porque
+     qualquer um dos dois seria falso sobre ela. */
+  taskTipoInfo.hidden = !info;
+  taskTipoTitulo.textContent = info ? info.nome : '';
+  taskTipoDesc.textContent   = info ? info.descricao : '';
+  taskTitleLabel.textContent = info ? info.rotuloTitulo : 'Título';
+  aplicarCamposDoTipo(info);
+}
+
+function pintarTipoTarefa(){
+  var valor = taskTipoInput.value;
+  var algumMarcado = taskTipoItens.some(function(b){ return b.dataset.tipo === valor; });
+  /* Tipo fora da lista (tarefa antiga `sem_tela`): na edição não se
+     marca nada, porque marcar "Pesquisa" seria afirmar algo falso
+     sobre a tarefa. Só a criação cai no padrão. */
+  var travado = taskTipoLateral.getAttribute('aria-disabled') === 'true';
+  taskTipoItens.forEach(function(b, i){
+    var marcado = algumMarcado ? b.dataset.tipo === valor : (!travado && i === 0);
+    b.setAttribute('aria-checked', String(marcado));
+    b.tabIndex = marcado ? 0 : -1;
+  });
+  var escolhido = taskTipoItens.filter(function(b){ return b.getAttribute('aria-checked') === 'true'; })[0];
+  pintarInfoTipo(escolhido ? escolhido.dataset.tipo : null);
+}
+function definirTipoTarefa(valor, bloqueado){
+  taskTipoInput.value = valor || 'pesquisa';
+  if(bloqueado) taskTipoLateral.setAttribute('aria-disabled', 'true');
+  else taskTipoLateral.removeAttribute('aria-disabled');
+  pintarTipoTarefa();
+}
+taskTipoInput.addEventListener('change', pintarTipoTarefa);
+pintarTipoTarefa();
+
+taskTipoLateral.addEventListener('click', function(e){
+  var b = e.target.closest('[role="radio"]');
+  if(!b || taskTipoLateral.getAttribute('aria-disabled') === 'true') return;
+  definirTipoTarefa(b.dataset.tipo);
+});
+/* Setas percorrem as opções, como em qualquer grupo de rádio. */
+taskTipoLateral.addEventListener('keydown', function(e){
+  if(['ArrowDown','ArrowUp','ArrowRight','ArrowLeft'].indexOf(e.key) === -1) return;
+  if(taskTipoLateral.getAttribute('aria-disabled') === 'true') return;
+  e.preventDefault();
+  var atual = taskTipoItens.indexOf(document.activeElement);
+  if(atual < 0) atual = 0;
+  var passo = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1 : -1;
+  var prox = taskTipoItens[(atual + passo + taskTipoItens.length) % taskTipoItens.length];
+  definirTipoTarefa(prox.dataset.tipo);
+  prox.focus();
+});
+
 function openTaskModal(){
   tarefaEditando = null;
   taskModalTitle.textContent = 'Nova tarefa';
+  definirTipoTarefa('pesquisa');
   taskModal.showModal();
   document.body.classList.add('modal-open');
   document.getElementById('taskTitle').focus();
@@ -2068,6 +2231,10 @@ function openEditTaskModal(task){
     (task.querySelector('.task-title') || {}).textContent || '';
   document.getElementById('taskDesc').value =
     (task.querySelector('.task-desc') || {}).textContent || '';
+  /* ATV-TAR-EDIT-004: o tipo não muda depois de criado. A lateral
+     mostra o tipo DESTA tarefa — o select antigo mostrava sempre
+     "Pesquisa", até numa Matriz CSD — e fica travada. */
+  definirTipoTarefa(task.dataset.tipo, true);
   taskModal.showModal();
   document.body.classList.add('modal-open');
   document.getElementById('taskTitle').focus();
@@ -2099,7 +2266,7 @@ openTaskBtns.forEach(function(btn){
   document.getElementById('taskTitle').value = q.get('titulo') || '';
   document.getElementById('taskDesc').value = q.get('descricao') || '';
   var tipo = q.get('tipo');
-  if (tipo) document.getElementById('taskTipo').value = tipo;
+  if (tipo) definirTipoTarefa(tipo);
 
   /* Os parâmetros saem da barra de endereço. Sem isso um F5 depois
      de salvar reabriria o modal com a MESMA proposta, e a pessoa
@@ -2142,6 +2309,7 @@ document.addEventListener('click', function(ev){
 taskModal.addEventListener('close', function(){
   document.body.classList.remove('modal-open');
   taskForm.reset();
+  definirTipoTarefa('pesquisa');
 });
 
 taskModal.addEventListener('click', function(e){
@@ -2151,7 +2319,10 @@ taskModal.addEventListener('click', function(e){
 taskForm.addEventListener('submit', function(e){
   var title = document.getElementById('taskTitle').value.trim();
   var desc  = document.getElementById('taskDesc').value.trim();
-  if(!title) return;
+  var info  = TIPOS_TAREFA[taskTipoInput.value];
+  var semCampos = !tarefaEditando && info && info.semCampos;
+  if(semCampos){ title = ''; desc = ''; }
+  else if(!title) return;
 
   if(tarefaEditando){
     /* ATV-TAR-EDITA: gravação de verdade. Mesmo desenho da criação

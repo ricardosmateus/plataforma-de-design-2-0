@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.37.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.41.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -397,6 +397,25 @@ Não trocou a resolução de referência (`BOARD-PESQUISA-021`), nem a busca em 
 
 ---
 
+### 1.9 Referências — `BOARD-REF`
+
+A tarefa do tipo `referencias_visuais` (`ATV-TAR-CRIA-007`, "Referência" no modal "Nova tarefa") abre o mesmo `board.html`, mas sem post-its: o canvas mostra **um quadro só, "Referências"**, à direita do card da tarefa. Até 23/09/2026 eram dois quadros, "Sites" e "Imagens".
+
+| ID | Regra | Fonte |
+|---|---|---|
+| BOARD-REF-001 | Tarefa `referencias_visuais` mostra **um quadro, "Referências"**, no lugar dos quadros de post-its, com a descrição *"Essas referências passam a fazer parte do contexto da pesquisa…"*. No topo do quadro a pessoa escolhe o que vai adicionar — **Endereço do site**, **Documento** ou **Imagem** — e só a área da opção escolhida aparece: site mostra "Endereço do site" e "Nome (opcional)"; documento, o botão "Enviar documento"; imagem, o botão "Enviar imagem". A tela abre em "Endereço do site". Tudo que é adicionado vira card na **mesma lista**, mais antigo primeiro. "Novo registro", "Novo quadro" e a aba "Pesquisa" do assistente não aparecem; o **"Pesquisar" aparece e busca referências** (`BOARD-REF-010`). O quadro existe sempre, mesmo vazio. | Pedido do Ricardo, 23/09/2026 (revisto no mesmo dia: de dois quadros para um, com a escolha do tipo) |
+| BOARD-REF-002 | **Site:** endereço obrigatório e nome opcional. Aceita o endereço colado sem `https://` e grava a URL normalizada. Só `http` e `https`, com domínio de verdade (tem ponto). Card mostra o nome, ou o domínio quando não há nome, e o endereço como link que abre em outra aba (`noopener noreferrer`). | Pedido do Ricardo, 23/09/2026 (card de URL: "link com nome opcional") |
+| BOARD-REF-003 | **Imagem:** PNG, JPG, WEBP ou GIF, até **5MB**, várias de uma vez (um envio por imagem) ou arrastando para o quadro. O formato é conferido pelos **bytes** do arquivo, não pelo tipo que o navegador declara. SVG fica de fora: é documento que pode carregar script, e a imagem é enviada por qualquer membro e aberta pelos outros. O nome do card vem do nome do arquivo. | Pedido do Ricardo, 23/09/2026 |
+| BOARD-REF-004 | Cada referência é um card com **⋮**: "Abrir site"/"Abrir documento"/"Abrir imagem" e "Excluir". Excluir pede confirmação, apaga a linha e, se for imagem ou documento, o arquivo no armazenamento — nessa ordem, para nunca sobrar card apontando para arquivo apagado. | Pedido do Ricardo, 23/09/2026 |
+| BOARD-REF-005 | Referências têm **rotas próprias**, fora do `PUT` do quadro. O `PUT` apaga e regrava tudo a cada autosave (`BOARD-SALVA-001`); uma imagem já enviada não pode depender disso. No board de referências o autosave não grava nada. | Decisão de implementação, 23/09/2026 |
+| BOARD-REF-006 | Mesmas réguas do resto do board: escrever é de proprietário, membro e especialista (`BOARD-SALVA-004`); tarefa concluída não aceita adicionar nem excluir (`BOARD-LEITURA`) — a tela esconde os controles e o servidor recusa com `409`. Teto de 60 sites, 60 documentos e 60 imagens por tarefa. | Decorre de `BOARD-SALVA-004` e `BOARD-LEITURA` |
+| BOARD-REF-007 | Nesta versão a IA **não lê** as referências: elas ficam guardadas para a etapa seguinte. **Atenção:** o texto do modal "Nova tarefa" e o do quadro, definidos pelo Ricardo em 23/09/2026, dizem que as referências "passam a fazer parte do contexto da pesquisa" — isso só passa a ser verdade quando a leitura pela IA for construída. | Decisão do Ricardo, 23/09/2026 ("guardar agora, IA lê depois") |
+| BOARD-REF-008 | **Documento:** PDF, Word (DOC, DOCX), Excel (XLS, XLSX), PowerPoint (PPT, PPTX), ODT/ODS/ODP, RTF, TXT, CSV e MD, até **20MB**, vários de uma vez ou arrastando para o quadro. O formato é conferido pela **extensão e pelos bytes**: a extensão diz o que o arquivo afirma ser, os primeiros bytes precisam confirmar a família (PDF, ZIP do Office moderno, OLE do Office antigo, RTF, ou texto sem byte zero). HTML e SVG ficam de fora pelo mesmo motivo de `BOARD-REF-003`. O card mostra o nome (do arquivo, se a pessoa não der outro) e o formato; o arquivo baixa com o nome original. Arquivo solto no quadro vai como imagem se for PNG/JPG/WEBP/GIF e como documento se não for. | Pedido do Ricardo, 23/09/2026 |
+| BOARD-REF-009 | **Referência gerada com IA** (`ATV-GERAR-017`): a busca na web (até 5 buscas) acha até **4 concorrentes** — os já nomeados em pesquisas da empresa ou, sem eles, os que a busca descobrir —, o **site oficial** de cada um e até **2 documentos de marca** por concorrente (manual, brand book, kit de imprensa). O **logotipo** sai da página inicial do próprio site (imagem com "logo", apple-touch-icon, ícone grande, og:image — nunca SVG). Tudo entra direto como card, agrupado por concorrente; o que não servir a pessoa exclui pelo ⋮. **Garantias em código:** documento só com endereço que apareceu nos resultados da busca e site só com domínio que apareceu neles (o modelo não inventa link); arquivos baixados pelo servidor com as travas de `api/src/rede/baixar.ts` — só http(s) em porta padrão, nome resolvido e endereço privado/interno recusado, no máximo 3 redirecionamentos, tempo e tamanho com teto —, e conferidos por bytes como em `BOARD-REF-003`/`008`. O que falhar vira aviso, e o resto entra. | Pedido do Ricardo, 23/09/2026 (cópia guardada, entra direto, IA descobre os concorrentes) |
+| BOARD-REF-010 | **"Pesquisar" numa tarefa de Referência** faz o mesmo que o "Gerar com ajuda da IA" faz na criação (`BOARD-REF-009`), sobre a tarefa que já existe, pelo **mesmo código** (`api/src/referencias/busca-com-ia.ts`): busca concorrentes, sites, logotipos e documentos de marca e **acrescenta** os cards. Não duplica: site de domínio que a tarefa já tem, e card de mesmo nome, não entram de novo; os concorrentes dos cards de site entram como conhecidos. Enquanto trabalha, o retorno é só o próprio botão ("Pesquisando...", girando) — sem aviso dentro do quadro (Ricardo, 23/09/2026); erro aparece no quadro. Custo como na busca da geração (`ATV-GERAR-016`). Tarefa concluída não pesquisa (`BOARD-LEITURA-003`). Rota `POST .../referencias/buscar`. | Pedido do Ricardo, 23/09/2026 |
+
+**Imagem e documento precisam de armazenamento.** Os arquivos vão para o mesmo bucket S3/R2 dos logotipos de empresa (`EMP-CRIA-004`), na pasta `referencias/`. Sem `S3_DRIVER=s3` configurado, o envio de imagem e de documento é recusado com mensagem clara e os sites continuam funcionando — mesmo desenho de `EMP-CRIA-005`.
+
 ## 2. Contrato da API
 
 Todas autenticadas pelo cookie de acesso, e todas sob a corrente completa: **empresa → projeto → idéia → tarefa**. Qualquer elo que falhe devolve `404` com a mesma mensagem, pelo mesmo motivo de `IDEIA-ISO-004`: não contar a quem está adivinhando ids se a coisa não existe ou só não é dele.
@@ -422,6 +441,18 @@ Substitui o quadro inteiro da tarefa, numa transação. Devolve o quadro relido 
 | Qualquer elo da corrente falha | `404` | Volta para a atividade (BOARD-SALVA-005) |
 
 Tetos: 40 quadros por tarefa, 12 colunas por quadro, 200 registros por coluna. Existem para recusar um payload absurdo antes de virar transação — não porque alguém vá esbarrar neles.
+
+### Referências — `BOARD-REF`
+
+Base: `/empresas/:empresaId/projetos/:projetoId/ideias/:ideiaId/tarefas/:tarefaId/referencias`. Mesma corrente de isolamento dos quadros (`abrirContexto` de `rotas/board.ts`).
+
+- `GET` → `{ referencias: [{ id, tipo: "site" | "documento" | "imagem", url, nome, criado_em }] }`, mais antigas primeiro.
+- `POST` com `{ url, nome? }` → `201 { referencia }`. `400` com `campo: "url"` para endereço inválido.
+- `POST /imagem`, multipart com `nome?` e `imagem` → `201 { referencia }`. `400` com `campo: "imagem"` para formato, tamanho ou armazenamento indisponível; `502` se o bucket falhar.
+- `POST /documento`, multipart com `nome?` e `documento` → `201 { referencia }`. `400` com `campo: "documento"` para formato, tamanho ou armazenamento indisponível; `502` se o bucket falhar.
+- `POST /buscar` → `200 { referencias: [...só as novas], resumo: { concorrentes, sites, imagens, documentos }, avisos }`. `402` sem saldo, `503` sem busca configurada (`BOARD-REF-010`).
+- `DELETE /:referenciaId` → `204`.
+- Escritas: `403` sem papel de escrita, `409` para tarefa concluída, de outro tipo, ou no teto de 60.
 
 ### Rotas reaproveitadas
 
@@ -513,6 +544,10 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.41.0 | 2026-09-23 | Nova `BOARD-REF-010`: o botão "Pesquisar" volta ao board de Referência e busca sites, logotipos e documentos de marca dos concorrentes, pelo mesmo código da geração (`BOARD-REF-009`), acrescentando sem duplicar. `BOARD-REF-001` ajustada. |
+| 1.40.0 | 2026-09-23 | Nova `BOARD-REF-009`: a tarefa de Referência gerada pelo "Gerar com ajuda da IA" chega com sites, logotipos e documentos de marca dos concorrentes, buscados na web e baixados com as travas de `api/src/rede/baixar.ts`. |
+| 1.39.0 | 2026-09-23 | §1.9 revista: um quadro só, **"Referências"**, com a escolha Endereço do site / Documento / Imagem no topo e uma lista única de cards (`BOARD-REF-001`). Nova `BOARD-REF-008`: documento (PDF, Office, texto), até 20MB, conferido por extensão e bytes. Valor `documento` em `TipoReferenciaVisual` (migração `20260923190000_referencia_documento`), rota `POST .../referencias/documento`. `BOARD-REF-007` ganhou o aviso de que o texto novo promete a leitura pela IA antes de ela existir. |
+| 1.38.0 | 2026-09-23 | Nova §1.9 **`BOARD-REF`**, com rotas na §2: a tarefa de referências visuais (`ATV-TAR-CRIA-007`) abre o board com os quadros "Sites" e "Imagens". Tabela nova `referencias_visuais` e valor `referencias_visuais` em `TipoTarefa` (migração `20260923150000_referencias_visuais`), rotas em `api/src/rotas/referencias.ts`, regras puras em `api/src/referencias/regras.ts` (testadas em `testes/referencias.test.ts`). A IA ainda não lê as referências (`BOARD-REF-007`). |
 | 1.37.0 | 2026-09-17 | **O gasto da pesquisa voltou a ser visível com a cobrança desligada.** Achado em uso pelo Ricardo: a pesquisa "Amazon Logistch" correu e não apareceu no Histórico de uso. Causa imediata: `CREDITOS_COBRAR=nao`, que mede sem lançar (`DIN-011`). Causa de fundo: `018a`/`DIN-013` fizeram do Histórico a única janela para o valor, e o Histórico só lia a razão — as duas decisões juntas deixavam um gasto medido e gravado invisível em todo o produto. Nova `018b`, apontando para a regra de dinheiro nova `DIN-014`: consumo medido sem lançamento aparece no Histórico, marcado, e nunca se lança na razão para preencher a tela. |
 | 1.36.0 | 2026-09-16 | **Gravação e narração** (decisão A38). Corrigido, em uso real, o board que voltava em branco depois de uma pesquisa salva: nova `BOARD-LEITURA-007` (a trava de somente leitura mora em cada porta que cria conteúdo — `criarQuadroDocumento` não tinha a guarda que a irmã tinha) e nova `BOARD-SALVA-007` (montar não é gravar: quem monta e dispara gravação olha no resultado, e falha é dita). Nova prova `ferramentas/provar-gravacao.mjs`, que carrega a página inteira e só finge a rede — as suítes antigas dublavam justamente as funções onde os dois defeitos moravam. Nova `024a`: abrir a tarefa não remonta investigação terminada; a ponte de `024` fica só nos dois casos em que é a única saída (investigação encontrada correndo, e o "Ver a resposta que já existe" de `077`). Nova `057a`: "Download" mora no painel da tarefa, `ghost`, acima de "Excluir tarefa" — na conversa ele só existia logo depois da pesquisa. |
 | 1.35.0 | 2026-09-15 | **Valor em reais passou a aparecer num lugar só** (decisão A37, instrução do Ricardo; regra de dinheiro nova `DIN-013` em `creditos-pagamentos-regras.md`). Saíram os três lugares que mostravam o mesmo dinheiro na mesma jornada: o teto em cima do botão de buscar (`030`, já revogada com o portão), o custo colado na resposta do caderno (`051`) e o custo no rodapé do relatório (`057`) — trocado pelo tamanho do que foi apurado. `018` revista: a estimativa continua calculada, com comissão e buscas dentro, mas como **reserva no servidor**, não como texto na tela. Nova `018a` apontando para `DIN-013`. O que segura o gasto continua sendo o teto por investigação; a medição não mudou (`DIN-011`). |
