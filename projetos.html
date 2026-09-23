@@ -9,7 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/esqueleto.css">
-<link rel="stylesheet" href="css/acordeao.css">
 <style>
 /* ============================================================
    TOKENS — Hierarquia CDS (Base → Theme → Purpose)
@@ -435,7 +434,10 @@ body.modal-open{overflow:hidden}
 }
 .np-side-item{
   display:flex;align-items:center;
-  width:100%;height:40px;
+  /* min-height, e não height: "Pesquisa & Inovação" fica no limite
+     dos ~128px de texto desta coluna, e com altura fixa uma quebra de
+     linha vazaria para fora do item. */
+  width:100%;min-height:40px;
   padding:10px 16px;
   border-radius:6px;
   font-size:14px;line-height:20px;font-weight:500;
@@ -560,6 +562,10 @@ body.modal-open{overflow:hidden}
   transition:background var(--dur-fast) var(--ease-out);
 }
 .np-save:hover{background:var(--fill-accent-hover)}
+/* Travado até haver escolha: o nome do projeto É a escolha. Mesmo
+   tratamento do `.btn:disabled` de css/components.css. */
+.np-save:disabled{opacity:.6;cursor:not-allowed}
+.np-save:disabled:hover{background:var(--fill-accent)}
 .np-save svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
 /* ---------- Modal de confirmação (excluir projeto) ---------- */
@@ -1173,12 +1179,9 @@ body.modal-open{overflow:hidden}
 <dialog class="np-modal" id="npModal" aria-labelledby="npTitle">
   <div class="np-shell">
 
-    <!-- Lateral: categorias de projeto (desenhada por JS, a partir de
-         NP_CATEGORIAS — 39 itens em markup literal seriam 200 linhas
-         de HTML que ninguém revisa). -->
-    <nav class="np-side acordeao" id="npCategorias"
-         data-acordeao data-acordeao-exclusivo data-acordeao-selecao
-         aria-label="Categorias de projeto"></nav>
+    <!-- Lateral: só as categorias. Os projetos de cada uma aparecem no
+         conteúdo, como cards. Desenhada por JS a partir de NP_CATEGORIAS. -->
+    <nav class="np-side" id="npCategorias" aria-label="Categorias de projeto"></nav>
     <div class="np-divider" aria-hidden="true"></div>
 
     <!-- Conteúdo -->
@@ -1202,29 +1205,17 @@ body.modal-open{overflow:hidden}
         nome dele.
       </p>
 
-      <div class="np-list" role="radiogroup" aria-labelledby="npTitle">
-
-        <button type="button" class="np-option" role="radio" aria-checked="true" data-tipo="startup">
-          <span class="np-option-body">
-            <span class="np-option-title">Startup</span>
-            <span class="np-option-desc">São empresas jovens e inovadoras que buscam resolver desafios específicos por meio de modelos de negócios que podem crescer rapidamente e se adaptar facilmente, caracterizando-se pela busca rápida de crescimento e dependência de financiamento externo.</span>
-          </span>
-          <span class="np-option-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></svg>
-          </span>
-        </button>
-
-      </div>
-
-      <!-- As demais opções do protótipo (Franquia, Plano de Negócios,
-           e o resto "Lorem ipsum") saíram: eram placeholder sem tela
-           por trás. Cada tipo novo entra junto do que ele abre por
-           dentro (PROJ-CRIA-006/007). -->
+      <!-- Os projetos da categoria aberta na lateral, no mesmo card que
+           o "Startup" usava. O card do Startup saiu da tela, mas o tipo
+           não: todo projeto continua sendo criado como `startup`
+           (PROJ-CRIA-006) — o que se escolhe aqui é o NOME dele
+           (PROJ-CRIA-010). -->
+      <div class="np-list" id="npLista" role="radiogroup" aria-label="Projetos"></div>
 
       <div class="np-rule" aria-hidden="true"></div>
 
       <footer class="np-foot">
-        <button type="button" class="np-save">
+        <button type="button" class="np-save" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>
           Salvar
         </button>
@@ -1521,80 +1512,136 @@ const NP_CATEGORIAS = [
   { nome: 'Pesquisa & Inovação', itens: ['Discovery', 'Design Sprint', 'POC'] },
 ];
 
-const CHEVRON = '<svg class="acc-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+/* O tipo é sempre este. Os itens acima dão NOME ao projeto; o que ele
+   abre por dentro continua decidido pelo tipo, e o único habilitado é
+   `startup` (PROJ-CRIA-006, PROJ-CRIA-010). */
+const NP_TIPO = 'startup';
 
-/* `textContent`, e não `innerHTML`, para o rótulo: os nomes são
-   dado, e dado nunca vira markup — mesmo vindo de uma constante
-   daqui, porque a constante é editada por gente. */
-function npDesenharCategorias(){
+let npCategoriaAtual = 0;
+/* {cat, item}, e não só o nome: dois itens com o mesmo rótulo em
+   categorias diferentes marcariam os dois cards ao mesmo tempo. */
+let npEscolha = null;
+
+/* A lateral: uma linha por categoria, com a mesma marcação e o mesmo
+   `aria-current` da lateral da modal de perfil (empresas.html). Duas
+   modais do produto com lateral, uma convenção só.
+
+   `textContent`, nunca `innerHTML`, para os rótulos: são dado, e dado
+   não vira markup — mesmo vindo de uma constante, porque a constante
+   é editada por gente. */
+function npDesenharLateral(){
   const raiz = document.getElementById('npCategorias');
   if(!raiz) return;
   raiz.textContent = '';
-
   NP_CATEGORIAS.forEach(function(cat, i){
-    const grupo = document.createElement('div');
-    const idPainel = 'npCat' + i;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'np-side-item';
+    b.dataset.indice = String(i);
+    b.textContent = cat.nome;
+    raiz.appendChild(b);
+  });
+  npMarcarCategoria();
+}
 
-    const trigger = document.createElement('button');
-    trigger.type = 'button';
-    trigger.className = 'acc-trigger';
-    trigger.setAttribute('aria-expanded', 'false');
-    trigger.setAttribute('aria-controls', idPainel);
-    trigger.innerHTML = CHEVRON;
-    const rotulo = document.createElement('span');
-    rotulo.className = 'acc-trigger-rotulo';
-    rotulo.textContent = cat.nome;
-    trigger.appendChild(rotulo);
-
-    const painel = document.createElement('div');
-    painel.className = 'acc-panel';
-    painel.id = idPainel;
-    painel.hidden = true;
-    painel.dataset.categoria = cat.nome;
-
-    cat.itens.forEach(function(item){
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'acc-opcao';
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', 'false');
-      b.dataset.valor = item;
-      b.textContent = item;
-      painel.appendChild(b);
-    });
-
-    grupo.appendChild(trigger);
-    grupo.appendChild(painel);
-    raiz.appendChild(grupo);
+/* Só troca o atributo — não redesenha. Redesenhar destruiria o botão
+   que acabou de receber o clique, e o foco de quem navega por teclado
+   cairia no <body>. */
+function npMarcarCategoria(){
+  document.querySelectorAll('#npCategorias .np-side-item').forEach(function(b){
+    if(Number(b.dataset.indice) === npCategoriaAtual) b.setAttribute('aria-current', 'true');
+    else b.removeAttribute('aria-current');
   });
 }
 
-let npNomeEscolhido = null;
+const NP_MARCA_RADIO = '<span class="np-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></svg></span>';
 
-document.addEventListener('acordeao:escolha', function(ev){
-  if(ev.target.id !== 'npCategorias') return;
-  npNomeEscolhido = ev.detail.valor;
+/* O conteúdo: os projetos da categoria aberta, no card do "Startup". */
+function npDesenharOpcoes(){
+  const lista = document.getElementById('npLista');
+  if(!lista) return;
+  const cat = NP_CATEGORIAS[npCategoriaAtual];
+  lista.textContent = '';
+  lista.setAttribute('aria-label', 'Projetos de ' + cat.nome);
+
+  cat.itens.forEach(function(item){
+    const marcado = !!npEscolha && npEscolha.cat === npCategoriaAtual && npEscolha.item === item;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'np-option';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', marcado ? 'true' : 'false');
+    b.dataset.valor = item;
+
+    const corpo = document.createElement('span');
+    corpo.className = 'np-option-body';
+    const titulo = document.createElement('span');
+    titulo.className = 'np-option-title';
+    titulo.textContent = item;
+    corpo.appendChild(titulo);
+
+    b.appendChild(corpo);
+    b.insertAdjacentHTML('beforeend', NP_MARCA_RADIO);
+    lista.appendChild(b);
+  });
+}
+
+/* A linha de cima diz o que vai ser salvo, e o Salvar só destrava
+   quando há o que salvar. Antes existia um padrão ("Startup" já
+   marcado); agora o nome É a escolha, e salvar sem ela criaria um
+   projeto chamado "Startup" que ninguém pediu. */
+function npAtualizarResumo(){
   const linha = document.getElementById('npEscolha');
   if(linha){
-    linha.textContent = 'Nome do projeto: ';
-    const forte = document.createElement('strong');
-    forte.textContent = npNomeEscolhido;
-    linha.appendChild(forte);
+    if(npEscolha){
+      linha.textContent = 'Nome do projeto: ';
+      const forte = document.createElement('strong');
+      forte.textContent = npEscolha.item;
+      linha.appendChild(forte);
+    } else {
+      linha.textContent = 'Escolha um projeto — o que você escolher vira o nome dele.';
+    }
   }
-});
+  npSaveBtn.disabled = !npEscolha;
+}
 
 const npModal = document.getElementById('npModal');
 let npTrigger = null;
 
+/* Trocar de categoria não apaga a escolha: a pessoa costuma olhar
+   várias antes de decidir, e a linha de cima continua dizendo o que
+   vai ser salvo. Voltando à categoria, o card aparece marcado. */
+npModal.addEventListener('click', function(ev){
+  const categoria = ev.target.closest('.np-side-item');
+  if(categoria){
+    npCategoriaAtual = Number(categoria.dataset.indice);
+    npMarcarCategoria();
+    npDesenharOpcoes();
+    return;
+  }
+  const opcao = ev.target.closest('.np-option');
+  if(opcao){
+    npEscolha = { cat: npCategoriaAtual, item: opcao.dataset.valor };
+    npModal.querySelectorAll('#npLista .np-option').forEach(function(o){
+      o.setAttribute('aria-checked', o === opcao ? 'true' : 'false');
+    });
+    npAtualizarResumo();
+  }
+});
+
 function npOpen(trigger){
   npTrigger = trigger || null;
   const raizCat = document.getElementById('npCategorias');
-  if(raizCat && !raizCat.children.length) npDesenharCategorias();
+  if(raizCat && !raizCat.children.length) npDesenharLateral();
+  /* Reabrir depois de fechar sem salvar volta onde a pessoa estava. */
+  if(npEscolha) npCategoriaAtual = npEscolha.cat;
+  npMarcarCategoria();
+  npDesenharOpcoes();
+  npAtualizarResumo();
   npModal.showModal();
-  if(window.Acordeao) window.Acordeao.revelarEscolhido(raizCat);
   document.body.classList.add('modal-open');
-  const primeiro = npModal.querySelector('.np-option');
-  if(primeiro) primeiro.focus();
+  const ativa = npModal.querySelector('.np-side-item[aria-current="true"]');
+  if(ativa) ativa.focus();
 }
 
 document.addEventListener('click', ev => {
@@ -1605,29 +1652,27 @@ document.getElementById('npClose').addEventListener('click', () => npModal.close
 
 const npSaveBtn = npModal.querySelector('.np-save');
 npSaveBtn.addEventListener('click', () => {
-  const opcao = npModal.querySelector('.np-option[aria-checked="true"]');
-  const tipo = (opcao && opcao.dataset.tipo) || 'startup';
   const empresa = window.EmpresaAtual;
-  if(!empresa) return;
+  if(!empresa || !npEscolha) return;
 
   npSaveBtn.disabled = true;
-  /* Sem escolha na lateral o corpo sai sem `nome`, e o servidor
-     responde com o rótulo do catálogo — que é exatamente como a
-     modal se comportava antes desta lista existir. */
-  const corpo = { tipo: tipo };
-  if(npNomeEscolhido) corpo.nome = npNomeEscolhido;
+  const corpo = { tipo: NP_TIPO, nome: npEscolha.item };
 
   API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos', { corpo: corpo, metodo: 'POST' })
     .then(function(r){
       npModal.close();
       window.ProjetosView.acrescentar(r.projeto, empresa.papel);
       mostrarMensagem('Projeto criado com sucesso.');
+      /* Criado: o próximo "Novo projeto" começa do zero. Numa falha a
+         escolha fica, para tentar de novo sem refazer. */
+      npEscolha = null;
+      npCategoriaAtual = 0;
     })
     .catch(function(e){
       npModal.close();
       mostrarMensagem(e.message || 'Não foi possível criar o projeto.');
     })
-    .then(function(){ npSaveBtn.disabled = false; });
+    .then(function(){ npAtualizarResumo(); });
 });
 
 // Clique no backdrop fecha (o alvo só é o próprio dialog fora da casca).
@@ -2324,7 +2369,6 @@ window.pfAncorarCard = function(row){
 })();
 </script>
 
-<script src="js/acordeao.js"></script>
 <script src="js/api.js"></script>
 <script src="js/projetos.js"></script>
 

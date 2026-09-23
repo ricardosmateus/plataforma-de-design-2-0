@@ -77,9 +77,16 @@
 .acc-opcao:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 
 /* Selecionado. O fundo sozinho reprovaria em "não sinalize só por
-   cor" (WCAG 1.4.1), então vem com peso de fonte e `aria-checked`. */
+   cor" (WCAG 1.4.1), então vem com peso de fonte e `aria-checked`.
+
+   `--sky-200` com texto escuro, e NÃO o par `--bg-accent` /
+   `--text-accent`. Os dois valem `--blue-500` em tokens.css — texto
+   azul sobre fundo azul, invisível. Foi o que saiu na primeira versão
+   deste componente (22/09/2026): o item marcado virava uma barra azul
+   sem rótulo. É o mesmo tratamento do item selecionado nas laterais
+   das modais do produto (`.np-side-item`, `.pf-side-item`). */
 .acc-opcao[aria-checked="true"]{
-  background:var(--bg-accent);
-  color:var(--text-accent);
+  background:var(--sky-200);
+  color:var(--text-primary);
   font-weight:600;
 }
