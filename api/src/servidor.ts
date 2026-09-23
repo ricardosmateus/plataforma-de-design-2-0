@@ -346,6 +346,18 @@ export async function construirApp() {
      fora, detalhe no log. */
   app.setErrorHandler((e, _req, resposta) => {
     app.log.error(e);
+    /* O 500 genérico é certo para a tela e péssimo para quem está
+       depurando: "Erro inesperado" não diz que faltou um passo. As
+       duas falhas de Prisma que são SEMPRE falta de passo ganham o
+       comando no log (a resposta continua genérica — o detalhe do
+       banco não vai para o navegador). */
+    const nome = (e as { name?: string })?.name;
+    const codigo = (e as { code?: string })?.code;
+    if (nome === 'PrismaClientValidationError') {
+      console.error('  ⚠  O Prisma Client recusou a consulta. Se o schema mudou: npm run gerar, e reinicie a API.');
+    } else if (codigo === 'P2021' || codigo === 'P2022') {
+      console.error('  ⚠  Tabela ou coluna inexistente no banco: há migração pendente. Rode npm run migrar.');
+    }
     if (resposta.sent) return;
     resposta.code(500).send({ campo: null, mensagem: 'Erro inesperado. Tente novamente.' });
   });

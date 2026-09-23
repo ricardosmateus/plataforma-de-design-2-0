@@ -290,6 +290,13 @@ model Ideia {
   importancia Int         @default(0)
   status      StatusIdeia @default(ideias)
 
+  // IDEIA-ORDEM-001: a posição do card dentro da coluna. Menor = mais
+  // acima. O default -(epoch em ms) faz a idéia nova nascer no topo sem
+  // que nenhuma rota calcule nada — e é por isso que o quadro nunca
+  // reorganizado continua "mais recente primeiro". Reorganizar grava
+  // 0..n-1 na coluna (rotas/ideias.ts, PUT .../ideias/ordem).
+  posicao Float @default(dbgenerated("((- (EXTRACT(epoch FROM now()) * (1000)::numeric)))::double precision"))
+
   // Taxonomia (semana 1: grafo de conhecimento)
   // Preenchidos ao entrar em "finalizado", limpados ao sair
   assunto String?        // Categoria principal (pasta) — 1 por ideia
@@ -313,6 +320,7 @@ model Ideia {
 
   // Toda listagem filtra por projeto + não-arquivado (IDEIA-QUADRO-004).
   @@index([projetoId, arquivadoEm])
+  @@index([projetoId, status, posicao])
   @@map("ideias")
 }
 

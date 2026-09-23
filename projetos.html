@@ -273,7 +273,11 @@ a:focus-visible{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
   gap:32px;
-  align-items:start;
+  /* Todos os cards de uma linha ficam com a altura do mais alto: uma
+     descrição de duas linhas não pode deixar o vizinho de uma linha
+     mais baixo. O .card-body tem flex:1, então é ele quem cresce, e o
+     "Acessar" fica sempre alinhado no rodapé do card. */
+  align-items:stretch;
 }
 
 .card{
@@ -1225,6 +1229,37 @@ body.modal-open{overflow:hidden}
   </div>
 </dialog>
 
+<!-- ============ MODAL: projeto com o mesmo nome (PROJ-CRIA-012) ============ -->
+<dialog class="cf-modal" id="dpModal" aria-labelledby="dpTitle" aria-describedby="dpTexto">
+  <div class="cf-shell">
+
+    <header class="cf-head">
+      <h2 class="cf-title" id="dpTitle">
+        <span class="np-title-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        </span>
+        Projeto já existe
+      </h2>
+      <button type="button" class="np-close" id="dpClose">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        Fechar
+      </button>
+    </header>
+
+    <div class="cf-confirm">
+      <p class="cf-confirm-text" id="dpTexto"></p>
+      <div class="cf-confirm-actions">
+        <button type="button" class="cf-btn cf-btn--primary" id="dpConfirm">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg>
+          <span id="dpConfirmTexto">Criar mesmo assim</span>
+        </button>
+        <button type="button" class="cf-btn cf-btn--secondary" id="dpCancel">Cancelar</button>
+      </div>
+    </div>
+
+  </div>
+</dialog>
+
 <!-- ===================== MODAL: excluir projeto ===================== -->
 <dialog class="cf-modal" id="cfModal" aria-labelledby="cfTitle">
   <div class="cf-shell">
@@ -1271,6 +1306,39 @@ body.modal-open{overflow:hidden}
    mesma separação de empresas.html / js/empresas.js.
    ------------------------------------------------------------ */
 const THUMBS = { startup: 'img/card-startup.svg' };
+
+/* Ilustração por NOME de projeto (PROJ-CRIA-011). Desde PROJ-CRIA-010
+   todo projeto é `tipo: startup` por trás, então THUMBS sozinho daria
+   a mesma arte para "Logotipo", "Site" e "App". A chave é o nome sem
+   acento e em minúsculas (ver chaveDoNome). Um nome sem arte própria
+   ainda cai na do tipo — a lista cresce uma ilustração de cada vez. */
+const THUMBS_POR_NOME = {
+  'logotipo': 'img/card-logotipo.svg',
+  'landing page': 'img/card-landing-page.svg',
+  'rebranding': 'img/card-rebranding.svg',
+};
+
+/* "Logotipo", "logotipo " e "Logótipo" são o mesmo projeto. */
+function chaveDoNome(t){
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
+/* O item da modal "Novo projeto" que tem este nome, ou null. É de lá
+   que vem a descrição do card (PROJ-CRIA-011): a mesma frase que a
+   pessoa leu ao escolher, e não a do tipo — que seria igual para
+   todos. NP_CATEGORIAS é declarada mais abaixo neste mesmo <script>;
+   só é lida quando um card é desenhado, depois da carga. */
+function itemDaModal(nome){
+  var chave = chaveDoNome(nome);
+  if(!chave) return null;
+  for(var c = 0; c < NP_CATEGORIAS.length; c++){
+    var itens = NP_CATEGORIAS[c].itens;
+    for(var i = 0; i < itens.length; i++){
+      if(chaveDoNome(itens[i].nome) === chave) return itens[i];
+    }
+  }
+  return null;
+}
 const ICON_DOTS = `<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>`;
 
 /* Só "Excluir" por enquanto — "Editar" saiu porque, com um único
@@ -1345,7 +1413,9 @@ function linkDoProjeto(p){
 }
 
 function cardDeProjeto(p, mostrarMenu){
-  var thumb = THUMBS[p.tipo] || 'img/projetos-vazio.svg';
+  var item  = itemDaModal(p.nome);
+  var thumb = THUMBS_POR_NOME[chaveDoNome(p.nome)] || THUMBS[p.tipo] || 'img/projetos-vazio.svg';
+  var desc  = (item && item.desc) || p.descricao || '';
   return `
   <article class="card" data-id="${escapar(p.id)}">
     <div class="card-thumb">
@@ -1355,7 +1425,7 @@ function cardDeProjeto(p, mostrarMenu){
     ${mostrarMenu ? MENU : ''}
     <div class="card-body">
       <h3 class="card-title">${escapar(p.nome)}</h3>
-      <p class="card-desc">${escapar(p.descricao || '')}</p>
+      <p class="card-desc">${escapar(desc)}</p>
     </div>
     <a class="btn btn--secondary" href="${escapar(linkDoProjeto(p))}">Acessar</a>
   </article>
@@ -1496,20 +1566,75 @@ window.avisoProjetos = mostrarMensagem;
    A distinção é o que deixa esta lista existir sem reabrir
    PROJ-CRIA-007, que exige tela pronta antes de um tipo entrar:
    "Landing Page" não promete tela de landing page, promete um
-   projeto chamado Landing Page. */
+   projeto chamado Landing Page.
+
+   Cada item traz `desc`: uma frase curta que aparece no card, abaixo
+   do nome, para quem não conhece o termo ("POC", "CX") saber o que
+   está escolhendo. O que vai para a API continua sendo só o `nome`. */
 const NP_CATEGORIAS = [
-  { nome: 'Marca',               itens: ['Logotipo', 'Identidade Visual', 'Rebranding'] },
-  { nome: 'Digital',             itens: ['Site', 'App', 'Landing Page', 'E-commerce'] },
-  { nome: 'Produto',             itens: ['SaaS', 'Plataforma', 'MVP', 'Feature'] },
-  { nome: 'Marketing',           itens: ['Campanha', 'Social Media', 'E-mail'] },
-  { nome: 'Conteúdo',            itens: ['Blog', 'E-book', 'Newsletter'] },
-  { nome: 'IA & Automação',      itens: ['Chatbot', 'Agente IA', 'Automação'] },
-  { nome: 'Negócios',            itens: ['Modelo de Negócio', 'Estratégia', 'Pesquisa'] },
-  { nome: 'Experiência',         itens: ['UX', 'CX', 'Jornada', 'Serviço'] },
-  { nome: 'Comunicação',         itens: ['Apresentação', 'Catálogo', 'Mídia Kit'] },
-  { nome: 'Operações',           itens: ['Dashboard', 'Sistema Interno', 'Workflow'] },
-  { nome: 'Audiovisual',         itens: ['Vídeo', 'Motion', 'Animação'] },
-  { nome: 'Pesquisa & Inovação', itens: ['Discovery', 'Design Sprint', 'POC'] },
+  { nome: 'Marca', itens: [
+    { nome: 'Logotipo',          desc: 'O símbolo e a assinatura que identificam a marca.' },
+    { nome: 'Identidade Visual', desc: 'O sistema completo da marca: cores, tipografia, grafismos e aplicações.' },
+    { nome: 'Rebranding',        desc: 'Renovar uma marca que já existe para refletir um novo momento do negócio.' },
+  ]},
+  { nome: 'Digital', itens: [
+    { nome: 'Site',         desc: 'Presença da empresa na web, com páginas sobre o que ela faz e oferece.' },
+    { nome: 'App',          desc: 'Aplicativo para celular ou tablet, com as funções que o usuário usa no dia a dia.' },
+    { nome: 'Landing Page', desc: 'Uma página única, focada em levar o visitante a uma ação específica.' },
+    { nome: 'E-commerce',   desc: 'Loja virtual para vender produtos ou serviços pela internet.' },
+  ]},
+  { nome: 'Produto', itens: [
+    { nome: 'SaaS',       desc: 'Software vendido por assinatura e usado direto no navegador.' },
+    { nome: 'Plataforma', desc: 'Produto digital que conecta públicos diferentes, como quem compra e quem vende.' },
+    { nome: 'MVP',        desc: 'A primeira versão enxuta de um produto, para validar a ideia com usuários reais.' },
+    { nome: 'Feature',    desc: 'Uma nova funcionalidade para um produto que já está no ar.' },
+  ]},
+  { nome: 'Marketing', itens: [
+    { nome: 'Campanha',     desc: 'Ações coordenadas por um período para promover um produto, serviço ou ideia.' },
+    { nome: 'Social Media', desc: 'Conteúdo e estratégia para os perfis da marca nas redes sociais.' },
+    { nome: 'E-mail',       desc: 'Mensagens por e-mail para atrair, engajar ou converter clientes.' },
+  ]},
+  { nome: 'Conteúdo', itens: [
+    { nome: 'Blog',       desc: 'Artigos frequentes que atraem público e mostram domínio do assunto.' },
+    { nome: 'E-book',     desc: 'Material aprofundado em formato de livro digital, muito usado para gerar contatos.' },
+    { nome: 'Newsletter', desc: 'Envio periódico de conteúdo para uma lista de assinantes.' },
+  ]},
+  { nome: 'IA & Automação', itens: [
+    { nome: 'Chatbot',   desc: 'Assistente de conversa que responde clientes de forma automática.' },
+    { nome: 'Agente IA', desc: 'Inteligência artificial que executa tarefas sozinha para cumprir um objetivo.' },
+    { nome: 'Automação', desc: 'Tarefas repetitivas que passam a rodar sozinhas, sem trabalho manual.' },
+  ]},
+  { nome: 'Negócios', itens: [
+    { nome: 'Modelo de Negócio', desc: 'Como a empresa cria e entrega valor, e de onde vem a receita.' },
+    { nome: 'Estratégia',        desc: 'A direção de médio e longo prazo: onde competir e como se diferenciar.' },
+    { nome: 'Pesquisa',          desc: 'Levantamento de mercado, concorrência ou público para embasar decisões.' },
+  ]},
+  { nome: 'Experiência', itens: [
+    { nome: 'UX',      desc: 'A experiência de uso de um produto digital: clareza, fluidez e facilidade.' },
+    { nome: 'CX',      desc: 'A experiência do cliente em todo contato com a marca, do primeiro ao pós-venda.' },
+    { nome: 'Jornada', desc: 'O mapa das etapas que o cliente percorre, com as dores e oportunidades de cada uma.' },
+    { nome: 'Serviço', desc: 'O desenho de como um serviço funciona, na frente e por trás do atendimento.' },
+  ]},
+  { nome: 'Comunicação', itens: [
+    { nome: 'Apresentação', desc: 'Slides para vender, mostrar resultados ou contar a história da empresa.' },
+    { nome: 'Catálogo',     desc: 'Vitrine organizada de produtos ou serviços, impressa ou digital.' },
+    { nome: 'Mídia Kit',    desc: 'Números de audiência e formatos de anúncio para atrair patrocinadores e parceiros.' },
+  ]},
+  { nome: 'Operações', itens: [
+    { nome: 'Dashboard',       desc: 'Painel que reúne os indicadores do negócio em um só lugar.' },
+    { nome: 'Sistema Interno', desc: 'Ferramenta sob medida para a equipe organizar o dia a dia da empresa.' },
+    { nome: 'Workflow',        desc: 'Um fluxo de trabalho definido, com etapas, responsáveis e aprovações.' },
+  ]},
+  { nome: 'Audiovisual', itens: [
+    { nome: 'Vídeo',    desc: 'Produção em vídeo para divulgação, apresentação institucional ou redes sociais.' },
+    { nome: 'Motion',   desc: 'Peças gráficas em movimento, como vinhetas, logos e textos animados.' },
+    { nome: 'Animação', desc: 'Personagens ou cenas animadas para explicar uma ideia ou contar uma história.' },
+  ]},
+  { nome: 'Pesquisa & Inovação', itens: [
+    { nome: 'Discovery',     desc: 'Investigação inicial para entender o problema antes de propor soluções.' },
+    { nome: 'Design Sprint', desc: 'Processo de poucos dias para prototipar e testar uma ideia com usuários.' },
+    { nome: 'POC',           desc: 'Prova de conceito: um teste rápido para ver se uma ideia é viável na prática.' },
+  ]},
 ];
 
 /* O tipo é sempre este. Os itens acima dão NOME ao projeto; o que ele
@@ -1564,7 +1689,8 @@ function npDesenharOpcoes(){
   lista.textContent = '';
   lista.setAttribute('aria-label', 'Projetos de ' + cat.nome);
 
-  cat.itens.forEach(function(item){
+  cat.itens.forEach(function(opcao, j){
+    const item = opcao.nome;
     const marcado = !!npEscolha && npEscolha.cat === npCategoriaAtual && npEscolha.item === item;
     const b = document.createElement('button');
     b.type = 'button';
@@ -1579,6 +1705,20 @@ function npDesenharOpcoes(){
     titulo.className = 'np-option-title';
     titulo.textContent = item;
     corpo.appendChild(titulo);
+
+    /* A descrição entra como aria-describedby, não no nome acessível:
+       o leitor de tela anuncia "Logotipo, botão de opção" e só depois
+       a explicação — o nome curto continua sendo o que identifica. */
+    if(opcao.desc){
+      const desc = document.createElement('span');
+      desc.className = 'np-option-desc';
+      desc.id = 'npDesc-' + npCategoriaAtual + '-' + j;
+      desc.textContent = opcao.desc;
+      corpo.appendChild(desc);
+      titulo.id = 'npTit-' + npCategoriaAtual + '-' + j;
+      b.setAttribute('aria-labelledby', titulo.id);
+      b.setAttribute('aria-describedby', desc.id);
+    }
 
     b.appendChild(corpo);
     b.insertAdjacentHTML('beforeend', NP_MARCA_RADIO);
@@ -1651,24 +1791,48 @@ document.addEventListener('click', ev => {
 document.getElementById('npClose').addEventListener('click', () => npModal.close());
 
 const npSaveBtn = npModal.querySelector('.np-save');
-npSaveBtn.addEventListener('click', () => {
+
+/* O POST do projeto, com ou sem o "sim" da modal de repetido.
+   Sem `confirmarDuplicado`, o servidor devolve 409 se a empresa já
+   tem um projeto com este nome (PROJ-CRIA-012) — e aí quem decide é
+   a pessoa, na dpModal. */
+function npCriar(confirmarDuplicado){
   const empresa = window.EmpresaAtual;
-  if(!empresa || !npEscolha) return;
-
-  npSaveBtn.disabled = true;
   const corpo = { tipo: NP_TIPO, nome: npEscolha.item };
-
-  API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos', { corpo: corpo, metodo: 'POST' })
+  if(confirmarDuplicado) corpo.confirmarDuplicado = true;
+  return API.chamar('/empresas/' + encodeURIComponent(empresa.id) + '/projetos', { corpo: corpo, metodo: 'POST' })
     .then(function(r){
-      npModal.close();
       window.ProjetosView.acrescentar(r.projeto, empresa.papel);
       mostrarMensagem('Projeto criado com sucesso.');
       /* Criado: o próximo "Novo projeto" começa do zero. Numa falha a
          escolha fica, para tentar de novo sem refazer. */
       npEscolha = null;
       npCategoriaAtual = 0;
-    })
+    });
+}
+
+function ehDuplicado(e){
+  return e && e.status === 409 && e.dados && e.dados.codigo === 'projeto_duplicado';
+}
+
+npSaveBtn.addEventListener('click', () => {
+  if(!window.EmpresaAtual || !npEscolha) return;
+
+  npSaveBtn.disabled = true;
+  npCriar(false)
+    .then(function(){ npModal.close(); })
     .catch(function(e){
+      if(ehDuplicado(e)){
+        /* A modal de escolha sai e a de confirmação entra no lugar —
+           duas modais empilhadas disputariam o foco e o Esc. O
+           gatilho original é guardado para o foco voltar a ele quando
+           a decisão terminar. */
+        const gatilho = npTrigger;
+        npTrigger = null;
+        npModal.close();
+        dpAbrir(e.dados.duplicado || {}, gatilho);
+        return;
+      }
       npModal.close();
       mostrarMensagem(e.message || 'Não foi possível criar o projeto.');
     })
@@ -1682,6 +1846,89 @@ npModal.addEventListener('close', () => {
   document.body.classList.remove('modal-open');
   if(npTrigger && document.contains(npTrigger)) npTrigger.focus();
   npTrigger = null;
+});
+
+/* ------------------------------------------------------------
+   Modal "Projeto já existe" — PROJ-CRIA-012
+   ------------------------------------------------------------
+   Aviso, não bloqueio (PROJ-CRIA-003 continua valendo): a pessoa
+   pode ter dois "Logotipo" de propósito — uma segunda rodada, uma
+   submarca. O que a modal evita é o repetido POR ENGANO, de quem
+   volta dias depois sem lembrar que já tinha criado.
+
+   "Criar mesmo assim" reenvia com `confirmarDuplicado: true`.
+   "Cancelar", "Fechar", Esc e clique fora cancelam a criação
+   inteira: nada é gravado e a escolha é descartada.
+   ------------------------------------------------------------ */
+const dpModal      = document.getElementById('dpModal');
+const dpTexto      = document.getElementById('dpTexto');
+const dpConfirmBtn = document.getElementById('dpConfirm');
+const dpConfirmTxt = document.getElementById('dpConfirmTexto');
+let dpGatilho  = null;
+let dpDecidido = false;
+
+function dpData(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+/* O texto é montado com nós, não com innerHTML: nome da empresa e do
+   projeto vêm de dado gravado. */
+function dpMontarTexto(dup){
+  const empresa = dup.empresa || (window.EmpresaAtual && window.EmpresaAtual.nome) || 'esta empresa';
+  const nome    = dup.nome || (npEscolha && npEscolha.item) || '';
+  const qtd     = Number(dup.quantidade) || 1;
+  const data    = dup.criado_em ? dpData(dup.criado_em) : '';
+  const forte   = function(t){ const b = document.createElement('strong'); b.textContent = t; return b; };
+
+  dpTexto.textContent = '';
+  dpTexto.append('A empresa ', forte(empresa), qtd > 1 ? ' já tem ' + qtd + ' projetos ' : ' já tem um projeto ', forte(nome));
+  if(data) dpTexto.append(qtd > 1 ? ' — o mais recente criado em ' + data : ', criado em ' + data);
+  dpTexto.append('. Deseja criar outro mesmo assim?');
+}
+
+function dpAbrir(dup, gatilho){
+  dpGatilho  = gatilho || null;
+  dpDecidido = false;
+  dpMontarTexto(dup);
+  dpConfirmBtn.disabled = false;
+  dpConfirmTxt.textContent = 'Criar mesmo assim';
+  dpModal.showModal();
+  document.body.classList.add('modal-open');
+  /* O foco começa no Cancelar: o caminho seguro é o que o Enter faz
+     sem querer. */
+  document.getElementById('dpCancel').focus();
+}
+
+function dpCancelar(){ if(dpModal.open) dpModal.close(); }
+document.getElementById('dpClose').addEventListener('click', dpCancelar);
+document.getElementById('dpCancel').addEventListener('click', dpCancelar);
+dpModal.addEventListener('click', ev => { if(ev.target === dpModal) dpCancelar(); });
+
+dpConfirmBtn.addEventListener('click', () => {
+  if(!npEscolha || !window.EmpresaAtual){ dpCancelar(); return; }
+  dpConfirmBtn.disabled = true;
+  dpConfirmTxt.textContent = 'Criando…';
+  npCriar(true)
+    .then(function(){ dpDecidido = true; dpCancelar(); })
+    .catch(function(e){
+      dpDecidido = true;
+      dpCancelar();
+      mostrarMensagem(e.message || 'Não foi possível criar o projeto.');
+    });
+});
+
+dpModal.addEventListener('close', () => {
+  document.body.classList.remove('modal-open');
+  /* Saiu sem confirmar: a criação foi cancelada, e a escolha também
+     — reabrir "Novo projeto" começa do zero. */
+  if(!dpDecidido){
+    npEscolha = null;
+    npCategoriaAtual = 0;
+  }
+  if(dpGatilho && document.contains(dpGatilho)) dpGatilho.focus();
+  dpGatilho = null;
 });
 
 /* ------------------------------------------------------------

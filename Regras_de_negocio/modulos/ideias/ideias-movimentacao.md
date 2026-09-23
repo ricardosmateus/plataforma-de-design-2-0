@@ -1,6 +1,6 @@
 # Regras de Negócio — Movimentação de Idéias entre Colunas
 
-> **Versão:** 1.1.0 · **Status:** Implementado
+> **Versão:** 1.2.0 · **Status:** Implementado
 > **Conferido em:** 13/09/2026, contra `api/src/rotas/ideias.ts`, `api/src/ideias/transicao.ts`, `js/ideias.js` e `visao_do_projeto.html`
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -82,6 +82,23 @@ Casar por id resolve os três de uma vez: o id não se repete, não muda quando 
 
 ---
 
+### 1.5 Ordem dentro da coluna — `IDEIA-ORDEM`
+
+| ID | Regra | Fonte |
+|---|---|---|
+| IDEIA-ORDEM-001 | Cada idéia tem uma **posição** dentro da sua coluna (`ideias.posicao`), e a coluna é exibida em posição crescente — no empate, a mais nova primeiro. A idéia **nova nasce no topo** da coluna (o default do banco é `-(epoch em ms)`): um quadro que nunca foi reorganizado continua "mais recente primeiro", como sempre foi. As etapas de "Gerar com ajuda da IA" continuam na ordem de execução, pelo desempate do `criado_em`. | Decidido 23/09/2026 com o Ricardo |
+| IDEIA-ORDEM-002 | Quem pode reorganizar é quem pode mover (IDEIA-MOV-004). | Decorre de IDEIA-MOV-004 |
+| IDEIA-ORDEM-003 | Reorganizar grava **a coluna inteira na ordem nova** (`PUT .../ideias/ordem`). Só a posição muda: status, conteúdo, importância, data e taxonomia ficam como estão, e nada é reclassificado. Soltar o card no mesmo lugar não é alteração: não chama a API (mesma lógica de IDEIA-MOV-003). | Decidido 23/09/2026 |
+| IDEIA-ORDEM-004 | O servidor só grava se a lista enviada for **exatamente** a coluna que existe agora — nenhuma idéia a mais, a menos ou repetida. Se a coluna mudou desde que a tela carregou (outra pessoa criou, moveu ou excluiu uma idéia), a resposta é `409 ordem_desatualizada`: o card volta, o quadro é recarregado e a tela avisa "O quadro mudou enquanto você reorganizava. Atualizamos para você ver a ordem atual." | Decidido 23/09/2026 |
+| IDEIA-ORDEM-005 | **Arrastar dentro da mesma coluna** mostra uma barra azul entre os cards, no lugar onde o card vai cair; soltar grava. Arrastar para outra coluna continua como antes (realce da coluna inteira). | Decidido 23/09/2026 com o Ricardo |
+| IDEIA-ORDEM-006 | O card que **chega de outra coluna** entra no **topo** dela — o mesmo lugar de uma idéia nova. Antes da posição existir, ele caía onde a data de criação mandasse; com a ordem montada à mão, esse lugar deixou de significar alguma coisa. | Decidido 23/09/2026 |
+| IDEIA-ORDEM-007 | Só dá para reorganizar com a ordenação **"Ordem do quadro"** (nova opção, e a padrão) **e sem busca**. Com busca a coluna mostra só parte dos cards; com outra ordenação a posição na tela não é a gravada — nos dois casos "entre A e B" não tem significado honesto. Tentar reorganizar assim não faz nada e explica: "Para reorganizar os cards, limpe a busca e use a ordenação “Ordem do quadro”." | Decidido 23/09/2026 |
+| IDEIA-ORDEM-008 | Pelo teclado: **Alt + seta para cima/baixo** troca o card em foco de lugar com o vizinho. Seta sozinha continua rolando a página; esquerda/direita continuam mudando de coluna (IDEIA-MOV-007). Toda reorganização é anunciada em `aria-live`: "*{título}* movida para a posição *N* de *M* em *{coluna}*." | Decidido 23/09/2026 |
+
+**Contrato — `PUT /empresas/:empresaId/projetos/:projetoId/ideias/ordem`.** Corpo `{ status, ids }`: a coluna e todos os ids ativos dela na ordem nova (até 500). `200` com `{ status, ids }`; `400` para coluna inválida ou id repetido; `403` para quem não pode escrever; `404` sem acesso ao projeto; `409 ordem_desatualizada` quando a lista não bate com a coluna atual. Grava `posicao = 0..n-1` numa transação só.
+
+---
+
 ## 2. Contrato da API — `PATCH /empresas/:empresaId/projetos/:projetoId/ideias/:id/status`
 
 > **O que a transição escreve, além do `status`** (IDEIA-MOV-017/018/019):
@@ -138,4 +155,5 @@ Requisição autenticada pelo cookie de acesso.
 |---|---|---|
 | 1.0.1 | 2026-08-28 | Pendência "Contrato da conclusão de atividade" resolvida — `atividade.html` foi implementada (`atividade-lista.md`) e agora chama a API real tanto para `ATV-ACESSO-001` (Acessar → "Em andamento") quanto para `IDEIA-MOV-014` (Concluir atividade → "Finalizado"). Nenhuma regra nova aqui; só o gatilho que faltava passou a existir. |
 | 1.0.0 | 2026-08-24 | Documento criado. Regras de movimentação (IDEIA-MOV), os três caminhos equivalentes, persistência otimista com reversão e a correção da ponte com `atividade.html` (id em vez de título). Decisões I5 a I7. |
+| 1.2.0 | 2026-09-23 | **Nova §1.5 `IDEIA-ORDEM-001` a `008`:** reorganizar os cards dentro da mesma coluna, arrastando (barra azul no lugar de destino) ou com Alt+setas. Coluna `ideias.posicao` (migração `20260923120000_posicao_da_ideia`, que preserva a ordem atual de todo quadro), rota `PUT .../ideias/ordem` com conferência da coluna inteira (`409` se mudou), e o card que muda de coluna passa a entrar no topo dela (IDEIA-ORDEM-006). Regra pura em `api/src/ideias/ordem.ts`, 5 testes em `api/testes/ordem-ideias.test.ts`. |
 | 1.1.0 | 2026-09-13 | Conferência contra o código. **IDEIA-MOV-002 corrigida**: dizia que mover altera "apenas o campo `status`", o que deixou de ser verdade quando a taxonomia entrou — sair de `finalizado` apaga `assunto`, `tags` e `taxonomia_manual` e remove os recortes por tema. A exceção existia só como comentário em `rotas/ideias.ts`. Registradas IDEIA-MOV-017 (limpeza na mesma transação), IDEIA-MOV-018 (classificação em segundo plano ao entrar em `finalizado`) e IDEIA-MOV-019 (a limpeza é o complemento de `finalizado`, não uma lista de destinos). Tabela de efeitos da transição acrescentada à §2. Aberta pendência sobre o gesto destrutivo sem confirmação. Status do cabeçalho atualizado. |

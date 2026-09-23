@@ -24,6 +24,7 @@ import {
   TIPOS_VALIDOS,
   type TipoProjeto,
 } from '../projetos/catalogo.js';
+import { encontrarMesmoNome } from '../projetos/duplicidade.js';
 import * as sessao from '../seguranca/sessao.js';
 
 type Erro = { campo: string | null; mensagem: string };
@@ -46,6 +47,10 @@ const criacao = z.object({
     .min(1, 'Dê um nome ao projeto.')
     .max(80, 'O nome do projeto deve ter no máximo 80 caracteres.')
     .optional(),
+  /* PROJ-CRIA-012: `true` só depois que a pessoa viu a modal "Este
+     projeto já existe" e escolheu continuar. Sem ele, um nome
+     repetido na empresa volta como 409 em vez de criar. */
+  confirmarDuplicado: z.boolean().optional(),
 });
 
 const paramsComEmpresa = z.object({ empresaId: z.string().uuid() });
@@ -181,6 +186,36 @@ export async function rotasProjetos(app: FastifyInstance) {
     if (!dados.success) {
       const falha = dados.error.issues[0];
       return resposta.code(400).send(erro('tipo', falha?.message ?? 'Escolha um tipo de projeto válido.'));
+    }
+
+    /* PROJ-CRIA-012: nome repetido na empresa não é bloqueado
+       (PROJ-CRIA-003), mas precisa de um "sim" de quem cria. A
+       conferência mora aqui, e não só na tela, porque a lista que a
+       tela tem pode estar velha — outro membro pode ter criado o
+       mesmo projeto depois que a página abriu. */
+    if (!dados.data.confirmarDuplicado) {
+      const nomeNovo = dados.data.nome ?? CATALOGO_TIPOS[dados.data.tipo].nome;
+      const existentes = await db.projeto.findMany({
+        where: { empresaId: params.data.empresaId, arquivadoEm: null },
+        select: { nome: true, tipo: true, criadoEm: true },
+      });
+      const repetido = encontrarMesmoNome(existentes, nomeNovo);
+      if (repetido) {
+        const empresa = await db.empresa.findUnique({
+          where: { id: params.data.empresaId },
+          select: { nome: true },
+        });
+        return resposta.code(409).send({
+          ...erro(null, `O projeto "${nomeNovo}" já existe na empresa ${empresa?.nome ?? ''}.`.trim()),
+          codigo: 'projeto_duplicado',
+          duplicado: {
+            nome: nomeNovo,
+            empresa: empresa?.nome ?? null,
+            quantidade: repetido.quantidade,
+            criado_em: repetido.maisRecente.toISOString(),
+          },
+        });
+      }
     }
 
     const projeto = await db.projeto.create({

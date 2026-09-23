@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Idéias
 
-> **Versão:** 1.0.1 · **Status:** Implementado · conferência parcial
+> **Versão:** 1.2.0 · **Status:** Implementado · conferência parcial
 > **Conferido em:** 13/09/2026, na conferência de `visao_do_projeto.html` contra o código: IDEIA-ISO, IDEIA-QUADRO e IDEIA-VAZIO conferidas; IDEIA-BUSCA ainda não
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -63,8 +63,8 @@ O módulo de Projetos estabeleceu que projeto pertence a empresa (PROJ-ISO). Id�
 |---|---|---|
 | IDEIA-BUSCA-001 | A busca filtra por texto em título e descrição, e é aplicada **dentro de cada coluna** — o quadro nunca perde colunas por causa de um filtro. | Interface existente |
 | IDEIA-BUSCA-002 | Coluna sem resultado **por causa da busca** mostra "Nenhuma idéia corresponde à busca."; coluna genuinamente sem idéias mostra "Nenhuma idéia por aqui ainda.". São mensagens diferentes porque são situações diferentes. | Interface existente |
-| IDEIA-BUSCA-003 | A ordenação tem três modos: mais recente (padrão), maior relevância (importância decrescente) e por data (mais antiga primeiro). | Interface existente |
-| IDEIA-BUSCA-004 | Criar ou editar uma idéia limpa a busca e devolve a ordenação ao padrão, para que a idéia recém-salva não nasça escondida por um filtro ativo. | Interface existente |
+| IDEIA-BUSCA-003 | A ordenação tem **quatro** modos: **ordem do quadro (padrão)** — a ordem montada arrastando (IDEIA-ORDEM-001, `ideias-movimentacao.md`), mais recente, maior relevância (importância decrescente) e por data (mais antiga primeiro). ~~Três modos, com mais recente como padrão.~~ **Revista em 23/09/2026:** "Ordem do quadro" entrou e virou o padrão; num quadro nunca reorganizado ela é idêntica a "Mais recente". | Interface existente · revista 23/09/2026 |
+| IDEIA-BUSCA-004 | Criar ou editar uma idéia limpa a busca e devolve a ordenação ao padrão (hoje "Ordem do quadro"), para que a idéia recém-salva não nasça escondida por um filtro ativo. | Interface existente |
 | IDEIA-BUSCA-005 | Busca e ordenação acontecem **no cliente**, sobre a lista já carregada. Não há paginação nesta versão. | Decisão I4 |
 
 **Por que IDEIA-BUSCA-002 não é firula.** É a mesma honestidade de EMP-LIST-010 aplicada ao nível da coluna: "não achei nada com esse texto" e "aqui não tem nada" levam o usuário a ações opostas — limpar a busca, ou criar a primeira idéia. Uma mensagem só para os dois casos empurra metade dos usuários para o caminho errado.
@@ -75,7 +75,7 @@ O módulo de Projetos estabeleceu que projeto pertence a empresa (PROJ-ISO). Id�
 |---|---|---|
 | IDEIA-VAZIO-001 | O estado vazio substitui o quadro inteiro quando o projeto não tem **nenhuma** idéia — não quando uma coluna está vazia. Coluna vazia tem o vazio próprio dela (IDEIA-BUSCA-002). | Interface existente |
 | IDEIA-VAZIO-002 | O estado vazio traz o botão "Nova idéia" para quem pode criar. Quem só visualiza vê a ilustração e o texto, sem botão. | Decorre de IDEIA-CRIA-004 |
-| IDEIA-VAZIO-003 | O botão "Gerar com ajuda da IA" **sai** do estado vazio nesta versão — a IA foi adiada (decisão I3). Ele volta junto com a funcionalidade de verdade. | Decisão I3 |
+| IDEIA-VAZIO-003 | ~~O botão "Gerar com ajuda da IA" **sai** do estado vazio nesta versão — a IA foi adiada (decisão I3).~~ **Revista em 23/09/2026:** o botão volta, com a funcionalidade de verdade, ao lado de "Nova idéia" e só para quem pode criar. Regras em `ideias-criacao.md` §1.5 (`IDEIA-GERAR`). | Decisão I3 → I14 |
 
 **Atenção de implementação — armadilha já vivida.** Em `projetos.html`, a linha que revelava o botão "Novo projeto" morava dentro da função que desenha a lista, e por isso só rodava quando já existia pelo menos um item. Resultado: o estado vazio aparecia sem botão nenhum, e não havia caminho para criar o primeiro projeto. A permissão precisa ser aplicada **nos dois caminhos** — lista e vazio. Ver `projetos-listagem.md`, mesma nota.
 
@@ -142,7 +142,7 @@ Os limites de 60 e 280 vêm do `maxlength` que o protótipo já usa nos campos �
 
 | Item | Situação |
 |---|---|
-| IA (gerar idéias + assistente) | **Adiada por decisão I3.** Quando entrar, exige decidir: custo por token, consumo de créditos da conta, e que contexto do projeto a IA recebe. |
+| IA (gerar idéias + assistente) | **Gerar idéias entrou em 23/09/2026** (I14, `ideias-criacao.md` §1.5). O painel do assistente nesta tela continua como estava. |
 | Card ilustrado (`illustration`) | O protótipo tem uma variante de card cujo corpo é uma imagem, usada pela "Matriz CSD", e que navega para `matriz_csd.html`. Não está no modelo de dados acima porque pertence ao módulo de atividades, ainda não especificado. |
 | Destino do botão "Acessar" | Hoje leva a `atividade.html` ou `matriz_csd.html`, ambas fora deste módulo. O contrato dessa navegação entra junto do módulo de atividades. |
 | Volume e paginação | Ver decisão I4 — revisitar se um projeto real passar de algumas centenas de idéias. |
@@ -153,5 +153,7 @@ Os limites de 60 e 280 vêm do `maxlength` que o protótipo já usa nos campos �
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.2.0 | 2026-09-23 | IDEIA-BUSCA-003 revista: nova ordenação "Ordem do quadro", padrão, que respeita a posição montada arrastando (IDEIA-ORDEM, `ideias-movimentacao.md` §1.5). |
+| 1.1.0 | 2026-09-23 | IDEIA-VAZIO-003 revista: "Gerar com ajuda da IA" volta ao estado vazio e ganha par no cabeçalho, com a funcionalidade (`IDEIA-GERAR`, decisão I14 em `ideias-criacao.md`). |
 | 1.0.1 | 2026-09-13 | Sem mudança de regra. Cabeçalho corrigido: dizia "implementação não iniciada" com o quadro no ar desde então. Conferidas IDEIA-ISO-002/003/004, IDEIA-QUADRO-005/007/008 e IDEIA-VAZIO-002/003 — todas cumpridas. IDEIA-BUSCA fica para uma próxima conferência. |
 | 1.0.0 | 2026-08-24 | Documento criado. Regras de isolamento (IDEIA-ISO), quadro (IDEIA-QUADRO), busca (IDEIA-BUSCA) e estado vazio (IDEIA-VAZIO) definidas, junto das decisões I1 a I4. |

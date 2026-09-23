@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "predev": "prisma generate",
     "dev": "tsx watch src/servidor.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/servidor.js",
@@ -20,6 +21,7 @@
     "teste:integracao": "tsx --test testes/transicao-integracao.test.ts",
     "relatorio:consumo": "tsx scripts/relatorio-consumo.ts",
     "creditar": "tsx scripts/creditar.ts",
+    "apagar-usuario": "tsx scripts/apagar-usuario.ts",
     "preteste:razao": "tsx scripts/migrar-teste.ts",
     "teste:razao": "tsx --test testes/razao-integracao.test.ts",
     "preteste:reserva": "tsx scripts/migrar-teste.ts",

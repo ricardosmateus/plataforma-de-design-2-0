@@ -225,14 +225,21 @@ select:focus-visible{
 .btn--secondary:hover{background:var(--sky-100);color:var(--text-primary)}
 .btn--lg{width:auto;height:48px;padding:0 24px;font-size:16px;line-height:24px;gap:10px}
 .btn--lg svg{width:22px;height:22px}
-.btn--ghost{
-  height:40px;padding:0 16px;
-  color:var(--text-secondary);
-  font-size:14px;line-height:20px;font-weight:500;
-  border:1px solid var(--border-strong);
-  background:var(--surface-1);
-}
-.btn--ghost:hover{background:var(--surface-0);color:var(--text-primary)}
+.btn--ghost{background:var(--surface-1);color:var(--text-secondary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--ghost:hover:not(:disabled){background:var(--surface-0);color:var(--text-primary)}
+/* Estado carregando — o mesmo de styleguide.html (is-loading) e de
+   css/components.css. O rótulo troca e o spinner entra; a largura
+   é presa pelo JS de quem liga o estado (ver marcarGerando). */
+.btn .btn-spinner{display:none}
+.btn.is-loading{cursor:progress}
+.btn.is-loading:disabled{opacity:1;cursor:progress}
+.btn.is-loading .btn-icone,
+.btn.is-loading .btn-label{display:none}
+.btn.is-loading .btn-loading-label{display:inline}
+.btn.is-loading .btn-spinner{display:block;animation:btn-giro 800ms linear infinite}
+.btn-loading-label{display:none}
+@keyframes btn-giro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.btn.is-loading .btn-spinner{animation-duration:2400ms}}
 
 /* ============================================================
    TOOLBAR — busca + filtro
@@ -440,6 +447,17 @@ body.is-carregando-quadro .toolbar{opacity:.5;pointer-events:none}
   box-shadow:var(--shadow-lg);
   border-color:var(--border-strong);
 }
+/* IDEIA-ORDEM-005: dentro da própria coluna, o lugar onde o card vai
+   cair aparece como uma barra entre os cards — é ela, e não o realce
+   da coluna inteira, que responde "vai ficar ONDE?". */
+.drop-indicator{
+  list-style:none;
+  height:4px;margin:-10px 0;
+  border-radius:2px;
+  background:var(--fill-accent);
+  box-shadow:0 0 0 3px var(--sky-100);
+  pointer-events:none;
+}
 /* Realce só nas colunas que de fato aceitam o card (a de origem não). */
 .column-body.is-drop-target{
   background:var(--bg-primary);
@@ -471,6 +489,13 @@ body.is-carregando-quadro .toolbar{opacity:.5;pointer-events:none}
 .idea-add-title{font-size:14px;line-height:20px;font-weight:600;color:var(--text-secondary)}
 
 .idea-head{display:flex;align-items:center;gap:12px}
+/* Com o kebab no card, o título não pode entrar embaixo dele. O
+   botão é absoluto (top/right 8px, 32px de largura): ocupa até 40px
+   da borda, e o card tem 16px de padding — 24px de sobra para
+   livrar o botão + 8px de respiro = 32px. Só quando o kebab existe:
+   quem não opera o card não tem menu, e o título usa a largura toda. */
+.card-menu ~ .idea-head{padding-right:32px}
+.idea-head .idea-title{min-width:0}
 .idea-icon{
   width:36px;height:36px;flex-shrink:0;
   display:grid;place-items:center;
@@ -587,9 +612,15 @@ body.is-empty .empty-wrap{
 .empty h2{font-size:18px;line-height:28px;font-weight:600;margin-bottom:8px;color:var(--text-primary)}
 .empty p{font-size:14px;line-height:22px;color:var(--text-secondary);max-width:380px;margin-bottom:32px}
 .empty-actions{display:flex;align-items:center;gap:12px}
+/* Os botões do cabeçalho — "Gerar com ajuda da IA" (ghost) e "Nova
+   idéia" (primary). O primary fica na borda, onde sempre esteve. */
+.page-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
 
 /* Estado alternado */
 body.is-empty .page-header .btn--primary{display:none}
+/* No estado vazio os dois botões do cabeçalho saem juntos: o estado
+   vazio tem os seus, e mostrar os dois pares duplicaria cada ação. */
+body.is-empty .page-actions{display:none}
 body.is-empty .toolbar{display:none}
 body.is-empty .board-wrap{display:none}
 body.is-empty .rule--hide-on-empty{display:none}
@@ -687,6 +718,19 @@ body.is-empty .rule--hide-on-empty{display:none}
 
 /* Modais de confirmação (Excluir / Duplicar) */
 .modal--stacked{width:440px;padding:24px}
+
+/* ---------- Modal "Gerar com ajuda da IA" — IDEIA-GERAR-011 ----------
+   Mesma casca da "Nova idéia" (.modal + .np-main), um pouco mais
+   larga: o campo é de texto corrido, e 480px deixava o exemplo do
+   placeholder em quatro linhas. */
+.modal--gerar{width:560px}
+.gi-intro{font-size:15px;line-height:24px;color:var(--text-secondary);margin:16px 0 0}
+.gi-intro strong{color:var(--text-primary);font-weight:600}
+.gi-opcional{font-weight:400;color:var(--text-muted)}
+.gi-meta{display:flex;align-items:flex-start;justify-content:flex-end;gap:16px;font-size:13px;line-height:18px;color:var(--text-muted)}
+.gi-contador{flex-shrink:0;font-variant-numeric:tabular-nums}
+.gi-contador.is-limite{color:var(--text-danger)}
+#gerarIaOrientacao{min-height:132px}
 .modal-shell{display:flex;flex-direction:column;height:100%;gap:0}
 .modal-confirm{display:flex;flex-direction:column;align-items:flex-start;gap:24px}
 .modal-confirm-text{font-size:15px;line-height:24px;color:var(--text-primary);margin:0;margin-top:24px;max-width:360px}
@@ -1572,10 +1616,21 @@ body.modal-open{overflow:hidden}
         </span>
         <span class="page-title-main" id="pageTitle"></span>
       </h1>
+      <div class="page-actions">
+      <!-- IDEIA-GERAR: as etapas do projeto, geradas pela Skill
+           senior-product-designer. Ghost — a ação principal da tela
+           continua sendo "Nova idéia". -->
+      <button class="btn btn--ghost" id="gerarIa" type="button" data-gerar-ia hidden>
+        <svg class="btn-icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0Z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+        <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2.5" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9" stroke-width="2.5"/></svg>
+        <span class="btn-label">Gerar com ajuda da IA</span>
+        <span class="btn-loading-label">Gerando idéias...</span>
+      </button>
       <button class="btn btn--primary" id="openModal" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         Nova idéia
       </button>
+      </div>
     </header>
 
     <div class="section-head">
@@ -1614,12 +1669,18 @@ body.modal-open{overflow:hidden}
       </div>
 
       <div class="field-filter">
-        <button type="button" class="select" id="filter" data-value="recentes" aria-haspopup="listbox" aria-expanded="false" aria-label="Filtrar por">
-          <span id="filterLabel">Mais recente</span>
+        <button type="button" class="select" id="filter" data-value="quadro" aria-haspopup="listbox" aria-expanded="false" aria-label="Filtrar por">
+          <span id="filterLabel">Ordem do quadro</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
         </button>
         <div class="select-menu" role="listbox" aria-labelledby="filterLabel">
-          <button type="button" role="option" aria-selected="true" data-value="recentes">
+          <!-- IDEIA-ORDEM-007: a ordem que a pessoa montou arrastando. É a
+               padrão, e a única em que dá para reorganizar. -->
+          <button type="button" role="option" aria-selected="true" data-value="quadro">
+            Ordem do quadro
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
+          </button>
+          <button type="button" role="option" aria-selected="false" data-value="recentes">
             Mais recente
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7"/></svg>
           </button>
@@ -1699,13 +1760,19 @@ body.modal-open{overflow:hidden}
         <h2>Nenhuma idéia por aqui ainda</h2>
         <p>Crie sua primeira idéia para começar a organizar o que ainda está na cabeça em um só lugar.</p>
         <div class="empty-actions">
-          <!-- O botão "Gerar com ajuda da IA" saiu daqui: a IA foi adiada
-               (decisão I3, ideias-quadro.md). Volta junto da funcionalidade
-               de verdade — IDEIA-VAZIO-003. -->
           <button class="btn btn--primary" id="openModalEmpty" type="button" hidden>
             <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
             Nova idéia
-          </button></div>
+          </button>
+          <!-- IDEIA-VAZIO-003 (revista 23/09/2026): o botão volta junto
+               com a funcionalidade de verdade — IDEIA-GERAR. -->
+          <button class="btn btn--ghost" id="gerarIaEmpty" type="button" data-gerar-ia hidden>
+            <svg class="btn-icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0Z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+            <svg class="btn-spinner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-width="2.5" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9" stroke-width="2.5"/></svg>
+            <span class="btn-label">Gerar com ajuda da IA</span>
+            <span class="btn-loading-label">Gerando idéias...</span>
+          </button>
+        </div>
       </section>
     </div>
 
@@ -1790,7 +1857,7 @@ body.modal-open{overflow:hidden}
 
 <!-- Região viva: anuncia movimentações de card a leitores de tela -->
 <p class="sr-only" role="status" aria-live="polite" id="liveRegion"></p>
-<p class="sr-only" id="dragHelp">Arraste o card para outra coluna ou use as setas esquerda e direita para movê-lo.</p>
+<p class="sr-only" id="dragHelp">Arraste o card para outra coluna ou use as setas esquerda e direita para movê-lo. Para mudar a posição dentro da coluna, arraste-o para cima ou para baixo, ou use Alt com as setas para cima e para baixo.</p>
 
 <!-- ===================== MODAL: nova idéia ===================== -->
 <dialog class="modal" id="modal" aria-labelledby="modalTitle">
@@ -1846,6 +1913,53 @@ body.modal-open{overflow:hidden}
 <div class="modal-divider"></div>
 <div class="modal-footer">
           <button type="submit" class="btn btn--primary">Salvar</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</dialog>
+
+<!-- ============ MODAL GERAR COM AJUDA DA IA — IDEIA-GERAR-011 ============ -->
+<dialog class="modal modal--gerar" id="gerarIaModal" aria-labelledby="gerarIaTitulo">
+  <div class="np-shell">
+    <div class="np-main">
+
+      <div class="modal-header">
+        <h2 class="modal-title" id="gerarIaTitulo">
+          <span class="modal-title-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0Z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+          </span>
+          Gerar com ajuda da IA
+        </h2>
+        <button type="button" class="modal-close" id="gerarIaFechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Fechar
+        </button>
+      </div>
+
+      <p class="gi-intro" id="gerarIaIntro">
+        A IA vai sugerir as etapas deste projeto e colocá-las em
+        <strong>Minhas idéias</strong>, na ordem de execução. Você pode incluir
+        uma orientação para a Inteligência Artificial.
+      </p>
+
+      <form class="modal-form" id="gerarIaForm" method="dialog" novalidate>
+        <div class="field">
+          <label class="label" for="gerarIaOrientacao">
+            <span class="sr-only">Orientação para a IA </span><span class="gi-opcional">(opcional)</span>
+          </label>
+          <textarea class="textarea" id="gerarIaOrientacao" maxlength="1000"
+                    aria-describedby="gerarIaContador"></textarea>
+          <div class="gi-meta">
+            <span class="gi-contador" id="gerarIaContador" aria-live="polite">0/1000</span>
+          </div>
+        </div>
+
+        <div class="modal-divider"></div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn--primary" id="gerarIaConfirmar">Gerar idéias</button>
+          <button type="button" class="btn btn--secondary" id="gerarIaCancelar">Cancelar</button>
         </div>
       </form>
 
@@ -2025,6 +2139,27 @@ body.modal-open{overflow:hidden}
   }
 
   /* ---------- Busca e ordenação (IDEIA-BUSCA) ---------- */
+
+  /* IDEIA-ORDEM-001: "Ordem do quadro" — posição crescente e, no
+     empate, a mais nova primeiro. Mesma regra de compararOrdem em
+     api/src/ideias/ordem.ts, que é a que o servidor usa. */
+  function compararOrdem(a, b){
+    var pa = typeof a.posicao === 'number' ? a.posicao : 0;
+    var pb = typeof b.posicao === 'number' ? b.posicao : 0;
+    if(pa !== pb) return pa - pb;
+    return new Date(b.criado_em) - new Date(a.criado_em);
+  }
+
+  /* IDEIA-ORDEM-007: só dá para reorganizar vendo a ordem de verdade.
+     Com busca, a coluna mostra só parte dos cards; com outra
+     ordenação, a posição na tela não é a posição gravada. Nos dois
+     casos, soltar "entre A e B" não teria um significado honesto. */
+  function podeReordenar(){
+    return podeEscrever(papelAtual) && modoOrdenacao() === 'quadro' && busca.value.trim() === '';
+  }
+  var AVISO_REORDENAR = 'Para reorganizar os cards, limpe a busca e use a ordenação “Ordem do quadro”.';
+  function avisar(msg){ if(window.mostrarMensagem) window.mostrarMensagem(msg); }
+
   function modoOrdenacao(){
     return filtro.getAttribute('data-value');
   }
@@ -2039,7 +2174,8 @@ body.modal-open{overflow:hidden}
     return lista.slice().sort(function(a,b){
       if(modo === 'relevancia') return (b.importancia||0) - (a.importancia||0);
       if(modo === 'data')       return new Date(a.criado_em) - new Date(b.criado_em);
-      return new Date(b.criado_em) - new Date(a.criado_em);
+      if(modo === 'recentes')   return new Date(b.criado_em) - new Date(a.criado_em);
+      return compararOrdem(a, b);
     });
   }
 
@@ -2113,6 +2249,13 @@ body.modal-open{overflow:hidden}
     if(!destino) return false;
 
     var origem = ideia.status;
+    var posicaoOrigem = ideia.posicao;
+    /* IDEIA-ORDEM-006: chega no topo da coluna — mesma conta do
+       servidor (posicaoNoTopo), para a tela não mostrar um lugar e o
+       banco gravar outro. */
+    var naDestino = IDEIAS.filter(function(i){ return i.status === destino.id; })
+      .map(function(i){ return typeof i.posicao === 'number' ? i.posicao : 0; });
+    ideia.posicao = naDestino.length ? Math.min.apply(null, naDestino) - 1 : 0;
     ideia.status = destino.id;
     entrandoId = id;
     desenhar();
@@ -2128,10 +2271,66 @@ body.modal-open{overflow:hidden}
     if(window.IdeiasAcoes && window.IdeiasAcoes.mover){
       window.IdeiasAcoes.mover(id, destino.id).catch(function(){
         var atual = porId(id);
-        if(atual){ atual.status = origem; desenhar(); }
+        if(atual){ atual.status = origem; atual.posicao = posicaoOrigem; desenhar(); }
       });
     }
     return true;
+  }
+
+  /* ------------------------------------------------------------
+     Reorganizar dentro da coluna — IDEIA-ORDEM-001 a 008
+     ------------------------------------------------------------
+     Arrastar e Alt+setas chegam aqui, como mover() para as colunas.
+     `novosIds` é a coluna INTEIRA na ordem nova — é isso que vai ao
+     servidor, que confere se a coluna ainda é a mesma.
+
+     Otimista com reversão, como mover (IDEIA-MOV-011/012): o card
+     anda na hora e volta se o servidor recusar.
+     ------------------------------------------------------------ */
+  function reordenar(status, novosIds, idMovido, focar){
+    if(!podeReordenar()) return false;
+
+    var atuais = idsDaColuna(status);
+    if(atuais.join('|') === novosIds.join('|')) return false;   // IDEIA-ORDEM-003
+
+    var antes = {};
+    novosIds.forEach(function(id, indice){
+      var ideia = porId(id);
+      if(!ideia) return;
+      antes[id] = ideia.posicao;
+      ideia.posicao = indice;
+    });
+    desenhar();
+
+    var ideia = porId(idMovido);
+    var col = colunaPorId(status);
+    if(ideia && col){
+      var pos = novosIds.indexOf(idMovido) + 1;
+      live.textContent = '“' + ideia.titulo + '” movida para a posição ' + pos + ' de ' + novosIds.length + ' em ' + col.rotulo + '.';
+    }
+    if(focar){
+      var alvo = board.querySelector('.idea[data-id="' + idMovido + '"]');
+      if(alvo) alvo.focus();
+    }
+
+    if(window.IdeiasAcoes && window.IdeiasAcoes.reordenar){
+      window.IdeiasAcoes.reordenar(status, novosIds).catch(function(){
+        Object.keys(antes).forEach(function(id){
+          var i = porId(id);
+          if(i) i.posicao = antes[id];
+        });
+        desenhar();
+      });
+    }
+    return true;
+  }
+
+  /* Os ids da coluna na ordem em que estão NA TELA — que, com
+     podeReordenar() verdadeiro, é a ordem gravada inteira. */
+  function idsDaColuna(status){
+    return IDEIAS.filter(function(i){ return i.status === status; })
+      .sort(compararOrdem)
+      .map(function(i){ return i.id; });
   }
 
   /* ATV-ACESSO-001: "Acessar" garante que a idéia está em "Em
@@ -2231,7 +2430,28 @@ body.modal-open{overflow:hidden}
   });
 
   /* ---------- Teclado: setas movem o card em foco ---------- */
+  /* IDEIA-ORDEM-008: Alt + seta para cima/baixo troca o card de lugar
+     com o vizinho. Seta sozinha continua rolando a página. */
   board.addEventListener('keydown', function(e){
+    if(!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    var card = e.target.closest('.idea');
+    if(!card || e.target !== card) return;
+    var ideia = porId(card.dataset.id);
+    if(!ideia || !podeEscrever(papelAtual)) return;
+    e.preventDefault();
+    if(!podeReordenar()){ avisar(AVISO_REORDENAR); return; }
+
+    var ids = idsDaColuna(ideia.status);
+    var i = ids.indexOf(ideia.id);
+    var j = e.key === 'ArrowUp' ? i - 1 : i + 1;
+    if(i < 0 || j < 0 || j >= ids.length) return;
+    ids.splice(i, 1);
+    ids.splice(j, 0, ideia.id);
+    reordenar(ideia.status, ids, ideia.id, true);
+  });
+
+  board.addEventListener('keydown', function(e){
+    if(e.altKey) return;
     if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     var card = e.target.closest('.idea');
     if(!card) return;
@@ -2249,11 +2469,37 @@ body.modal-open{overflow:hidden}
 
   /* ---------- Arrastar e soltar ---------- */
   var arrastandoId = null;
+  var tentouReordenarBloqueado = false;
+  var indicador = document.createElement('li');
+  indicador.className = 'drop-indicator';
+  indicador.setAttribute('aria-hidden', 'true');
 
   function limparAlvos(){
     Array.prototype.forEach.call(board.querySelectorAll('.column-body.is-drop-target'), function(el){
       el.classList.remove('is-drop-target');
     });
+  }
+  function tirarIndicador(){
+    if(indicador.parentNode) indicador.parentNode.removeChild(indicador);
+  }
+
+  /* O card antes do qual o arrastado vai entrar: o primeiro (fora ele
+     mesmo) cujo meio está abaixo do ponteiro. null = vai para o fim. */
+  function cardDepoisDoPonteiro(lista, y){
+    var cards = Array.prototype.filter.call(lista.querySelectorAll(':scope > .idea'), function(c){
+      return c.dataset.id !== arrastandoId;
+    });
+    for(var k = 0; k < cards.length; k++){
+      var r = cards[k].getBoundingClientRect();
+      if(y < r.top + r.height / 2) return cards[k];
+    }
+    return null;
+  }
+
+  function posicionarIndicador(lista, y){
+    var depois = cardDepoisDoPonteiro(lista, y);
+    var fim = lista.querySelector(':scope > .idea-add');
+    lista.insertBefore(indicador, depois || fim || null);
   }
 
   /* Um card inteiro arrastável engoliria o clique no botão "Acessar",
@@ -2279,12 +2525,27 @@ body.modal-open{overflow:hidden}
     var ideia = porId(arrastandoId);
     if(!alvo || !ideia) return;
 
-    /* Soltar na coluna de origem não muda nada — sem preventDefault,
-       o cursor mostra "não permitido" (IDEIA-MOV-003). */
-    if(alvo.dataset.status === ideia.status){ limparAlvos(); return; }
+    /* Na coluna de origem: reorganizar (IDEIA-ORDEM-005). Sem poder
+       reorganizar, nada de preventDefault — o cursor mostra "não
+       permitido", e ao soltar a tela explica por quê. */
+    if(alvo.dataset.status === ideia.status){
+      limparAlvos();
+      var lista = alvo.querySelector('.card-list');
+      if(!lista || !podeReordenar()){
+        tirarIndicador();
+        tentouReordenarBloqueado = podeEscrever(papelAtual);
+        return;
+      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      posicionarIndicador(lista, e.clientY);
+      return;
+    }
 
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    tirarIndicador();
+    tentouReordenarBloqueado = false;
     limparAlvos();
     alvo.classList.add('is-drop-target');
   });
@@ -2299,12 +2560,37 @@ body.modal-open{overflow:hidden}
     if(!alvo || arrastandoId === null) return;
     e.preventDefault();
     limparAlvos();
+
+    var ideia = porId(arrastandoId);
+    if(ideia && alvo.dataset.status === ideia.status){
+      /* A ordem nova é a da tela, com o card no lugar do indicador. */
+      var lista = alvo.querySelector('.card-list');
+      var ids = [];
+      if(lista && indicador.parentNode === lista){
+        Array.prototype.forEach.call(lista.children, function(el){
+          if(el === indicador) ids.push(ideia.id);
+          else if(el.classList.contains('idea') && el.dataset.id !== ideia.id) ids.push(el.dataset.id);
+        });
+      }
+      tirarIndicador();
+      tentouReordenarBloqueado = false;
+      if(ids.length) reordenar(ideia.status, ids, ideia.id, true);
+      arrastandoId = null;
+      return;
+    }
+
+    tirarIndicador();
     mover(arrastandoId, alvo.dataset.status, 'card');
     arrastandoId = null;
   });
 
   board.addEventListener('dragend', function(){
     limparAlvos();
+    tirarIndicador();
+    /* Soltou na própria coluna com busca ou outra ordenação ativa:
+       diz por que não reorganizou, em vez de só não acontecer nada. */
+    if(tentouReordenarBloqueado) avisar(AVISO_REORDENAR);
+    tentouReordenarBloqueado = false;
     Array.prototype.forEach.call(board.querySelectorAll('.is-dragging'), function(el){
       el.classList.remove('is-dragging');
     });
@@ -2343,10 +2629,10 @@ body.modal-open{overflow:hidden}
      idéia que a pessoa acabou de escrever. */
   function limparFiltros(){
     busca.value = '';
-    filtro.setAttribute('data-value','recentes');
-    rotuloFiltro.textContent = 'Mais recente';
+    filtro.setAttribute('data-value','quadro');
+    rotuloFiltro.textContent = 'Ordem do quadro';
     Array.prototype.forEach.call(menuFiltro.querySelectorAll('[role="option"]'), function(b){
-      b.setAttribute('aria-selected', String(b.dataset.value === 'recentes'));
+      b.setAttribute('aria-selected', String(b.dataset.value === 'quadro'));
     });
   }
 
@@ -2411,6 +2697,118 @@ body.modal-open{overflow:hidden}
 
   document.getElementById('openModal').addEventListener('click', abrirModalCriacao);
   document.getElementById('openModalEmpty').addEventListener('click', abrirModalCriacao);
+
+  /* ---------- Gerar com ajuda da IA — IDEIA-GERAR ----------
+     Os dois botões mudam juntos: enquanto um gera, o outro não pode
+     disparar uma segunda geração paga. Sem barra de progresso — não
+     sabemos quanto falta (IA-CONV-NARRA); o spinner diz só a verdade:
+     está trabalhando. */
+  var botoesGerar = Array.prototype.slice.call(document.querySelectorAll('[data-gerar-ia]'));
+  function marcarGerando(ligado){
+    botoesGerar.forEach(function(b){
+      /* A largura fica presa enquanto gera: "Gerando idéias..." é mais
+         curto que o rótulo, e no cabeçalho o botão encolheria para a
+         direita, saindo de baixo do cursor. */
+      b.style.minWidth = ligado ? b.offsetWidth + 'px' : '';
+      b.classList.toggle('is-loading', ligado);
+      b.disabled = ligado;
+      b.setAttribute('aria-busy', String(ligado));
+    });
+  }
+  /* Guarda o texto de uma geração que FALHOU, para a pessoa não ter
+     de reescrever ao tentar de novo. Numa geração que deu certo ele
+     é apagado: a próxima começa em branco. */
+  var orientacaoPendente = '';
+
+  function gerarComIa(orientacao){
+    if(!window.IdeiasAcoes || !window.IdeiasAcoes.gerar) return;
+    if(botoesGerar.some(function(b){ return b.disabled; })) return;
+    marcarGerando(true);
+    /* IDEIA-BUSCA-004: as idéias novas não podem nascer escondidas
+       por uma busca ou ordenação que estava ativa. */
+    limparFiltros();
+    window.IdeiasAcoes.gerar(orientacao).then(
+      function(){ orientacaoPendente = ''; },
+      function(){ orientacaoPendente = orientacao || ''; }
+    ).then(function(){
+      marcarGerando(false);
+    });
+  }
+
+  /* ---------- Modal "Gerar com ajuda da IA" — IDEIA-GERAR-011 ----------
+     Os dois botões (cabeçalho e estado vazio) abrem a mesma modal. O
+     campo é opcional de verdade: "Gerar idéias" com ele vazio roda a
+     geração exatamente como rodava antes da modal existir. */
+  var giModal     = document.getElementById('gerarIaModal');
+  var giForm      = document.getElementById('gerarIaForm');
+  var giCampo     = document.getElementById('gerarIaOrientacao');
+  var giContador  = document.getElementById('gerarIaContador');
+  var giIntro     = document.getElementById('gerarIaIntro');
+  var giGatilho   = null;
+  var GI_MAX      = 1000;
+
+  function giAtualizarContador(){
+    var n = giCampo.value.length;
+    giContador.textContent = n + '/' + GI_MAX;
+    giContador.classList.toggle('is-limite', n >= GI_MAX);
+  }
+
+  /* O nome do projeto na frase de abertura, quando já carregou: diz
+     à pessoa QUAL trabalho a IA vai quebrar em etapas. Montado com
+     nós — o nome é dado gravado. */
+  function giMontarIntro(){
+    var h = document.getElementById('tituloProjeto');
+    var nome = h && !h.classList.contains('is-carregando') ? h.textContent.trim() : '';
+    giIntro.textContent = '';
+    var forte = function(t){ var b = document.createElement('strong'); b.textContent = t; return b; };
+    if(nome){
+      giIntro.append('A IA vai sugerir as etapas do projeto ', forte(nome), ' e colocá-las em ', forte('Minhas idéias'), ', na ordem de execução. Você pode incluir uma orientação para a Inteligência Artificial.');
+    } else {
+      giIntro.append('A IA vai sugerir as etapas deste projeto e colocá-las em ', forte('Minhas idéias'), ', na ordem de execução. Você pode incluir uma orientação para a Inteligência Artificial.');
+    }
+  }
+
+  function abrirModalGerar(ev){
+    if(botoesGerar.some(function(b){ return b.disabled; })) return;
+    giGatilho = ev && ev.currentTarget ? ev.currentTarget : null;
+    giMontarIntro();
+    giCampo.value = orientacaoPendente;
+    giAtualizarContador();
+    giModal.showModal();
+    document.body.classList.add('modal-open');
+    giCampo.focus();
+  }
+
+  function fecharModalGerar(){ if(giModal.open) giModal.close(); }
+
+  botoesGerar.forEach(function(b){ b.addEventListener('click', abrirModalGerar); });
+  document.getElementById('gerarIaFechar').addEventListener('click', fecharModalGerar);
+  document.getElementById('gerarIaCancelar').addEventListener('click', fecharModalGerar);
+  giModal.addEventListener('click', function(e){ if(e.target === giModal) fecharModalGerar(); });
+  giCampo.addEventListener('input', giAtualizarContador);
+
+  /* Enter no campo é quebra de linha; Ctrl/Cmd+Enter gera. */
+  giCampo.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)){
+      e.preventDefault();
+      giForm.requestSubmit();
+    }
+  });
+
+  giForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var orientacao = giCampo.value.trim().slice(0, GI_MAX);
+    fecharModalGerar();
+    gerarComIa(orientacao);
+  });
+
+  giModal.addEventListener('close', function(){
+    document.body.classList.remove('modal-open');
+    /* O foco volta ao botão que abriu — que agora mostra "Gerando
+       idéias...", então quem usa leitor de tela ouve o que aconteceu. */
+    if(giGatilho && document.contains(giGatilho)) giGatilho.focus();
+    giGatilho = null;
+  });
   document.getElementById('closeModal').addEventListener('click', fecharModal);
   modal.addEventListener('click', function(e){ if(e.target === modal) fecharModal(); });
   modal.addEventListener('close', function(){ document.body.classList.remove('modal-open'); });
@@ -2589,6 +2987,10 @@ body.modal-open{overflow:hidden}
        vazio — nos DOIS caminhos. Foi exatamente isto que faltou em
        projetos.html e deixou o estado vazio sem saída (IDEIA-VAZIO-002). */
     document.querySelectorAll('[id="openModal"], [id="openModalEmpty"]').forEach(function(b){
+      b.hidden = !pode;
+    });
+    /* IDEIA-GERAR-002: gerar é criar — mesma régua, nos dois lugares. */
+    document.querySelectorAll('[data-gerar-ia]').forEach(function(b){
       b.hidden = !pode;
     });
   }

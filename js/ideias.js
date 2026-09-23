@@ -118,6 +118,50 @@
        quando o servidor achou uma parecida e NÃO gravou nada — a
        tela (visao_do_projeto.html) é quem decide o que fazer com
        cada uma. Isto não é erro: por isso não cai no `catch`. */
+    /* IDEIA-GERAR — "Gerar com ajuda da IA".
+       O servidor cria as idéias (já em ordem de execução) e devolve
+       as que criou; aqui o quadro é recarregado inteiro, porque são
+       várias de uma vez e a ordem certa é a do servidor.
+
+       As três saídas dizem coisas diferentes e pedem ações
+       diferentes: criou (começar pela primeira), não criou nada
+       porque já existiam parecidas (nada a fazer), falhou (tentar de
+       novo). `parecidas` nunca some em silêncio — IDEIA-GERAR-005. */
+    /* IDEIA-GERAR-011: `orientacao` é o texto opcional da modal. Vazio
+       não vai no corpo — o servidor gera como sempre gerou. */
+    gerar: function (orientacao) {
+      var corpo = {};
+      var texto = typeof orientacao === 'string' ? orientacao.trim() : '';
+      if (texto) corpo.orientacao = texto;
+      return chamarComRenovacao(base() + '/gerar', { metodo: 'POST', corpo: corpo }, false).then(function (r) {
+        var criadas = (r && r.ideias) || [];
+        var parecidas = (r && r.parecidas) || 0;
+
+        if (criadas.length === 0) {
+          aviso('As idéias sugeridas já estão no quadro. Nenhuma idéia nova foi criada.');
+          return r;
+        }
+
+        return carregarQuadro().then(function () {
+          var texto = criadas.length === 1
+            ? '1 idéia criada em Minhas idéias.'
+            : criadas.length + ' idéias criadas em Minhas idéias, na ordem de execução. Comece pela primeira.';
+          if (parecidas > 0) {
+            texto += parecidas === 1
+              ? ' 1 ficou de fora por ser parecida com uma que já existe.'
+              : ' ' + parecidas + ' ficaram de fora por serem parecidas com idéias que já existem.';
+          }
+          window.IdeiasView.anunciar(texto);
+          aviso(texto);
+          return r;
+        });
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        avisoErro(mensagemDeFalha(e, 'Não foi possível gerar idéias agora. Tente de novo em instantes.'));
+        throw e;
+      });
+    },
+
     criar: function (titulo, descricao, importancia, opcoes) {
       var ignorar = !!(opcoes && opcoes.ignorarDuplicata);
       return chamarComRenovacao(base(), {
@@ -155,6 +199,29 @@
            insistir na edição de algo que não existe mais, não. */
         if (e.status === 404) { carregarQuadro(); throw e; }
         avisoErro(mensagemDeFalha(e, 'Não foi possível salvar a idéia.'));
+        throw e;
+      });
+    },
+
+    /* IDEIA-ORDEM-003/004: grava a coluna inteira na ordem nova.
+       Chamada depois de o card já ter andado na tela; se falhar, quem
+       reverte é a tela. Um 409 é a coluna que mudou desde que a tela
+       carregou (outra pessoa criou, moveu ou excluiu uma idéia): o
+       quadro é recarregado para mostrar a ordem que vale de verdade. */
+    reordenar: function (status, ids) {
+      return chamarComRenovacao(base() + '/ordem', {
+        metodo: 'PUT',
+        corpo: { status: status, ids: ids },
+      }, false).then(function (r) {
+        return r;
+      }, function (e) {
+        if (tratarErroFatal(e)) throw e;
+        if (e.status === 409 || e.status === 404) {
+          carregarQuadro();
+          if (e.status === 409) aviso(mensagemDeFalha(e, 'O quadro mudou enquanto você reorganizava. Atualizamos para você ver a ordem atual.'));
+          throw e;
+        }
+        avisoErro(mensagemDeFalha(e, 'Não foi possível reorganizar a idéia.'));
         throw e;
       });
     },

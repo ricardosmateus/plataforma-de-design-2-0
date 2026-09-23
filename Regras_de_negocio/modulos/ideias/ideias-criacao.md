@@ -1,6 +1,6 @@
 # Regras de Negócio — Criação e Edição de Idéias
 
-> **Versão:** 1.2.0 · **Status:** Implementado · conferência parcial
+> **Versão:** 1.4.0 · **Status:** Implementado · conferência parcial
 > **Conferido em:** 16/09/2026, na investigação de por que o alerta de duplicidade não disparava: `duplicidade.ts`, as rotas de `ideias.ts` e a rota `/confirmar` de `ia.ts` conferidas contra o código e contra as 152 idéias reais do projeto Startup/iHouseLog; regras da modal (IDEIA-MODAL) ainda não
 > **Módulo:** Idéias · **Página:** `visao_do_projeto.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -85,6 +85,30 @@ Calibração nova: **0.7 no título, 0.3 na descrição, limiar 0.6 sem mudança
 
 **Bug corrigido em 26/08/2026 — o alerta escondido bloqueava o clique em "Nova idéia".** `.dup-alerta{display:flex}` tem a mesma especificidade CSS do `[hidden]{display:none}` do navegador, e regra de autor sempre vence empate contra regra do user-agent — então o elemento nunca ficava de fato `display:none`, mesmo com o atributo `hidden` presente: continuava ocupando layout e, principalmente, continuava recebendo eventos de clique por cima do cabeçalho, mesmo invisível (`opacity:0` não desliga hit-testing). Resultado: com o alerta oculto, clicar em "Nova idéia" não fazia nada. O mesmo defeito, com a mesma causa, já existia em `.toast` — corrigido junto, mesma correção. Ajuste: `pointer-events:none` no estado padrão, `.dup-alerta[hidden]{display:none}` (mais específico, garante o repouso) e `pointer-events:auto` só em `.dup-alerta.is-visible`. Este é o mesmo padrão já usado em `.btn[hidden]`, na mesma página, por um incidente real anterior em `projetos.html`.
 
+### 1.5 Gerar com ajuda da IA — `IDEIA-GERAR`
+
+Para quem abre um projeto e não sabe por onde começar. Um clique e o quadro ganha as etapas do trabalho daquele tipo de projeto, uma idéia por etapa, em ordem de execução. Quem gera é a Skill `Skills/senior-product-designer.skill`; o que ela promete e o que o servidor garante estão aqui.
+
+| ID | Regra | Fonte |
+|---|---|---|
+| IDEIA-GERAR-001 | O botão **"Gerar com ajuda da IA"** (variante `ghost` do styleguide) aparece em dois lugares de `visao_do_projeto.html`: no cabeçalho, à esquerda de "Nova idéia", e no estado vazio, à direita de "Nova idéia". No estado vazio o par do cabeçalho sai inteiro, para nenhuma ação aparecer duas vezes. | Pedido do Ricardo, 23/09/2026 |
+| IDEIA-GERAR-002 | Gerar é criar idéias: aparece e é aceito só para quem pode criar (IDEIA-CRIA-004). O servidor recusa de novo com `403` (IDEIA-CRIA-010). | Decorre de IDEIA-CRIA-004 |
+| IDEIA-GERAR-003 | O **nome do projeto** escolhido na modal "Novo projeto" ("Identidade Visual", "Landing Page", "MVP"…) define o trabalho; sem nome escolhido, vale o rótulo do tipo. A ficha da empresa (nome e descrição) especifica cada etapa. Projetos de tipos diferentes recebem listas diferentes. Pedido ao modelo: **4 a 7 etapas**; aceitas até 8. | Decisão I14 |
+| IDEIA-GERAR-004 | Cada etapa vira uma idéia com título e descrição dentro dos limites de IDEIA-CRIA-001, **conferidos no servidor** — o que passa do limite é encurtado em fronteira de frase ou de palavra, nunca no meio da palavra. Item sem título ou sem descrição, e título repetido na mesma resposta, são descartados. | Decorre de IDEIA-CRIA-001/005 |
+| IDEIA-GERAR-005 | Toda etapa passa pela checagem de duplicidade (IDEIA-DUPL-001) contra **todas** as idéias ativas do projeto e contra as etapas já aceitas na mesma resposta. Parecida **não é gravada**, e a resposta diz quantas ficaram de fora — a tela conta isso à pessoa, nunca some com elas em silêncio. | Decorre de IDEIA-DUPL-001 |
+| IDEIA-GERAR-006 | As idéias **caem direto em "Minhas idéias"** (IDEIA-CRIA-003), sem tela de aprovação: quem não quer uma etapa a exclui ou edita no próprio quadro. A primeira etapa fica no topo da ordenação padrão ("Mais recente") — a ordem de execução é a ordem do quadro, sem número colado no título. | Decisão I14 |
+| IDEIA-GERAR-007 | As idéias geradas nascem **sem importância** (zero). A nota é da pessoa (IDEIA-CRIA-002); a IA inventaria números com convicção. | Decorre de IDEIA-CRIA-002 |
+| IDEIA-GERAR-008 | Custo: reserva antes de chamar, `402` sem saldo, e cobrança só do que foi **entregue** — resposta que não vira nenhuma idéia gravada é registrada como `descartado` e não é cobrada (IA-CUSTO-002/003). Consumo registrado como `assistente`. O valor aparece só no Histórico de uso (DIN-013). | Decorre de IA-CUSTO / DIN-013 |
+| IDEIA-GERAR-009 | Enquanto gera, **os dois botões** ficam em carregando ("Gerando idéias...") e desabilitados — um segundo clique não dispara uma segunda geração paga. Sem barra de progresso: não se sabe quanto falta. A busca e a ordenação são limpas antes (IDEIA-BUSCA-004). | Decorre de IA-CONV-NARRA |
+| IDEIA-GERAR-010 | Três desfechos, três mensagens: criou (quantas, na ordem de execução, e quantas ficaram de fora por semelhança); não criou nada porque todas eram parecidas (aviso, não erro); falhou (toast de erro com o motivo do servidor, nada gravado, nada cobrado). | Decorre de IA-ACAO-009 |
+| IDEIA-GERAR-011 | **Os dois botões "Gerar com ajuda da IA" (cabeçalho e estado vazio) abrem uma modal antes de gerar.** Ela diz o que vai acontecer ("A IA vai sugerir as etapas do projeto **Logotipo** e colocá-las em **Minhas idéias**, na ordem de execução") e traz um campo **opcional** "Orientação para a IA", até **1.000 caracteres**, com contador — sem texto de ajuda abaixo e sem exemplo dentro do campo (revisto 23/09/2026: o exemplo era lido como sugestão a seguir, e confundia). **"Gerar idéias"** fecha a modal e inicia a geração (IDEIA-GERAR-009 continua valendo: os dois botões ficam em carregando); **"Cancelar"**, "Fechar", Esc e clique fora não geram nada e não custam nada. Campo vazio = a geração roda exatamente como antes da modal: o texto não vai no pedido. Com texto, ele vai ao modelo como **contexto** da Skill, num bloco delimitado depois dos dados do projeto: ajusta foco, prioridade e o que já está resolvido, mas não troca a lógica da Skill (o nome do projeto continua definindo o trabalho, IDEIA-GERAR-003) nem o formato; o que pedir fora do projeto é ignorado. Se a geração **falhar**, o texto fica guardado e reaparece ao reabrir a modal; se der certo, a próxima abre em branco. Ctrl/Cmd+Enter gera. O servidor recusa orientação acima do limite com `400` (`campo: "orientacao"`) **antes** de reservar crédito. | Decidido 23/09/2026 com o Ricardo |
+
+**Por que direto no quadro, e não uma lista para aprovar (IDEIA-GERAR-006).** O botão existe para quem não sabe por onde começar — pedir a essa pessoa que julgue sete etapas antes de ver qualquer uma no quadro é devolver a ela a decisão que ela veio pedir. É a mesma leitura de D1 e D12 em `planejamento-pesquisa-v2.md`: *ele já clicou, e já sabemos que ele quer*. Apagar continua onde a pessoa já sabe mexer, card a card. O custo assumido: o **especialista** não exclui (IDEIA-CRIA-008), então uma etapa que ele não queira fica até alguém da empresa removê-la.
+
+**Por que o nome, e não o `tipo` (IDEIA-GERAR-003).** Todo projeto hoje tem `tipo = startup` (PROJ-CRIA-006); o que diferencia "Identidade Visual" de "Landing Page" é o `nome` escolhido na modal. Gerar pelo `tipo` daria a mesma lista para todos.
+
+**Por que a duplicidade não pergunta, aqui (IDEIA-GERAR-005).** Na criação à mão, a parecida vira alerta porque a pessoa escreveu aquilo e pode querer mesmo assim (I12). Aqui ninguém escreveu: a IA propôs algo que o quadro já tem. Perguntar "criar mesmo assim?" sobre um texto que a pessoa nem leu seria decisão sem informação. A etapa sai, e a contagem é dita.
+
 ---
 
 ## 2. Contrato da API
@@ -104,6 +128,19 @@ Calibração nova: **0.7 no título, 0.3 na descrição, limiar 0.6 sem mudança
 | Qualquer elo da corrente falha | `404` | Redireciona para `projetos.html` |
 
 `ignorar_duplicata: true` é o que o botão "Criar"/"Salvar" do alerta envia no reenvio, depois que a pessoa já viu o alerta e decidiu que quer mesmo assim (IDEIA-DUPL-006) — só então a checagem é pulada e a idéia é gravada de verdade.
+
+### `POST /empresas/:empresaId/projetos/:projetoId/ideias/gerar`
+
+**Corpo:** vazio.
+
+| Situação | Resposta | Efeito na tela |
+|---|---|---|
+| Etapas geradas e ao menos uma gravada | `201` com `{ ideias: [...], parecidas: n }` — `ideias` na ordem de execução | Recarrega o quadro; toast com quantas foram criadas e quantas ficaram de fora |
+| Todas as etapas eram parecidas com idéias existentes | `200` com `{ ideias: [], parecidas: n }` | Toast de aviso: nenhuma idéia nova. Nada gravado, nada cobrado |
+| Papel sem permissão de criar | `403` | — (o botão nem aparece) |
+| Saldo insuficiente | `402` | Toast de erro |
+| IA não configurada, modelo sem preço, provedor fora ou resposta sem nenhuma etapa válida | `503` | Toast de erro. Nada gravado, nada cobrado |
+| Qualquer elo da corrente falha (IDEIA-ISO-003) | `404` | — |
 
 ### `PUT /empresas/:empresaId/projetos/:projetoId/ideias/:id`
 
@@ -139,8 +176,9 @@ Repare na diferença com o `POST /ideias`: lá a resposta com `possivel_duplicat
 | I8 | O que o especialista pode fazer com idéias? | **Cria, edita e move; não exclui** — nem as próprias. Idéias são a mesa de trabalho dele; exclusão pertence a quem é da empresa. | 24/08/2026 |
 | I9 | A importância é obrigatória? | Não. Zero é um valor válido e significa "sem prioridade definida". Obrigar uma nota no instante da criação produz números inventados. | 24/08/2026 |
 | I10 | Título de idéia é único no projeto? | Não. Repetição é legítima em brainstorm. Consequência assumida: nenhuma parte do sistema pode identificar idéia por título (ver IDEIA-MOV-015). | 24/08/2026 |
-| I11 | A IA gera idéias nesta versão? | **Não** — adiada com o restante da IA (decisão I3, `ideias-quadro.md`). A modal "Gerar com ajuda da IA" e seu botão saem da tela até a funcionalidade existir. | 24/08/2026 |
+| I11 | A IA gera idéias nesta versão? | ~~**Não** — adiada com o restante da IA (decisão I3, `ideias-quadro.md`).~~ **Revista por I14 em 23/09/2026.** | 24/08/2026 |
 | I13 | Como calibrar o alerta de duplicidade, e ele vale na porta da IA? | **Peso 0.7 no título / 0.3 na descrição, limiar 0.6; e sim, vale em toda porta.** A calibração 0.5/0.5 impedia o título de disparar sozinho e deixava o alerta mudo (zero disparos em 11.476 pares reais). A porta da IA gravava sem checar — corrigida. | 16/09/2026 |
+| I14 | Como a IA gera idéias? | **Pelo botão "Gerar com ajuda da IA", com a Skill `senior-product-designer`:** 4 a 7 etapas do trabalho, a partir do nome do projeto e da ficha da empresa, gravadas direto em "Minhas idéias" na ordem de execução, sem importância, com as parecidas descartadas e contadas. Ver §1.5. | 23/09/2026 |
 | I12 | Deve haver checagem de duplicidade ao salvar uma idéia? | **Sim, como aviso — nunca como bloqueio.** Compara título e descrição, juntos, com toda idéia ativa do projeto; encontrando uma parecida, mostra um alerta flutuante — já filtrando o quadro para ela — com duas ações ("Criar"/"Salvar" ou "Cancelar") e não grava nada até a pessoa decidir. Preserva I10 integralmente: não é unicidade, é uma decisão informada. | 26/08/2026 |
 
 ---
@@ -149,7 +187,7 @@ Repare na diferença com o `POST /ideias`: lá a resposta com `possivel_duplicat
 
 | Item | Situação |
 |---|---|
-| Geração por IA | **Adiada (I3/I11).** Quando entrar, define-se: quantas idéias por vez, se caem direto no quadro ou passam por aprovação, custo em créditos, e que contexto do projeto alimenta o modelo. |
+| Geração por IA — o que ficou de fora da primeira versão | Resolvida por I14 (§1.5). Ficou de fora: o conhecimento validado de "Sobre a empresa" (`recortes_taxonomia`) ainda **não** entra no pedido — só a ficha. E o consumo é registrado como `assistente` porque `TipoConsumoIa` não tem um valor próprio; separar no Histórico de uso exige migração (`ALTER TYPE ... ADD VALUE`). |
 | Anexos na idéia | O compositor do assistente tem um botão de anexo. Não há regra de anexo em idéia, e o campo não existe no modelo. Fora do escopo desta versão. |
 | Histórico de edição | Não se registra quem editou o quê. Se virar requisito (provável, com especialistas externos escrevendo), exige tabela de auditoria própria. |
 | Limiar de semelhança do IDEIA-DUPL | **Recalibrado em 16/09/2026** (decisão I13) contra as 152 idéias reais do projeto Startup/iHouseLog: 0.7/0.3, limiar 0.6, zero falsos alertas em 11.476 pares. Continua sendo o primeiro número a mexer se o uso real mostrar avisos demais ou de menos (`PESO_TITULO`/`LIMIAR_DUPLICATA` em `api/src/ideias/duplicidade.ts`), agora com uma base de comparação de verdade. |
@@ -161,6 +199,8 @@ Repare na diferença com o `POST /ideias`: lá a resposta com `possivel_duplicat
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.4.0 | 2026-09-23 | **IDEIA-GERAR-011:** os botões "Gerar com ajuda da IA" passam a abrir uma modal com o campo opcional "Orientação para a IA" (até 1.000 caracteres). O texto vai à Skill como contexto delimitado; vazio, o pedido sai idêntico ao anterior. `POST .../ideias/gerar` aceita `{ orientacao? }`. Skill `senior-product-designer` ganha a regra 7 ("a orientação ajusta, não substitui"). 5 testes novos em `api/testes/gerar-ideias.test.ts`. |
+| 1.3.0 | 2026-09-23 | **Nova §1.5 `IDEIA-GERAR-001` a `010`** e decisão I14: o botão "Gerar com ajuda da IA" volta à tela, agora com a funcionalidade — no cabeçalho e no estado vazio, variante `ghost`. Skill nova `Skills/senior-product-designer.skill`; código em `api/src/ia/gerar-ideias.ts` e na rota `POST .../ideias/gerar`. I11 revista. 18 testes puros em `api/testes/gerar-ideias.test.ts`. |
 | 1.2.0 | 2026-09-16 | Alerta de duplicidade recalibrado e estendido (decisão I13). **Pesos** passam de 0.5/0.5 para 0.7/0.3 entre título e descrição, limiar inalterado: com 0.5 o título não alcançava o limiar sozinho e o alerta disparava zero vezes nos 11.476 pares das 152 idéias reais. **Nova IDEIA-DUPL-009**: confirmar uma ação `criar_ideia`/`editar_ideia` do assistente passa pela mesma checagem — essa porta gravava direto, sem checar. Contrato do `/confirmar` documentado em §2. Cinco testes novos em `api/testes/ideias-duplicidade.test.ts`, três deles travando a regressão dos pesos e dois guardando contra falso alerta, tirados de pares reais. |
 | 1.1.3 | 2026-09-13 | Sem mudança de regra. Cabeçalho corrigido: dizia "implementação não iniciada" com `POST`/`PUT` no ar e o alerta de duplicidade funcionando em `js/ideias.js`. |
 | 1.1.2 | 2026-08-26 | Correção de bug: `.dup-alerta` (e, junto, `.toast`, mesmo defeito) ficava clicável e interceptando cliques mesmo escondido (`hidden`), por causa de um empate de especificidade CSS entre `[hidden]` e `display:flex` — bloqueava o clique em "Nova idéia". Corrigido com `pointer-events:none`/`[hidden]{display:none}`/`pointer-events:auto` só em `.is-visible`, mesmo padrão já usado em `.btn[hidden]`. |

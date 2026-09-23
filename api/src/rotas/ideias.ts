@@ -29,12 +29,22 @@ import { db } from '../db.js';
 import * as sessao from '../seguranca/sessao.js';
 import { encontrarDuplicata } from '../ideias/duplicidade.js';
 import { planejarTransicao } from '../ideias/transicao.js';
+import { conferirNovaOrdem, posicaoNoTopo, ORDEM_MAX } from '../ideias/ordem.js';
 import { CATEGORIAS } from '../ia/taxonomia-vocabulario.js';
 import {
   classificarIdeiaEmSegundoPlano,
   limparTaxonomia,
 } from '../ia/taxonomia.js';
 import { segmentarIdeiaEmSegundoPlano } from '../ia/recortes.js';
+import { randomUUID } from 'node:crypto';
+import { env } from '../env.js';
+import { iaConfigurada } from '../ia/provedor.js';
+import { montarMensagem, interpretarIdeias, pedirIdeias, MAX_TOKENS_GERACAO, SISTEMA, ORIENTACAO_MAX } from '../ia/gerar-ideias.js';
+import { nomeDoTipo } from '../projetos/catalogo.js';
+import { registrar } from '../creditos/registro.js';
+import { tetoUsdMicros, custoUsdMicros } from '../creditos/precos.js';
+import { usdParaMicrosBrl, comissaoSobre, cotacaoParaMilesimos } from '../creditos/dinheiro.js';
+import { reservar, liberar, consumir, SaldoInsuficiente } from '../creditos/reserva.js';
 
 type Erro = { campo: string | null; mensagem: string };
 const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensagem });
@@ -93,6 +103,25 @@ const mudancaDeStatus = z.object({
   status: z.enum(STATUS_VALIDOS, {
     errorMap: () => ({ message: 'Escolha uma coluna válida do quadro.' }),
   }),
+});
+
+/* IDEIA-GERAR-011: o corpo do "gerar" é opcional inteiro — quem não
+   escreveu orientação manda `{}` (ou nada), e a geração sai como
+   sempre saiu. */
+const corpoGerar = z.object({
+  orientacao: z
+    .string()
+    .max(ORIENTACAO_MAX, `A orientação deve ter no máximo ${ORIENTACAO_MAX} caracteres.`)
+    .optional()
+    .nullable(),
+});
+
+/* IDEIA-ORDEM-003: a coluna inteira, na ordem nova. */
+const novaOrdem = z.object({
+  status: z.enum(STATUS_VALIDOS, {
+    errorMap: () => ({ message: 'Escolha uma coluna válida do quadro.' }),
+  }),
+  ids: z.array(z.string().uuid()).min(1).max(ORDEM_MAX),
 });
 
 const paramsQuadro = z.object({
@@ -262,6 +291,9 @@ type LinhaIdeia = {
   assunto?: string | null;
   tags?: string[];
   taxonomiaManual?: boolean;
+  /* Opcional pelo mesmo motivo da taxonomia: `encontrarDuplicata`
+     monta objetos parciais. Linha do banco sempre traz. */
+  posicao?: number;
   criadoEm: Date;
   atualizadoEm: Date;
 };
@@ -278,6 +310,9 @@ function ideiaParaResposta(i: LinhaIdeia) {
     assunto: i.assunto ?? null,
     tags: i.tags ?? [],
     taxonomia_manual: i.taxonomiaManual ?? false,
+    /* IDEIA-ORDEM-001: a tela ordena por isto (e por criado_em no
+       empate), então precisa receber. */
+    posicao: i.posicao ?? 0,
     criado_em: i.criadoEm.toISOString(),
     atualizado_em: i.atualizadoEm.toISOString(),
   };
@@ -295,9 +330,11 @@ export async function rotasIdeias(app: FastifyInstance) {
     const ctx = await abrirContexto(req, false);
     if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
 
+    /* IDEIA-ORDEM-001: a ordem da coluna é a posição; no empate (as
+       etapas geradas numa mesma transação), a mais nova primeiro. */
     const ideias = await db.ideia.findMany({
       where: { projetoId: ctx.projetoId, arquivadoEm: null },
-      orderBy: { criadoEm: 'desc' },
+      orderBy: [{ posicao: 'asc' }, { criadoEm: 'desc' }],
     });
 
     /* `papel` vai uma vez na raiz, não repetido em cada idéia: é o
@@ -347,6 +384,170 @@ export async function rotasIdeias(app: FastifyInstance) {
     });
 
     return resposta.code(201).send({ ideia: ideiaParaResposta(ideia) });
+  });
+
+  /* ---------- Gerar com ajuda da IA — IDEIA-GERAR-001 a 010 ----------
+     Skill: Skills/senior-product-designer.skill
+
+     Um clique, e o quadro ganha as etapas do trabalho do projeto. A
+     ordem das garantias é a de sempre: corrente e papel antes de
+     tudo, reserva antes de chamar, custo registrado antes de decidir,
+     cobrança só do que foi entregue. */
+  app.post('/empresas/:empresaId/projetos/:projetoId/ideias/gerar', async (req, resposta) => {
+    const ctx = await abrirContexto(req, false);
+    if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
+
+    /* IDEIA-GERAR-002: gerar é criar idéias — mesma régua de quem cria
+       à mão (IDEIA-CRIA-004), recusada de novo aqui (IDEIA-CRIA-010). */
+    if (!podeEscrever(ctx.papel)) {
+      return resposta.code(403).send(erro(null, 'Seu papel não permite criar idéias.'));
+    }
+
+    /* Sem provedor, a recusa sai ANTES de qualquer reserva, com o
+       mesmo texto do assistente — não é erro de quem clicou. */
+    if (!iaConfigurada()) {
+      return resposta.code(503).send(erro(null, 'O assistente de IA ainda não está configurado neste ambiente.'));
+    }
+
+    /* Validado antes da reserva: texto longo demais é erro de quem
+       pediu, não pode custar nada. */
+    const corpo = corpoGerar.safeParse(req.body ?? {});
+    if (!corpo.success) {
+      return resposta
+        .code(400)
+        .send(erro('orientacao', corpo.error.issues[0]?.message ?? 'Orientação inválida.'));
+    }
+
+    const projeto = await db.projeto.findFirst({
+      where: { id: ctx.projetoId, empresaId: ctx.empresaId },
+      select: { nome: true, tipo: true, empresa: { select: { nome: true, descricao: true } } },
+    });
+    if (!projeto) return resposta.code(404).send(erro(null, 'Projeto não encontrado.'));
+
+    /* Todas as ativas: as mais recentes vão ao modelo (para ele saber
+       onde o projeto está); TODAS entram na checagem de duplicidade. */
+    const ativas = await db.ideia.findMany({
+      where: { projetoId: ctx.projetoId, arquivadoEm: null },
+      orderBy: { criadoEm: 'desc' },
+    });
+
+    /* IDEIA-GERAR-001: o NOME escolhido na modal ("Identidade Visual")
+       define o trabalho. Sem ele, o rótulo do tipo — como no resto da
+       plataforma (PROJ-CRIA-002). */
+    const mensagem = montarMensagem({
+      empresaNome: projeto.empresa.nome,
+      empresaDescricao: projeto.empresa.descricao ?? null,
+      projetoNome: projeto.nome ?? nomeDoTipo(projeto.tipo),
+      existentes: ativas.map((i: LinhaIdeia) => ({ titulo: i.titulo, status: i.status })),
+      orientacao: corpo.data.orientacao ?? null,
+    });
+
+    /* ---- Reserva ANTES de chamar (IA-CUSTO-002) ---- */
+    const operacaoId = randomUUID();
+    let tetoTotalMicros = 0;
+    if (env.CREDITOS_COBRAR === 'sim') {
+      const tetoUsd = tetoUsdMicros(env.IA_MODELO as string, SISTEMA + '\n' + mensagem, MAX_TOKENS_GERACAO);
+      if (tetoUsd === null) {
+        return resposta.code(503).send(erro(null, 'O assistente está indisponível no momento. Tente mais tarde.'));
+      }
+      const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
+      tetoTotalMicros = comissaoSobre(usdParaMicrosBrl(tetoUsd, cotacao)).totalMicros;
+      try {
+        await reservar(ctx.usuarioId, tetoTotalMicros, operacaoId, 'assistente');
+      } catch (e) {
+        if (e instanceof SaldoInsuficiente) {
+          return resposta
+            .code(402)
+            .send(erro(null, 'Saldo insuficiente para gerar idéias. Adicione créditos para continuar.'));
+        }
+        throw e;
+      }
+    }
+
+    const r = await pedirIdeias(mensagem);
+    const geradas = r.ok ? interpretarIdeias(r.bruto) : [];
+
+    /* IDEIA-GERAR-005: comparadas com TODAS as ativas do projeto e com
+       as que já passaram nesta mesma resposta. Parecida não é gravada
+       — e é contada, para a tela dizer quantas ficaram de fora em vez
+       de sumir com elas em silêncio. */
+    const comparaveis = ativas.map((i: LinhaIdeia) => ({
+      id: i.id, titulo: i.titulo, descricao: i.descricao, status: i.status,
+    }));
+    const aceitas: typeof geradas = [];
+    let parecidas = 0;
+    for (const g of geradas) {
+      if (encontrarDuplicata(g, comparaveis)) { parecidas++; continue; }
+      aceitas.push(g);
+      comparaveis.push({ id: 'nova-' + aceitas.length, titulo: g.titulo, descricao: g.descricao, status: 'ideias' });
+    }
+
+    /* Custo registrado antes de decidir (a chamada já foi paga). Só é
+       `entregue` o que virou ao menos uma idéia no quadro. */
+    const entregue = aceitas.length > 0;
+    if (r.uso && r.modelo) {
+      registrar({
+        usuarioId: ctx.usuarioId,
+        empresaId: ctx.empresaId,
+        projetoId: ctx.projetoId,
+        tipo: 'assistente',
+        resultado: entregue ? 'entregue' : 'descartado',
+        modelo: r.modelo,
+        uso: r.uso,
+        requisicaoId: r.requisicaoId,
+        operacaoId,
+      });
+    }
+
+    /* ---- Acerta a reserva pelo custo verdadeiro (IA-CUSTO-003) ---- */
+    if (tetoTotalMicros > 0) {
+      await liberar(ctx.usuarioId, tetoTotalMicros, operacaoId, 'assistente');
+      if (entregue && r.uso && r.modelo) {
+        const usdReal = custoUsdMicros(r.modelo, r.uso);
+        if (usdReal !== null) {
+          const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
+          const totalReal = comissaoSobre(usdParaMicrosBrl(usdReal, cotacao)).totalMicros;
+          if (totalReal > 0) await consumir(ctx.usuarioId, totalReal, operacaoId, 'assistente');
+        }
+      }
+    }
+
+    if (!entregue) {
+      /* Nada gravado, nada cobrado. As duas mensagens pedem ações
+         diferentes: tentar de novo ou desistir de gerar o que já está lá. */
+      if (geradas.length > 0) {
+        return resposta.code(200).send({ ideias: [], parecidas });
+      }
+      const mensagemFalha = !r.ok && r.motivo === 'rede'
+        ? 'Não foi possível falar com o provedor de IA. Tente de novo.'
+        : 'Não foi possível gerar idéias agora. Tente de novo em instantes.';
+      return resposta.code(503).send(erro(null, mensagemFalha));
+    }
+
+    /* IDEIA-GERAR-006: a primeira etapa precisa aparecer no topo da
+       ordenação padrão ("Mais recente"). Cada idéia nasce 1 ms mais
+       velha que a anterior, na mesma transação — a ordem de execução
+       é a ordem do quadro, sem número colado no título. */
+    const agora = Date.now();
+    const criadas = await db.$transaction(
+      aceitas.map((g, i) =>
+        db.ideia.create({
+          data: {
+            projetoId: ctx.projetoId,
+            titulo: g.titulo,
+            descricao: g.descricao,
+            /* IDEIA-GERAR-007: sem nota. IDEIA-CRIA-002 — zero é "ainda
+               não pensei nisso", e quem pensa é a pessoa. */
+            importancia: 0,
+            status: 'ideias',
+            criadoPor: ctx.usuarioId,
+            criadoEm: new Date(agora - i),
+          },
+        }),
+      ),
+    );
+
+    return resposta.code(201).send({ ideias: criadas.map(ideiaParaResposta), parecidas });
   });
 
   /* ---------- Editar — IDEIA-CRIA-001/004 ---------- */
@@ -402,6 +603,52 @@ export async function rotasIdeias(app: FastifyInstance) {
   });
 
   /* ---------- Mover de coluna — IDEIA-MOV-001 a 004 ---------- */
+  /* ---------- Reorganizar dentro da coluna — IDEIA-ORDEM-001 a 008 ----------
+     O corpo é a coluna INTEIRA na ordem nova. O servidor confere que
+     ela é exatamente a coluna que existe agora (IDEIA-ORDEM-004) e
+     grava 0..n-1. Só a posição muda: status, conteúdo e taxonomia
+     ficam como estão, e nada é reclassificado. */
+  app.put('/empresas/:empresaId/projetos/:projetoId/ideias/ordem', async (req, resposta) => {
+    const ctx = await abrirContexto(req, false);
+    if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
+
+    /* IDEIA-ORDEM-002: quem move entre colunas, reorganiza
+       (IDEIA-MOV-004). */
+    if (!podeEscrever(ctx.papel)) {
+      return resposta.code(403).send(erro(null, 'Seu papel não permite reorganizar idéias.'));
+    }
+
+    const dados = novaOrdem.safeParse(req.body);
+    if (!dados.success) return resposta.code(400).send(primeiroErro(dados.error));
+
+    const atuais = await db.ideia.findMany({
+      where: { projetoId: ctx.projetoId, status: dados.data.status, arquivadoEm: null },
+      select: { id: true },
+    });
+    const conferencia = conferirNovaOrdem(
+      atuais.map((i: { id: string }) => i.id),
+      dados.data.ids,
+    );
+    if (!conferencia.ok) {
+      if (conferencia.motivo === 'repetida') {
+        return resposta.code(400).send(erro('ids', 'A mesma idéia apareceu duas vezes na ordem.'));
+      }
+      /* IDEIA-ORDEM-004: a coluna mudou desde que a tela carregou. */
+      return resposta.code(409).send({
+        ...erro(null, 'O quadro mudou enquanto você reorganizava. Atualizamos para você ver a ordem atual.'),
+        codigo: 'ordem_desatualizada',
+      });
+    }
+
+    await db.$transaction(
+      dados.data.ids.map((id, indice) =>
+        db.ideia.update({ where: { id }, data: { posicao: indice } }),
+      ),
+    );
+
+    return resposta.send({ status: dados.data.status, ids: dados.data.ids });
+  });
+
   app.patch('/empresas/:empresaId/projetos/:projetoId/ideias/:id/status', async (req, resposta) => {
     const ctx = await abrirContexto(req, true);
     if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
@@ -461,6 +708,16 @@ export async function rotasIdeias(app: FastifyInstance) {
        que a transição significa. */
     const plano = planejarTransicao(existente.status, novoStatus);
 
+    /* IDEIA-ORDEM-006: quem chega numa coluna entra no topo dela, o
+       mesmo lugar de uma idéia nova. Sem isto o card cairia onde a
+       posição antiga dele calhasse na coluna nova — um lugar que não
+       significa nada para quem arrastou. */
+    const topo = await db.ideia.aggregate({
+      where: { projetoId: ctx.projetoId, status: novoStatus, arquivadoEm: null },
+      _min: { posicao: true },
+    });
+    const posicao = posicaoNoTopo(topo._min.posicao === null ? [] : [topo._min.posicao]);
+
     /* IDEIA-MOV-002: só o status muda. Título, descrição,
        importância e data de criação ficam como estão.
 
@@ -480,8 +737,8 @@ export async function rotasIdeias(app: FastifyInstance) {
       db.ideia.update({
         where: { id: existente.id },
         data: plano.limpar
-          ? { status: novoStatus, ...limparTaxonomia() }
-          : { status: novoStatus },
+          ? { status: novoStatus, posicao, ...limparTaxonomia() }
+          : { status: novoStatus, posicao },
       }),
       ...(plano.limpar
         ? [db.recorteTaxonomia.deleteMany({ where: { ideiaId: existente.id } })]
