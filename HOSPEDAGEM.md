@@ -335,6 +335,52 @@ cópia; apagá-lo é opcional e é decisão sua.
   comportamento anterior sem perder nada: mede, não lança, e o Histórico de
   uso volta a mostrar "medido, não cobrado" (`DIN-011`/`DIN-014`).
 
+- **E-mail (OTP) — resolvido em 22–23/09/2026, com uma pendência de
+  entrega.** O cadastro falhava com *"Não conseguimos enviar o código
+  agora"* para qualquer endereço que não fosse o do Ricardo. Não era
+  defeito: o Resend recusava com `403 validation_error` — *"You can only
+  send testing emails to your own email address"* — porque o remetente
+  estava num domínio não verificado.
+
+  **O que foi feito.** O domínio raiz `plataformadedesign.com` não pôde
+  ser adicionado: o Resend respondeu que já está registrado em OUTRA conta
+  (um domínio só vive numa conta por vez), e o fluxo de *claim* não
+  apareceu no painel. A saída foi verificar o subdomínio
+  **`mail.plataformadedesign.com`**, que não colide — e que, de quebra,
+  é a prática recomendada para e-mail transacional: separa a reputação de
+  envio do domínio principal. DNS na Hostinger, três registros
+  (`resend._domainkey.mail` TXT, `rsend.mail` e `send.mail` CNAME), e
+  `EMAIL_REMETENTE` no Render apontando para
+  `nao-responda@mail.plataformadedesign.com`.
+
+  **A armadilha do campo Nome**, que custa horas a quem não sabe: o Resend
+  exibe `send.mail.plataformadedesign.com`, mas a Hostinger completa o
+  domínio sozinha. Digita-se só `send.mail`. Com o nome inteiro vira
+  `...plataformadedesign.com.plataformadedesign.com` e nunca verifica.
+
+  **Pendente: DMARC e reputação.** Falta o registro TXT `_dmarc.mail`
+  com `v=DMARC1; p=none;` — no subdomínio, não em `_dmarc` puro, para não
+  publicar política no domínio inteiro. Ele não bloqueia nada; completa o
+  trio SPF+DKIM+DMARC que o Gmail espera de remetente legítimo.
+
+  E o fator maior não é configuração: o subdomínio **nunca enviou nada**,
+  então não tem reputação. Gmail desconfia de remetente novo, e isso
+  melhora com dias de entrega real. O conteúdo do e-mail **não** é o
+  problema — `mensagemCodigo` (`api/src/email/index.ts`) já manda texto
+  puro E HTML, curto, sem imagem, sem link e sem anexo, que é o perfil que
+  passa melhor. Não mexer nele achando que ajuda.
+
+  Quando abrir ao público, **subir o volume aos poucos**: disparar
+  centenas de e-mails de um domínio novo no primeiro dia é o padrão que
+  dispara filtro. E-mail de OTP joga a favor — é esperado, aberto na
+  hora, e constrói reputação rápido.
+
+- **As variáveis de e-mail não estão no `render.yaml`.** `EMAIL_DRIVER`,
+  `RESEND_API_KEY` e `EMAIL_REMETENTE` vivem só no painel do Render,
+  diferente das do Mercado Pago, que estão versionadas como `sync: false`.
+  Um serviço recriado do zero sobe sem e-mail, e sem nada no repositório
+  que explique por quê. Vale padronizar.
+
 - **Desenvolvimento aponta para o banco de produção.** O `api/.env` da
   máquina do Ricardo tem `DATABASE_URL` no compute de produção
   (`ep-green-block`) e `CREDITOS_COBRAR=sim`. Consequência visível,
