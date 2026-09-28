@@ -1338,6 +1338,13 @@
   function correrStream(abrir, texto, idN, seguirSozinho) {
     var N = narracao();
     var entregue = false;
+    /* O stream que planeja termina no `aguardando` e dispara a busca
+       num SEGUNDO stream. Quem chamou (o botão "Pesquisar" do board)
+       precisa esperar por esse segundo também: antes, esta função
+       resolvia quando o plano fechava, o botão parava de girar e
+       voltava a aceitar clique enquanto a busca paga ainda corria —
+       e um segundo clique abria outra busca. */
+    var seguinte = null;
 
     trabalhando(true, 'Pesquisando...');
 
@@ -1391,7 +1398,7 @@
               return;
             }
             N.passo(idN, 'Plano fechado. Indo à web.');
-            confirmarBusca(dados.investigacao_id, texto, idN);
+            seguinte = confirmarBusca(dados.investigacao_id, texto, idN);
             return;
           }
 
@@ -1456,7 +1463,9 @@
         if (!entregue) {
           N.fechar(idN, 'falha', 'A conexão caiu no meio da investigação.');
         }
-        return entregue;
+        /* `correrStream` nunca rejeita, então esperar o segundo stream
+           aqui não desvia nada para o `.catch` abaixo. */
+        return seguinte || entregue;
       })
       .catch(function (e) {
         /* Erro ANTES do stream abrir chega aqui com status e corpo
