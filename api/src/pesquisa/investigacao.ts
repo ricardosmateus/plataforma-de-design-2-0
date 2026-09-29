@@ -42,6 +42,7 @@
    ============================================================ */
 
 import { db } from '../db.js';
+import { lerModeloMatriz, type ModeloMatriz } from './matriz.js';
 
 export type EstadoInvestigacao =
   | 'correndo'
@@ -55,6 +56,9 @@ export type PassoGravado = { texto: string; em: string };
 export type PlanoGravado = {
   perguntas: { pergunta: string; porque: string }[];
   ja_sabido: string[];
+  /* BOARD-PESQUISA-MATRIZ: gravado junto com o plano porque é a busca
+     — num segundo pedido, às vezes horas depois — que precisa dele. */
+  matriz?: ModeloMatriz | null;
 };
 
 export type Investigacao = {
@@ -106,7 +110,7 @@ function lerPlano(v: unknown): PlanoGravado | null {
     : [];
   const jaSabido = Array.isArray(o.ja_sabido) ? o.ja_sabido.map(String).filter(Boolean) : [];
   if (!perguntas.length && !jaSabido.length) return null;
-  return { perguntas, ja_sabido: jaSabido };
+  return { perguntas, ja_sabido: jaSabido, matriz: lerModeloMatriz(o.matriz) };
 }
 
 export function lerLinha(linha: LinhaCrua): Investigacao {

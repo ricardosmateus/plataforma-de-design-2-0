@@ -159,8 +159,16 @@ export interface ProvedorBusca {
   /** A pergunta já chega RESOLVIDA — com apelidos e pronomes
    * trocados pelos nomes reais por `roteador.ts`. O provedor não
    * conhece a sessão nem tem como resolver "ele". */
-  buscar(pergunta: string, contexto?: ContextoDeNegocio): Promise<RespostaBusca>;
+  buscar(pergunta: string, contexto?: ContextoDeNegocio, opcoes?: OpcoesDeBusca): Promise<RespostaBusca>;
 }
+
+/* A FORMA da resposta, quando a tarefa pede uma matriz
+   (BOARD-PESQUISA-MATRIZ). Opcional pelo mesmo motivo do contexto:
+   provedor que não saiba organizar em matriz continua compilando, e
+   o navegador cai no texto de sempre quando os títulos não vêm. */
+export type OpcoesDeBusca = {
+  formato?: ModeloMatriz | null;
+};
 
 /* ------------------------------------------------------------ */
 
@@ -239,6 +247,7 @@ class LugaresIndisponivel implements ProvedorLugares {
    ------------------------------------------------------------ */
 import { env } from '../env.js';
 import { criarBuscaClaude } from './provedor-claude-busca.js';
+import type { ModeloMatriz } from './matriz.js';
 
 let busca: ProvedorBusca | null = null;
 let lugares: ProvedorLugares | null = null;

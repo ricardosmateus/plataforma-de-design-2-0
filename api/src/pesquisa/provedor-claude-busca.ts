@@ -44,7 +44,8 @@
    ============================================================ */
 
 import { env } from '../env.js';
-import type { ProvedorBusca, RespostaBusca, Fonte, Afirmacao, ContextoDeNegocio } from './provedor.js';
+import type { ProvedorBusca, RespostaBusca, Fonte, Afirmacao, ContextoDeNegocio, OpcoesDeBusca } from './provedor.js';
+import { instrucaoDeFormato } from './matriz.js';
 
 /* Teto de buscas encadeadas por pergunta. É PES-007 aplicado na
    ORIGEM: o provedor não gasta além disto, então o custo tem um limite
@@ -271,10 +272,24 @@ function comContexto(base: string, contexto?: ContextoDeNegocio): string {
   );
 }
 
+/* Tarefa que pede matriz (BOARD-PESQUISA-MATRIZ): o formato entra
+   por ÚLTIMO no `system` e diz que vale mais que a regra de parágrafos
+   lá de cima — as duas falam da forma da resposta, e sem desempate o
+   modelo escolhe uma a cada vez. */
+function comFormato(base: string, formato?: OpcoesDeBusca['formato']): string {
+  if (!formato) return base;
+  return (
+    base +
+    '\n\n' +
+    instrucaoDeFormato(formato) +
+    '\nEste formato vale mais que a regra de parágrafos acima. As regras sobre fontes, datas e o que ficou faltando continuam valendo dentro de cada item.'
+  );
+}
+
 export class BuscaClaude implements ProvedorBusca {
   constructor(private readonly chave: string, private readonly modelo: string) {}
 
-  async buscar(pergunta: string, contexto?: ContextoDeNegocio): Promise<RespostaBusca> {
+  async buscar(pergunta: string, contexto?: ContextoDeNegocio, opcoes?: OpcoesDeBusca): Promise<RespostaBusca> {
     let bruta: unknown;
 
     try {
@@ -288,7 +303,7 @@ export class BuscaClaude implements ProvedorBusca {
         body: JSON.stringify({
           model: this.modelo,
           max_tokens: MAX_TOKENS_SAIDA,
-          system: comContexto(SISTEMA, contexto),
+          system: comFormato(comContexto(SISTEMA, contexto), opcoes?.formato),
           messages: [{ role: 'user', content: pergunta }],
           tools: [
             /* A versão vem da configuração (15/09/2026). De

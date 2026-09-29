@@ -105,6 +105,15 @@ import {
   rodadasGravadas,
   gravarRodada,
 } from '../pesquisa/caderno.js';
+import { detectarMatriz, type ModeloMatriz } from '../pesquisa/matriz.js';
+
+/* Como a narração chama cada formato — frase que a pessoa lê. */
+const NOME_MATRIZ: Record<ModeloMatriz, string> = {
+  swot: 'matriz SWOT (forças, fraquezas, oportunidades e ameaças)',
+  csd: 'Matriz CSD (certezas, suposições e dúvidas)',
+  impacto_esforco: 'matriz de impacto × esforço',
+  comparativa: 'tabela comparativa',
+};
 
 /* Os limites do provedor de busca vêm DE LÁ, importados — não
    copiados. Eram duas constantes repetidas aqui (`MAX_TOKENS_SAIDA`
@@ -1143,6 +1152,13 @@ export async function rotasPesquisa(app: FastifyInstance) {
 
       passo(`Escrevi ${saidaPlano.plano.perguntas.length} pergunta(s) verificável(is).`);
 
+      /* BOARD-PESQUISA-MATRIZ: a tarefa pede o resultado como matriz?
+         O planejador lê isso no mesmo pedido, sem custo a mais; o nome
+         explícito da matriz na tarefa ("SWOT", "Matriz CSD") é o
+         reforço que não depende de o modelo ter lembrado. */
+      const matriz = saidaPlano.plano.matriz ?? detectarMatriz(roteado.pergunta);
+      if (matriz) passo(`Vou entregar o resultado como ${NOME_MATRIZ[matriz]}.`);
+
       /* ---- 3. O plano, ANTES de gastar com busca (PES-007) ---- */
       const perguntaDaBusca = textoDaBusca(roteado.pergunta, saidaPlano.plano.perguntas);
       /* `tetoBuscaUsdMicros`, e não `tetoUsdMicros`: numa busca com
@@ -1181,6 +1197,7 @@ export async function rotasPesquisa(app: FastifyInstance) {
       anotarPlano(invId, {
         perguntas: saidaPlano.plano.perguntas,
         ja_sabido: saidaPlano.plano.jaSabido,
+        matriz,
       });
 
       enviar('plano', {
@@ -1425,6 +1442,7 @@ export async function rotasPesquisa(app: FastifyInstance) {
         saida = await provedorBuscaAtual().buscar(
           inv.perguntaBusca,
           await contextoDaSessao(sessao.empresaId),
+          { formato: inv.plano?.matriz ?? null },
         );
       } finally {
         if (reservadoBusca > 0) await liberar(usuarioId, reservadoBusca, operacaoBusca, 'pesquisa');
@@ -1513,6 +1531,9 @@ export async function rotasPesquisa(app: FastifyInstance) {
            rascunho devolve a decisão (`BOARD-PESQUISA-043`). */
         afirmacoes: afirmacoes.map((a, i) => ({ ...a, id: gravado.idsAfirmacoes[i] ?? null })),
         perguntas: inv.plano.perguntas,
+        /* Dica para o navegador; quem decide é ele, pelos títulos que
+           a resposta trouxe (js/pesquisa.js, `matrizDaResposta`). */
+        matriz: inv.plano.matriz ?? null,
         custo_micros: gastoTotal,
         custo_formatado: formatarReais(gastoTotal),
         erro: saida.erro ?? null,

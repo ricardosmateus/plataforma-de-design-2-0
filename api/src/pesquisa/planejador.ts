@@ -39,6 +39,7 @@
    ============================================================ */
 
 import { lerUso, type Uso } from '../creditos/precos.js';
+import { lerModeloMatriz, type ModeloMatriz } from './matriz.js';
 
 /* UMA pergunta é um plano legítimo — 14/09/2026.
    O piso era 3, e foi o defeito. Tarefa como "A Loggi opera ponto de
@@ -70,6 +71,10 @@ export type PlanoInvestigacao = {
   /* Preenchido quando a tarefa não tem fonte externa possível.
      Continua valendo BOARD-PESQUISA-012 para quem chama. */
   naoDaParaBuscar: string | null;
+  /* O formato em que a tarefa pede o resultado, quando ela pede uma
+     matriz (BOARD-PESQUISA-MATRIZ). Não muda o que se busca — muda
+     como a resposta é organizada. `null` é o caso comum: texto. */
+  matriz?: ModeloMatriz | null;
 };
 
 export const SISTEMA_PLANEJADOR = `Você transforma uma tarefa de um projeto de design em perguntas de pesquisa verificáveis.
@@ -90,12 +95,14 @@ REGRAS
 5. A ficha da empresa (quem está perguntando) serve para você INTERPRETAR a tarefa — resolver uma ambiguidade, entender um termo do ramo. Ela NUNCA substitui a tarefa. Não transforme a pergunta na pesquisa de concorrentes que você imagina que essa empresa gostaria de ter.
 6. Escreva as perguntas em português do Brasil, na linguagem de quem vai ler a resposta — não em jargão de busca.
 7. Só preencha "nao_da_para_buscar" quando a tarefa for genuinamente interna (criar, definir, priorizar, escrever algo do próprio time) e não houver NENHUM fato externo por trás dela. Na dúvida, prefira perguntar.
+8. Preencha "matriz" SÓ quando a tarefa pedir o resultado nesse formato: "swot" (forças, fraquezas, oportunidades e ameaças — basta pedir duas delas juntas), "csd" (certezas, suposições e dúvidas), "impacto_esforco" (priorizar por impacto e esforço) ou "comparativa" (tabela ou matriz comparando empresas ou produtos lado a lado por critérios). Tarefa que só pesquisa ou compara em texto: null. Pedir uma matriz NÃO torna a tarefa interna: a matriz é a forma da resposta, e as perguntas continuam sendo os fatos verificáveis por trás dela.
 
 FORMATO — responda SÓ com este JSON, sem texto antes ou depois:
 {
   "perguntas": [{ "pergunta": "...", "porque": "..." }],
   "ja_sabido": ["..."],
-  "nao_da_para_buscar": null
+  "nao_da_para_buscar": null,
+  "matriz": null
 }`;
 
 export function perguntaDoPlanejador(tarefa: string, contexto: string): string {
@@ -166,7 +173,7 @@ export function interpretarPlano(bruto: string): PlanoInvestigacao | null {
      tarefa que estava boa. */
   if (!perguntas.length && !naoDaParaBuscar) return null;
 
-  return { perguntas, jaSabido, naoDaParaBuscar };
+  return { perguntas, jaSabido, naoDaParaBuscar, matriz: lerModeloMatriz(obj.matriz) };
 }
 
 /* ------------------------------------------------------------

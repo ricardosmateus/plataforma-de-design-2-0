@@ -2231,6 +2231,82 @@ body.modal-open{overflow:hidden}
 }
 
 /* ============================================================
+   QUADRO-MATRIZ — BOARD-PESQUISA-MATRIZ
+   ============================================================
+   O resultado de uma pesquisa que pediu matriz. Por baixo é o quadro
+   de colunas de sempre — mesmos cards, mesmo menu, mesmo arrastar —,
+   e por isso editar, recolorir e excluir funcionam sem código novo. O
+   que muda é o desenho: 2×2 na SWOT e no Impacto × Esforço, três
+   colunas na CSD, linhas alinhadas na comparativa.
+
+   A cor vem do QUADRANTE, como na Matriz CSD: arrastar um card de
+   Forças para Ameaças muda a cor dele, porque muda o que ele diz. */
+.ideas-panel--matriz .quadro-colunas .column + .column::before{display:none}
+.ideas-panel--matriz .quadro-colunas .idea{min-height:0}
+/* O menu (⋮) mora no canto de cima: título longo numa coluna estreita
+   passava por baixo dele. */
+.ideas-panel--matriz .idea-title{padding-right:20px}
+.ideas-panel--matriz .quadro-colunas .card-list{gap:16px}
+.ideas-panel--matriz .quadro-colunas .column-head{
+  height:auto;min-height:48px;
+  flex-direction:column;gap:2px;
+  margin-bottom:16px;
+}
+/* O subtítulo ("Interno · ajuda") mora num atributo e sai por CSS:
+   `textContent` do cabeçalho continua sendo só o nome do quadrante, e
+   é ele que o autosave grava (lerDaTela). */
+.ideas-panel--matriz .column-head[data-sub]::after{
+  content:attr(data-sub);
+  font-size:12px;line-height:16px;font-weight:500;
+  color:var(--text-secondary);
+}
+
+/* 2×2 — SWOT e Impacto × Esforço */
+.ideas-panel--matriz.matriz--grade2 .quadro-colunas{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:24px;
+}
+.ideas-panel--matriz.matriz--grade2 .column{
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:12px;
+}
+
+/* Quadrantes */
+.column--quad-verde    .column-head{background:var(--green-100)}
+.column--quad-vermelho .column-head{background:var(--red-100)}
+.column--quad-azul     .column-head{background:var(--sky-100)}
+.column--quad-amarelo  .column-head{background:var(--yellow-100)}
+.ideas-panel .column--quad-verde .card-list .idea{background:var(--green-200);border-color:transparent}
+.ideas-panel .column--quad-vermelho .card-list .idea{background:var(--red-200);border-color:transparent}
+.ideas-panel .column--quad-azul .card-list .idea{background:var(--sky-200);border-color:transparent}
+.ideas-panel .column--quad-amarelo .card-list .idea{background:var(--lemon-100);border-color:transparent}
+
+/* Comparativa: uma coluna por empresa, um card por critério, e o
+   mesmo critério na mesma LINHA em todas as colunas — sem isso, um
+   card mais alto desalinha a tabela inteira e comparar vira caçar.
+   `display:contents` tira colunas e listas do layout (continuam no
+   DOM, onde o arrastar e o autosave as procuram) e a grade posiciona
+   cabeçalho e cards; `grid-row`/`grid-column` vêm de
+   `alinharComparativas()`. */
+.ideas-panel--matriz.matriz--comparativa .quadro-colunas{
+  display:grid;grid-auto-columns:minmax(0,1fr);
+  column-gap:16px;row-gap:12px;
+  align-items:stretch;
+}
+.ideas-panel--matriz.matriz--comparativa .column,
+.ideas-panel--matriz.matriz--comparativa .column-body,
+.ideas-panel--matriz.matriz--comparativa .card-list{display:contents}
+.ideas-panel--matriz.matriz--comparativa .column-head{margin-bottom:0}
+.ideas-panel--matriz.matriz--comparativa .column-empty{display:none}
+.ideas-panel--matriz.matriz--comparativa .idea{padding:16px;gap:8px}
+.ideas-panel--matriz.matriz--comparativa .idea-title{font-size:13px;line-height:18px;font-weight:600;color:var(--text-secondary);text-transform:none}
+/* A primeira coluna é quem pergunta (a instrução da busca pede isso):
+   destacá-la é o que deixa ver de relance onde ela ganha e perde. */
+.ideas-panel--matriz.matriz--comparativa .column:first-child .column-head{background:var(--sky-100)}
+.ideas-panel--matriz.matriz--comparativa .column:first-child .idea{background:var(--sky-200);border-color:transparent}
+
+/* ============================================================
    QUADRO DOCUMENTO
    ============================================================
    Um quadro de post-its é uma superfície para espalhar anotações; um
@@ -3308,6 +3384,10 @@ body.modal-open{overflow:hidden}
       var vazio = cb.querySelector('.column-empty');
       if(lista && vazio) vazio.hidden = lista.querySelectorAll('.idea').length > 0;
     });
+    /* Toda mudança de card passa por aqui (criar, soltar, excluir), e é
+       por isso que a tabela comparativa se realinha aqui — declarada
+       mais abaixo, alcançada por hoisting. */
+    if(typeof alinharComparativas === 'function') alinharComparativas();
   }
 
   document.addEventListener('pointerdown', function(e){
@@ -4476,7 +4556,18 @@ body.modal-open{overflow:hidden}
   // serve para quando colunas forem acrescentadas ou removidas.
   function ajustarLarguraQuadro(painel){
     var n = painel.querySelectorAll('.quadro-colunas .column').length;
-    if(n) painel.style.width = larguraQuadro(n) + 'px';
+    if(!n) return painel;
+    /* Quadro-matriz: a largura é a da GRADE, não a do número de
+       colunas — a SWOT tem quatro colunas em duas por linha. E a
+       coluna é mais larga que um post-it, porque o card de matriz
+       carrega frase, não palavra. */
+    if(painel.dataset.tipo === 'matriz'){
+      var cfg = MATRIZ_MODELOS[painel.dataset.modelo] || {};
+      var porLinha = cfg.grade ? Math.min(cfg.grade, n) : n;
+      painel.style.width = (porLinha * MATRIZ_COL_W + (porLinha - 1) * COL_GAP + PAD_QUADRO) + 'px';
+      return painel;
+    }
+    painel.style.width = larguraQuadro(n) + 'px';
     return painel;
   }
   window.ajustarLarguraQuadro = ajustarLarguraQuadro;
@@ -4875,6 +4966,105 @@ body.modal-open{overflow:hidden}
     dispararAutosave();
     return quadro;
   };
+
+  /* ------------------------------------------------------------
+     Quadro-matriz — BOARD-PESQUISA-MATRIZ
+     ------------------------------------------------------------
+     Os modelos que a pesquisa entrega (api/src/pesquisa/matriz.ts).
+     Os TÍTULOS aqui só valem para quadro sem título de coluna; o que
+     vem gravado manda — a pessoa pode ter renomeado "Forças" para
+     "Pontos fortes" e continua sendo o quadrante de cima à esquerda.
+     A cor e o subtítulo seguem a POSIÇÃO. */
+  var MATRIZ_MODELOS = {
+    swot: { nome: 'Matriz SWOT', grade: 2, colunas: [
+      { titulo: 'Forças',        cor: 'verde',    sub: 'Interno · ajuda' },
+      { titulo: 'Fraquezas',     cor: 'vermelho', sub: 'Interno · atrapalha' },
+      { titulo: 'Oportunidades', cor: 'azul',     sub: 'Externo · ajuda' },
+      { titulo: 'Ameaças',       cor: 'amarelo',  sub: 'Externo · atrapalha' }
+    ]},
+    csd: { nome: 'Matriz CSD', grade: 3, colunas: [
+      { titulo: 'Certezas',   cor: 'verde' },
+      { titulo: 'Suposições', cor: 'amarelo' },
+      { titulo: 'Dúvidas',    cor: 'vermelho' }
+    ]},
+    impacto_esforco: { nome: 'Impacto × Esforço', grade: 2, colunas: [
+      { titulo: 'Fazer já',        cor: 'verde',    sub: 'Alto impacto · baixo esforço' },
+      { titulo: 'Planejar',        cor: 'azul',     sub: 'Alto impacto · alto esforço' },
+      { titulo: 'Se sobrar tempo', cor: 'amarelo',  sub: 'Baixo impacto · baixo esforço' },
+      { titulo: 'Evitar',          cor: 'vermelho', sub: 'Baixo impacto · alto esforço' }
+    ]},
+    comparativa: { nome: 'Tabela comparativa', grade: 0, colunas: [] }
+  };
+  var MATRIZ_COL_W = 300;
+  window.MATRIZ_MODELOS = MATRIZ_MODELOS;
+
+  /* Monta sem perguntar se pode: quem chama decide. A carga do banco
+     (`quadros`) sempre pode; o resultado novo passa pela guarda de
+     BOARD-LEITURA-003 em `criarQuadroMatriz`, logo abaixo. */
+  function montarQuadroMatriz(titulo, modelo, colunas){
+    var cfg = MATRIZ_MODELOS[modelo];
+    if(!cfg) return null;
+    var lista = (colunas || []).filter(function(c){ return c; });
+    if(!lista.length && cfg.colunas.length){
+      lista = cfg.colunas.map(function(c){ return { titulo: c.titulo, registros: [] }; });
+    }
+    if(!lista.length) return null;
+
+    var titulos = lista.map(function(c, i){
+      return (c.titulo || (cfg.colunas[i] && cfg.colunas[i].titulo) || '').trim();
+    });
+    var painel = criarQuadro(titulo || cfg.nome, lista.length, titulos);
+    painel.dataset.tipo = 'matriz';
+    painel.dataset.modelo = modelo;
+    painel.classList.add('ideas-panel--matriz', 'matriz--' + modelo);
+    if(cfg.grade === 2) painel.classList.add('matriz--grade2');
+
+    var cols = painel.querySelectorAll('.quadro-colunas .column');
+    lista.forEach(function(c, i){
+      var col = cols[i];
+      if(!col) return;
+      var q = cfg.colunas[i];
+      if(q && q.cor) col.classList.add('column--quad-' + q.cor);
+      var head = col.querySelector('.column-head');
+      if(head && q && q.sub) head.dataset.sub = q.sub;
+      var destino = col.querySelector('.card-list');
+      (c.registros || c.itens || []).forEach(function(r){
+        var t = String(r.titulo || '').trim();
+        if(!t) return;
+        destino.appendChild(criarCard(t, r.descricao || ''));
+      });
+    });
+
+    ajustarLarguraQuadro(painel);
+    return painel;
+  }
+
+  window.criarQuadroMatriz = function(titulo, modelo, colunas){
+    if(modoLeitura && !restauroPendente) return null;
+    var painel = montarQuadroMatriz(titulo, modelo, colunas);
+    if(!painel) return null;
+    atualizarColunas();
+    dispararAutosave();
+    return painel;
+  };
+
+  /* A comparativa é uma tabela feita de colunas: o card N de cada
+     coluna é o mesmo critério. A grade põe cada um na sua célula —
+     cabeçalho na linha 1, card N na linha N+1 — e é refeita a cada
+     mudança, então soltar um card numa coluna empurra só aquela
+     coluna, como numa tabela. */
+  function alinharComparativas(){
+    Array.prototype.forEach.call(document.querySelectorAll('.matriz--comparativa .quadro-colunas'), function(grade){
+      Array.prototype.forEach.call(grade.querySelectorAll(':scope > .column'), function(col, i){
+        var head = col.querySelector('.column-head');
+        if(head){ head.style.gridColumn = String(i + 1); head.style.gridRow = '1'; }
+        Array.prototype.forEach.call(col.querySelectorAll('.card-list > .idea'), function(card, j){
+          card.style.gridColumn = String(i + 1);
+          card.style.gridRow = String(j + 2);
+        });
+      });
+    });
+  }
 
   /* ------------------------------------------------------------
      BOARD-QUADRO-002 / BOARD-ACESSO-004 — desenhar o que veio da API
@@ -5593,6 +5783,15 @@ body.modal-open{overflow:hidden}
             corpo.descricao || '',
             refs ? (refs.descricao || '').split('\n').filter(Boolean) : []
           );
+          return;
+        }
+
+        /* Quadro-matriz (BOARD-PESQUISA-MATRIZ): mesmas colunas e
+           registros, desenho próprio. Modelo desconhecido — gravado por
+           uma versão futura, digamos — cai no quadro de colunas comum:
+           perde o desenho, não perde o conteúdo. */
+        if(q.tipo === 'matriz' && MATRIZ_MODELOS[q.modelo]){
+          montarQuadroMatriz(q.titulo || '', q.modelo, q.colunas || []);
           return;
         }
 

@@ -340,11 +340,17 @@
         colunas.push({ titulo: tituloCol, registros: registros });
       });
 
-      quadros.push({
+      /* Quadro-matriz (BOARD-PESQUISA-MATRIZ): lido pelo mesmo caminho
+         de colunas — é feito de post-its —, gravado com o tipo e o
+         modelo, que é o que faz ele voltar desenhado como matriz. */
+      var ehMatriz = painel.dataset.tipo === 'matriz' && !!painel.dataset.modelo;
+      var quadro = {
         titulo: tituloEl ? tituloEl.textContent.trim() : '',
-        tipo: 'postits',
+        tipo: ehMatriz ? 'matriz' : 'postits',
         colunas: colunas,
-      });
+      };
+      if (ehMatriz) quadro.modelo = painel.dataset.modelo;
+      quadros.push(quadro);
     });
 
     return quadros;

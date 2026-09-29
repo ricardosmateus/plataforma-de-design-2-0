@@ -554,6 +554,9 @@ model ReferenciaVisual {
 enum QuadroTipo {
   postits
   documento
+  // BOARD-PESQUISA-MATRIZ: colunas e registros como o `postits`,
+  // desenhados como matriz. Qual matriz, diz `Quadro.modelo`.
+  matriz
 }
 
 model Quadro {
@@ -566,6 +569,11 @@ model Quadro {
   ordem  Int
 
   tipo QuadroTipo @default(postits)
+
+  // Só no tipo `matriz`: swot | csd | impacto_esforco | comparativa.
+  // Texto, e não enum, para um formato novo não pedir migração —
+  // a lista válida vive em `rotas/board.ts`.
+  modelo String?
 
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")

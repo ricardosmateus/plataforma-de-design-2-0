@@ -964,19 +964,250 @@
     return u || t;
   }
 
+  /* ------------------------------------------------------------
+     Resposta que é uma matriz — BOARD-PESQUISA-MATRIZ
+     ------------------------------------------------------------
+     Quando a tarefa pede uma matriz, o servidor manda a busca
+     organizar a resposta com os títulos fixos dela
+     (api/src/pesquisa/matriz.ts) — ou, na comparativa, uma tabela.
+     Aqui esses títulos viram o quadro-matriz.
+
+     O reconhecimento é pelos TÍTULOS, e não pela dica do servidor:
+     a investigação reaberta dias depois (recuperarInvestigacao) não
+     traz dica nenhuma, e precisa voltar como matriz do mesmo jeito.
+     A dica só baixa a exigência — com ela, dois quadrantes bastam;
+     sem ela, a resposta tem de trazer quase todos, para uma resposta
+     comum que por acaso tem uma seção "Oportunidades" não virar
+     SWOT sem ninguém ter pedido. */
+  var MATRIZES = {
+    swot: [
+      ['forcas', 'pontos fortes', 'strengths'],
+      ['fraquezas', 'pontos fracos', 'weaknesses'],
+      ['oportunidades', 'opportunities'],
+      ['ameacas', 'threats'],
+    ],
+    csd: [
+      ['certezas', 'certeza'],
+      ['suposicoes', 'suposicao', 'hipoteses'],
+      ['duvidas', 'duvida'],
+    ],
+    impacto_esforco: [
+      ['fazer ja', 'ganhos rapidos', 'quick wins'],
+      ['planejar', 'grandes projetos'],
+      ['se sobrar tempo', 'preenchimento', 'tarefas de preenchimento'],
+      ['evitar', 'nao fazer'],
+    ],
+  };
+  var TITULOS_MATRIZ = {
+    swot: ['Forças', 'Fraquezas', 'Oportunidades', 'Ameaças'],
+    csd: ['Certezas', 'Suposições', 'Dúvidas'],
+    impacto_esforco: ['Fazer já', 'Planejar', 'Se sobrar tempo', 'Evitar'],
+  };
+  var NOME_MATRIZ = {
+    swot: 'Matriz SWOT',
+    csd: 'Matriz CSD',
+    impacto_esforco: 'Impacto × Esforço',
+    comparativa: 'Tabela comparativa',
+  };
+
+  var FONTES_DA_MATRIZ = {
+    swot: 'Fontes da matriz SWOT',
+    csd: 'Fontes da matriz CSD',
+    impacto_esforco: 'Fontes da matriz de impacto × esforço',
+    comparativa: 'Fontes da tabela comparativa',
+  };
+
+  function semAcento(t) {
+    return String(t == null ? '' : t)
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  /* "2. Forças (internas):" → quadrante 0 da SWOT. Começar com o
+     sinônimo basta: o provedor às vezes acrescenta um complemento. */
+  function quadranteDe(titulo, modelo) {
+    var t = semAcento(titulo).replace(/^[\d.)\s-]+/, '').replace(/[:.]+$/, '');
+    var lista = MATRIZES[modelo];
+    for (var i = 0; i < lista.length; i++) {
+      for (var k = 0; k < lista[i].length; k++) {
+        var s = lista[i][k];
+        if (t === s || t.indexOf(s + ' ') === 0 || t.indexOf(s + '(') === 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  /* Um item por marcador de lista; linha sem marcador depois de um
+     item é continuação dele (o provedor quebra linha no meio). Sem
+     marcador nenhum, cada parágrafo é um item. */
+  function itensDaSecao(bruto) {
+    var linhas = String(bruto == null ? '' : bruto).split(/\r?\n/);
+    var itens = [];
+    var atual = null;
+    var temMarcador = linhas.some(function (l) { return /^\s*(?:[-*+•]|\d+[.)])\s+/.test(l); });
+
+    linhas.forEach(function (l) {
+      if (!l.trim()) { if (!temMarcador) atual = null; return; }
+      var m = l.match(/^\s*(?:[-*+•]|\d+[.)])\s+(.*)$/);
+      if (m) { atual = { txt: m[1] }; itens.push(atual); return; }
+      if (atual) { atual.txt += ' ' + l.trim(); return; }
+      if (!temMarcador) { atual = { txt: l.trim() }; itens.push(atual); }
+    });
+
+    return itens.map(function (it) {
+      var cru = it.txt.trim();
+      var titulo, descricao;
+      var m = cru.match(/^\*\*(.+?)\*\*\s*[:—–-]?\s*([\s\S]*)$/);
+      if (m) {
+        titulo = semMarcacao(m[1]).replace(/[:.]+$/, '');
+        descricao = semMarcacao(m[2]);
+      } else {
+        var limpo = semMarcacao(cru);
+        var dois = limpo.match(/^([^:]{3,80}):\s+([\s\S]+)$/);
+        if (dois) { titulo = dois[1]; descricao = dois[2]; }
+        else if (limpo.length <= 90) { titulo = limpo.replace(/\.$/, ''); descricao = ''; }
+        else {
+          var frase = (limpo.match(/^[^.!?]+[.!?]/) || [limpo.slice(0, 80)])[0];
+          titulo = cortar(frase.replace(/[.!?]$/, ''), 90);
+          descricao = limpo;
+        }
+      }
+      /* "**Foco em condomínios**: fluxo pensado…" — depois dos
+         dois-pontos a frase vem em minúscula, e sozinha no card ela
+         parece cortada. */
+      descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1);
+      return { titulo: cortar(titulo, MAX_TITULO), descricao: cortar(descricao, MAX_DESCRICAO) };
+    }).filter(function (it) { return it.titulo; });
+  }
+
+  /* A tabela da comparativa: linhas que começam com "|". A primeira é
+     o cabeçalho (Critério | Empresa A | Empresa B), a de traços é
+     descartada. Cada EMPRESA vira uma coluna do quadro e cada critério
+     um card nela — o mesmo formato de colunas e registros de qualquer
+     quadro, que o board desenha alinhado em linhas. */
+  function tabelaDaResposta(bruto) {
+    var texto = String(bruto == null ? '' : bruto);
+    var re = /^[ \t]*\|.*\|[ \t]*$/gm, m, bloco = [];
+    while ((m = re.exec(texto))) {
+      var ultimo = bloco[bloco.length - 1];
+      /* Só linhas CONSECUTIVAS formam a tabela. */
+      if (ultimo && texto.slice(ultimo.fim, m.index).trim()) {
+        if (bloco.length >= 4) break;
+        bloco = [];
+      }
+      bloco.push({ txt: m[0], inicio: m.index, fim: m.index + m[0].length });
+    }
+    if (bloco.length < 4) return null;   // cabeçalho, traços e ao menos duas linhas
+
+    function celulas(l) {
+      var c = l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+      return c.map(function (x) { return semMarcacao(x); });
+    }
+    var cab = celulas(bloco[0].txt);
+    var corpo = bloco.slice(1).filter(function (l) { return !/^[\s|:-]+$/.test(l.txt); });
+    if (cab.length < 3 || corpo.length < 2) return null;
+
+    var colunas = cab.slice(1).map(function (nome, i) {
+      return { titulo: cortar(nome || 'Empresa ' + (i + 1), MAX_TITULO), registros: [] };
+    });
+    corpo.forEach(function (l) {
+      var c = celulas(l.txt);
+      var criterio = cortar(c[0] || '', MAX_TITULO);
+      if (!criterio) return;
+      colunas.forEach(function (col, i) {
+        var v = (c[i + 1] || '').trim();
+        col.registros.push({ titulo: criterio, descricao: cortar(v || '—', MAX_DESCRICAO) });
+      });
+    });
+
+    return {
+      colunas: colunas,
+      inicio: bloco[0].inicio,
+      fim: bloco[bloco.length - 1].fim,
+    };
+  }
+
+  /* Devolve { modelo, colunas, faixas, usadas } ou null.
+     `usadas` são os índices das seções que viraram matriz — o resto
+     da resposta continua indo para documento. `faixas` são os
+     trechos do texto cru que a matriz ocupa: é por eles que as fontes
+     citadas ali vão para "Fontes da matriz". */
+  function matrizDaResposta(bruto, secoes, dica) {
+    if (dica === 'comparativa' || !dica) {
+      var tab = tabelaDaResposta(bruto);
+      if (tab) {
+        return {
+          modelo: 'comparativa',
+          colunas: tab.colunas,
+          faixas: [{ inicio: tab.inicio, fim: tab.fim }],
+          tabela: tab,
+          usadas: [],
+        };
+      }
+    }
+
+    var ordem = Object.keys(MATRIZES);
+    if (dica && MATRIZES[dica]) ordem = [dica].concat(ordem.filter(function (k) { return k !== dica; }));
+
+    for (var o = 0; o < ordem.length; o++) {
+      var modelo = ordem[o];
+      var n = MATRIZES[modelo].length;
+      var porQuadrante = [];
+      var usadas = [];
+      secoes.forEach(function (sec, i) {
+        if (!sec.titulo) return;
+        var q = quadranteDe(sec.titulo, modelo);
+        if (q < 0) return;
+        (porQuadrante[q] = porQuadrante[q] || []).push(sec);
+        usadas.push(i);
+      });
+      var achados = porQuadrante.filter(Boolean).length;
+      var minimo = dica === modelo ? 2 : Math.max(3, n - 1);
+      if (achados < Math.min(minimo, n)) continue;
+
+      var colunas = TITULOS_MATRIZ[modelo].map(function (t, q) {
+        var registros = [];
+        (porQuadrante[q] || []).forEach(function (sec) {
+          registros = registros.concat(itensDaSecao(sec.bruto));
+        });
+        return { titulo: t, registros: registros };
+      });
+      /* Matriz sem card nenhum é título sem conteúdo. */
+      if (!colunas.some(function (c) { return c.registros.length; })) continue;
+
+      return {
+        modelo: modelo,
+        colunas: colunas,
+        faixas: usadas.map(function (i) { return { inicio: secoes[i].inicio, fim: secoes[i].fim }; }),
+        usadas: usadas,
+      };
+    }
+    return null;
+  }
+
   /* Devolve a lista de quadros a criar, na ordem em que devem
-     aparecer. Cada item: { tipo, titulo, texto, fontes, itens }. */
-  function planejarQuadros(bruto, fontes, pergunta) {
+     aparecer. Cada item: { tipo, titulo, texto, fontes, itens } — ou,
+     no quadro-matriz, { tipo: 'matriz', modelo, titulo, colunas }. */
+  function planejarQuadros(bruto, fontes, pergunta, dica) {
     var secoes = secoesDaResposta(bruto);
-    var nomeadas = secoes.filter(function (s) { return s.titulo; });
-    if (nomeadas.length < 2) {
-      secoes = [{
-        titulo: '',
-        corpo: emParagrafos(bruto),
-        bruto: bruto,
-        inicio: 0,
-        fim: String(bruto == null ? '' : bruto).length,
-      }];
+
+    /* BOARD-PESQUISA-MATRIZ: se a resposta É uma matriz, ela vira o
+       primeiro quadro e sai das seções — o que sobra (conclusão, o que
+       faltou) segue o caminho de sempre, como documento. */
+    var mz = matrizDaResposta(bruto, secoes, dica);
+    if (mz) {
+      secoes = restoDaMatriz(secoes, mz, bruto);
+    } else {
+      var nomeadas = secoes.filter(function (s) { return s.titulo; });
+      if (nomeadas.length < 2) {
+        secoes = [{
+          titulo: '',
+          corpo: emParagrafos(bruto),
+          bruto: bruto,
+          inicio: 0,
+          fim: String(bruto == null ? '' : bruto).length,
+        }];
+      }
     }
 
     var perguntasSoltas = [];
@@ -1023,8 +1254,11 @@
          mais que cada seção isolada caiba num cartão. Sem esta
          segunda porta, três parágrafos de 270 caracteres viravam
          três cartões "Resposta" — exatamente o resultado ilegível que
-         o quadro-documento existe para evitar. */
-    var comoDocumento =
+         o quadro-documento existe para evitar.
+
+       Ao lado de uma matriz, o que sobra é sempre documento: os
+       post-its já estão na matriz, e a conclusão é texto de leitura. */
+    var comoDocumento = !!mz ||
       conteudo.some(function (c) { return c.texto.length >= LIMITE_DOCUMENTO; }) ||
       conteudo.filter(function (c) { return c.titulo; }).length >= 2;
 
@@ -1050,17 +1284,29 @@
        fonte daquela tabela ao lado dela, não amontoada num quadro
        anterior junto com as fontes de outros dois assuntos.
 
-       `conteudo` e `planos` são o mesmo índice (planos veio de um map
-       sobre conteudo), então o bruto da seção i responde pelo plano i.
+       Cada ALVO é um trecho do texto cru que virou quadro: as seções
+       de `conteudo`, na mesma ordem de `planos`, e — quando há
+       matriz — a matriz na frente, com todas as faixas que ela ocupa.
 
        Uma fonte citada por dois assuntos entra nos dois: cada quadro
        precisa se sustentar sozinho, e repetir a referência custa uma
        linha. Uma fonte que nenhum assunto cita não some — vai para o
-       primeiro quadro, exatamente onde ela estava antes. */
-    var lista = normalizarFontes(fontes);
+       primeiro alvo, exatamente onde ela estava antes. */
+    var alvos = conteudo.map(function (c) {
+      return { faixas: [{ inicio: c.inicio, fim: c.fim }], bruto: c.bruto };
+    });
+    if (mz) {
+      alvos.unshift({
+        faixas: mz.faixas,
+        bruto: mz.faixas.map(function (f) { return String(bruto).slice(f.inicio, f.fim); }).join('\n'),
+      });
+    }
 
-    if (lista.length && planos.length) {
-      var porPlano = planos.map(function () { return []; });
+    var lista = normalizarFontes(fontes);
+    var fontesDaMatriz = [];
+
+    if (lista.length && alvos.length) {
+      var porAlvo = alvos.map(function () { return []; });
       var orfas = [];
 
       lista.forEach(function (f) {
@@ -1075,11 +1321,11 @@
               nao aparece: a resposta e prosa, as citacoes sao
               metadados). */
         if (posicoes.length) {
-          conteudo.forEach(function (c, i) {
+          alvos.forEach(function (a, i) {
             var dentro = posicoes.some(function (n) {
-              return n >= c.inicio && n < c.fim;
+              return a.faixas.some(function (fx) { return n >= fx.inicio && n < fx.fim; });
             });
-            if (dentro) { porPlano[i].push(rotuloDaFonte(f)); achou = true; }
+            if (dentro) { porAlvo[i].push(rotuloDaFonte(f)); achou = true; }
           });
 
           /* 2. A posicao caiu numa secao que nao virou quadro (sobra
@@ -1088,31 +1334,35 @@
                 aquele trecho estava falando. */
           if (!achou) {
             var melhor = -1, dist = Infinity;
-            conteudo.forEach(function (c, i) {
-              posicoes.forEach(function (n) {
-                if (c.inicio <= n && n - c.inicio < dist) { dist = n - c.inicio; melhor = i; }
+            alvos.forEach(function (a, i) {
+              a.faixas.forEach(function (fx) {
+                posicoes.forEach(function (n) {
+                  if (fx.inicio <= n && n - fx.inicio < dist) { dist = n - fx.inicio; melhor = i; }
+                });
               });
             });
-            if (melhor >= 0) { porPlano[melhor].push(rotuloDaFonte(f)); achou = true; }
+            if (melhor >= 0) { porAlvo[melhor].push(rotuloDaFonte(f)); achou = true; }
           }
         }
 
         /* 3. Sem posicao: provedor antigo, ou resposta que traz o link
               escrito no texto. Reconhece pela URL/host/titulo. */
         if (!achou) {
-          conteudo.forEach(function (c, i) {
-            if (citaFonte(c.bruto, f)) { porPlano[i].push(rotuloDaFonte(f)); achou = true; }
+          alvos.forEach(function (a, i) {
+            if (citaFonte(a.bruto, f)) { porAlvo[i].push(rotuloDaFonte(f)); achou = true; }
           });
         }
 
         if (!achou) orfas.push(rotuloDaFonte(f));
       });
 
-      orfas.forEach(function (r) { porPlano[0].push(r); });
+      orfas.forEach(function (r) { porAlvo[0].push(r); });
+
+      if (mz) fontesDaMatriz = porAlvo.shift();
 
       planos.forEach(function (p, i) {
-        var fs = porPlano[i];
-        if (!fs.length) return;
+        var fs = porAlvo[i];
+        if (!fs || !fs.length) return;
         if (p.tipo === 'documento') p.fontes = fs;
         else p.itens = p.itens.concat(cardsDeTexto('Fontes', fs.join(' · ')));
       });
@@ -1132,7 +1382,49 @@
       });
     }
 
+    if (mz) {
+      var frente = [{
+        tipo: 'matriz',
+        modelo: mz.modelo,
+        titulo: NOME_MATRIZ[mz.modelo],
+        colunas: mz.colunas,
+      }];
+      /* O card da matriz é curto demais para carregar a fonte, e a
+         matriz não tem onde listar referências. Elas vão num documento
+         logo ao lado, para cada item continuar podendo ser conferido. */
+      if (fontesDaMatriz.length) {
+        frente.push({
+          tipo: 'documento',
+          titulo: FONTES_DA_MATRIZ[mz.modelo],
+          texto: 'As referências que sustentam os itens do quadro ao lado.',
+          fontes: fontesDaMatriz,
+        });
+      }
+      planos = frente.concat(planos);
+    }
+
     return planos;
+  }
+
+  /* As seções que não viraram matriz. Na comparativa a tabela mora no
+     MEIO de uma seção (normalmente a primeira, sem título): o que se
+     tira é a tabela, e o texto em volta dela continua. */
+  function restoDaMatriz(secoes, mz, bruto) {
+    if (!mz.tabela) {
+      return secoes.filter(function (sec, i) { return mz.usadas.indexOf(i) < 0; });
+    }
+    var tabela = String(bruto).slice(mz.tabela.inicio, mz.tabela.fim).replace(/\r\n?/g, '\n');
+    return secoes.map(function (sec) {
+      if (sec.fim <= mz.tabela.inicio || sec.inicio >= mz.tabela.fim) return sec;
+      var semTabela = String(sec.bruto).split(tabela).join('');
+      return {
+        titulo: sec.titulo,
+        corpo: emParagrafos(semTabela),
+        bruto: semTabela,
+        inicio: sec.inicio,
+        fim: sec.fim,
+      };
+    }).filter(function (sec) { return sec.corpo; });
   }
 
   function tituloDoDocumento(pergunta) {
@@ -2741,7 +3033,9 @@
 
       console.log('[Pesquisa] resposta bruta do provedor:\n' + (r.resposta || '(vazia)'));
 
-      var planos = planejarQuadros(r.resposta || '', fontes, texto);
+      /* `r.matriz` só vem no `fim` de uma busca nova: é a dica do
+         servidor de que a tarefa pediu matriz (BOARD-PESQUISA-MATRIZ). */
+      var planos = planejarQuadros(r.resposta || '', fontes, texto, r.matriz || null);
 
       var cardsLugares = (r.lugares || []).map(function (l) {
         return {
@@ -2778,7 +3072,17 @@
         var plano = planos[i];
         var quadro = plano.tipo === 'documento'
           ? window.criarQuadroDocumento(plano.titulo, plano.texto, plano.fontes)
-          : window.criarQuadroResultado(plano.titulo, plano.itens);
+          : plano.tipo === 'matriz'
+            ? (typeof window.criarQuadroMatriz === 'function'
+                ? window.criarQuadroMatriz(plano.titulo, plano.modelo, plano.colunas)
+                /* Board antigo em cache, sem o quadro-matriz: a matriz
+                   chega como colunas de post-its, com o mesmo conteúdo. */
+                : window.criarQuadroResultado(plano.titulo, [].concat.apply([], plano.colunas.map(function (c) {
+                    return c.registros.map(function (r) {
+                      return { titulo: c.titulo + ': ' + r.titulo, descricao: r.descricao };
+                    });
+                  }))))
+            : window.criarQuadroResultado(plano.titulo, plano.itens);
         if (!quadro) {
           if (!criados) {
             N.fechar(idN, 'parada', 'Tarefa concluída não recebe resultado novo. Reabra para pesquisar.');
@@ -3009,6 +3313,9 @@
   window.PesquisaFormato = {
     semMarcacao: semMarcacao,
     cardsDaResposta: cardsDaResposta,
+    /* Exposto para conferência (testes e console): é ele que decide se
+       uma resposta vira matriz. */
+    planejarQuadros: planejarQuadros,
     CONVITE: CONVITE
   };
 

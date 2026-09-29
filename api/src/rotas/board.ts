@@ -95,7 +95,11 @@ const quadroEntrada = z
       .max(260, 'O título do quadro deve ter no máximo 260 caracteres.')
       .optional()
       .default(''),
-    tipo: z.enum(['postits', 'documento']).optional().default('postits'),
+    tipo: z.enum(['postits', 'documento', 'matriz']).optional().default('postits'),
+    /* BOARD-PESQUISA-MATRIZ: qual matriz. Só vale no tipo `matriz` —
+       nos outros é descartado, para um campo esquecido na tela não
+       ficar gravado num quadro que não o usa. */
+    modelo: z.enum(['swot', 'csd', 'impacto_esforco', 'comparativa']).nullable().optional(),
     colunas: z
       .array(colunaEntrada)
       .max(12, 'Quadro com colunas demais.')
@@ -103,7 +107,15 @@ const quadroEntrada = z
       .default([]),
   })
   .superRefine((quadro, ctx) => {
-    if (quadro.tipo !== 'postits') return;
+    if (quadro.tipo === 'matriz' && !quadro.modelo) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['modelo'],
+        message: 'Quadro-matriz sem o modelo da matriz.',
+      });
+    }
+    /* A matriz é feita de post-its: vale a mesma regra de tamanho. */
+    if (quadro.tipo === 'documento') return;
     quadro.colunas.forEach((coluna, iCol) => {
       coluna.registros.forEach((registro, iReg) => {
         if (registro.descricao.length > 280) {
@@ -257,6 +269,7 @@ async function lerQuadros(tarefaId: string) {
     id: q.id,
     titulo: q.titulo,
     tipo: q.tipo,
+    modelo: q.tipo === 'matriz' ? q.modelo : null,
     ordem: q.ordem,
     colunas: q.colunas.map((c) => ({
       id: c.id,
@@ -340,6 +353,7 @@ export async function rotasBoard(app: FastifyInstance) {
             tarefaId: ctx.tarefaId,
             titulo: quadro.titulo,
             tipo: quadro.tipo,
+            modelo: quadro.tipo === 'matriz' ? quadro.modelo ?? null : null,
             ordem: q,
             colunas: {
               create: quadro.colunas.map((coluna, c) => ({

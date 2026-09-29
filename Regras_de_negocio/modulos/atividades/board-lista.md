@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.41.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.42.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -395,6 +395,20 @@ Não trocou a resolução de referência (`BOARD-PESQUISA-021`), nem a busca em 
 
 **Como BOARD-PESQUISA-009 foi cumprida.** A regra foi escrita em 13/09 como não cumprida e implementada no mesmo dia. O encanamento já existia inteiro e desligado: `OperacaoConsumo` tinha `'pesquisa'`, `ORIGEM.pesquisa` apontava para a origem própria que DIN-005 exige, a descrição "pesquisa de concorrentes" estava escrita, e a tabela `consumos_pesquisa` existia com as colunas certas. Faltava a rota chamar. Ver `creditos-pagamentos-regras.md` para o que ainda não entra na conta.
 
+### 1.8.1 Resultado que é uma matriz — `BOARD-PESQUISA-MATRIZ`
+
+Decidido em 28/09/2026 com o Ricardo. Algumas tarefas de pesquisa pedem o resultado como matriz ("liste oportunidades e ameaças", "forças e fraquezas contra a concorrência", "monte uma tabela…"). Entregue em parágrafos, a resposta obrigava a pessoa a remontar a matriz à mão no board.
+
+| ID | Regra | Onde |
+|---|---|---|
+| BOARD-PESQUISA-MATRIZ-001 | Quatro formatos: **SWOT** (Forças, Fraquezas, Oportunidades, Ameaças — grade 2×2), **CSD** (Certezas, Suposições, Dúvidas — 3 colunas), **Impacto × Esforço** (Fazer já, Planejar, Se sobrar tempo, Evitar — grade 2×2) e **Comparativa** (uma coluna por empresa, um card por critério, linhas alinhadas). | `api/src/pesquisa/matriz.ts` |
+| BOARD-PESQUISA-MATRIZ-002 | Quem decide se a tarefa pede matriz é o **planejador**, no mesmo pedido que já faz (campo `matriz` do JSON) — sem chamada nova e sem custo a mais. O nome explícito da matriz na tarefa ("SWOT", "Matriz CSD", "impacto x esforço", "tabela comparativa") é o reforço por código. Pedir matriz não torna a tarefa interna: as perguntas continuam sendo os fatos verificáveis por trás dela. | `planejador.ts`, `rotas/pesquisa.ts` |
+| BOARD-PESQUISA-MATRIZ-003 | Com matriz, a busca recebe a **forma** da resposta: títulos fixos por quadrante, itens "**Título**: frase com o dado", ou uma tabela em markdown na comparativa. Quadrante sem dado diz o que faltou — não se inventa item para preencher (PES-006). A matriz entra no plano gravado, porque é a busca, num segundo pedido, que precisa dela. | `provedor-claude-busca.ts`, `investigacao.ts` |
+| BOARD-PESQUISA-MATRIZ-004 | O navegador reconhece a matriz pelos **títulos** da resposta, não pela dica do servidor: a investigação reaberta depois volta como matriz sem nada gravado a mais. Com a dica, dois quadrantes bastam; sem ela, a resposta precisa trazer quase todos — uma resposta comum com uma seção "Oportunidades" não vira SWOT sem ninguém pedir. | `js/pesquisa.js` (`matrizDaResposta`) |
+| BOARD-PESQUISA-MATRIZ-005 | A matriz é o **primeiro** quadro. As fontes citadas nos itens dela vão num documento ao lado ("Fontes da matriz SWOT"), e o resto da resposta (conclusão, o que faltou) continua como documento. | `js/pesquisa.js` (`planejarQuadros`) |
+| BOARD-PESQUISA-MATRIZ-006 | O quadro-matriz é feito de post-its: editar, recolorir, excluir e arrastar funcionam como em qualquer quadro. A cor segue o **quadrante** — arrastar de Forças para Ameaças muda a cor, porque muda o que o card diz. Grava-se como `tipo = matriz` + `modelo`; modelo desconhecido volta como quadro de colunas comum (perde o desenho, não o conteúdo). | `board.html`, `js/board.js`, `rotas/board.ts` |
+| BOARD-PESQUISA-MATRIZ-007 | O assistente lê o card de matriz com o quadrante na frente ("(Ameaças) Lockers dos marketplaces…"): o mesmo texto em Forças e em Ameaças são afirmações opostas. | `rotas/ia.ts` |
+
 ---
 
 ### 1.9 Referências — `BOARD-REF`
@@ -544,6 +558,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.42.0 | 2026-09-28 | Nova §1.8.1 **`BOARD-PESQUISA-MATRIZ`**: pesquisa que pede matriz (SWOT, CSD, Impacto × Esforço, comparativa) volta como quadro-matriz no board, com as fontes e a conclusão em documentos ao lado. Enum `QuadroTipo` ganha `matriz` e `quadros` ganha `modelo` (migração `20260928120000_quadro_matriz`). |
 | 1.41.0 | 2026-09-23 | Nova `BOARD-REF-010`: o botão "Pesquisar" volta ao board de Referência e busca sites, logotipos e documentos de marca dos concorrentes, pelo mesmo código da geração (`BOARD-REF-009`), acrescentando sem duplicar. `BOARD-REF-001` ajustada. |
 | 1.40.0 | 2026-09-23 | Nova `BOARD-REF-009`: a tarefa de Referência gerada pelo "Gerar com ajuda da IA" chega com sites, logotipos e documentos de marca dos concorrentes, buscados na web e baixados com as travas de `api/src/rede/baixar.ts`. |
 | 1.39.0 | 2026-09-23 | §1.9 revista: um quadro só, **"Referências"**, com a escolha Endereço do site / Documento / Imagem no topo e uma lista única de cards (`BOARD-REF-001`). Nova `BOARD-REF-008`: documento (PDF, Office, texto), até 20MB, conferido por extensão e bytes. Valor `documento` em `TipoReferenciaVisual` (migração `20260923190000_referencia_documento`), rota `POST .../referencias/documento`. `BOARD-REF-007` ganhou o aviso de que o texto novo promete a leitura pela IA antes de ela existir. |

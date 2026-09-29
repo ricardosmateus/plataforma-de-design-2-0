@@ -244,6 +244,20 @@ async function tarefasParaOContexto(projetoId: string): Promise<TarefaContexto[]
       if (alvo === achados) {
         alvo.push(q.titulo ? `[${q.titulo}]` : '[quadro sem título]');
       }
+      /* Quadro-matriz (BOARD-PESQUISA-MATRIZ): o quadrante É parte do
+         que o card diz. "Preço baixo" em Forças e em Ameaças são
+         afirmações opostas — sem o rótulo, o modelo leria as duas
+         como a mesma coisa. */
+      if (q.tipo === 'matriz') {
+        for (const c of q.colunas) {
+          for (const r of c.registros) {
+            const texto = r.descricao ? `${r.titulo}: ${r.descricao}` : r.titulo;
+            alvo.push(c.titulo ? `(${c.titulo}) ${texto}` : texto);
+          }
+        }
+        alvo.push('');
+        continue;
+      }
       for (const r of registros) {
         alvo.push(r.descricao ? `${r.titulo}: ${r.descricao}` : r.titulo);
       }
