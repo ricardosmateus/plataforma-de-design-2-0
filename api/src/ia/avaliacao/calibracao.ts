@@ -18,7 +18,7 @@
    Nenhuma rede, nenhum banco: testado em testes/calibracao.test.ts.
    ============================================================ */
 
-import type { Criterio, Faixa } from './normalizar.js';
+import { LIMITES, type Criterio, type Faixa } from './normalizar.js';
 
 export type FaixaHumana = Exclude<Faixa, 'nao_avaliado'>;
 
@@ -43,7 +43,13 @@ export type Marcacao = {
 
 export type Cortes = { alta: number; revisar: number };
 export const CORTES_ATUAIS: Cortes = { alta: 80, revisar: 50 };
-export const LIMITE_ALERTA_ATUAL = 50;
+/* O limiar em uso hoje, por critério — lido de `normalizar.ts` para o
+   relatório nunca comparar contra um número que o código não usa. */
+export const LIMITE_ATUAL: Record<'c4' | 'c6' | 'c8', number> = {
+  c4: LIMITES.inventaFato,
+  c6: LIMITES.generica,
+  c8: LIMITES.duplicada,
+};
 export const AMOSTRA_MINIMA = 40;
 
 export function faixaComCortes(geral: number, c: Cortes): FaixaHumana {
@@ -132,15 +138,15 @@ function desempenho(amostras: Array<{ pct: number; humano: boolean }>, limiar: n
   };
 }
 
-function melhorLimiar(amostras: Array<{ pct: number; humano: boolean }>): DesempenhoAlerta | null {
+function melhorLimiar(amostras: Array<{ pct: number; humano: boolean }>, atual: number): DesempenhoAlerta | null {
   if (!amostras.length) return null;
   let melhor: DesempenhoAlerta | null = null;
-  for (let limiar = 20; limiar <= 90; limiar += 5) {
+  for (let limiar = 20; limiar <= 95; limiar += 5) {
     const d = desempenho(amostras, limiar);
     if (
       !melhor ||
       d.acerto > melhor.acerto + 1e-9 ||
-      (Math.abs(d.acerto - melhor.acerto) < 1e-9 && Math.abs(limiar - LIMITE_ALERTA_ATUAL) < Math.abs(melhor.limiar - LIMITE_ALERTA_ATUAL))
+      (Math.abs(d.acerto - melhor.acerto) < 1e-9 && Math.abs(limiar - atual) < Math.abs(melhor.limiar - atual))
     ) {
       melhor = d;
     }
@@ -189,8 +195,8 @@ export function analisar(linhas: LinhaAvaliada[], marcacoes: Marcacao[]): Relato
       campo,
       n: amostras.length,
       positivosHumanos: amostras.filter((a) => a.humano).length,
-      atual: amostras.length ? desempenho(amostras, LIMITE_ALERTA_ATUAL) : null,
-      sugerido: melhorLimiar(amostras),
+      atual: amostras.length ? desempenho(amostras, LIMITE_ATUAL[criterio as 'c4' | 'c6' | 'c8']) : null,
+      sugerido: melhorLimiar(amostras, LIMITE_ATUAL[criterio as 'c4' | 'c6' | 'c8']),
     };
   });
 
@@ -297,7 +303,7 @@ export function tabelaDivergencias(itens: LinhaDetalhe[]): string {
       const esperado = it.esperado[campo];
       if (!c || typeof esperado !== 'boolean') continue;
       const v = conv(c);
-      const alertou = v > LIMITE_ALERTA_ATUAL;
+      const alertou = v > LIMITE_ATUAL[cod];
       if (alertou !== esperado) problemas.push(`${alertou ? 'alertou' : 'não alertou'} ${nome} (${Math.round(v)}%)`);
     }
     if (problemas.length) linhas.push(`| ${it.titulo} | ${it.rotulo} | ${g ?? '—'}% | ${problemas.join('; ')} |`);

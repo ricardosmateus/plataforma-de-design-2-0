@@ -113,8 +113,14 @@ export function montarLoteIdeias(c: ContextoAvaliacaoIdeias): Lote {
 
   const questions: Record<string, Pergunta> = {};
 
-  c.etapas.forEach((_, i) => {
-    const e = `\`etapas.${i}\``;
+  c.etapas.forEach((etapa, i) => {
+    /* O TÍTULO vai citado na pergunta, junto do caminho. Só com
+       `etapas.7` o JEV confunde as posições numa lista longa e julga
+       a etapa vizinha: na calibração de 29/09/2026 a etapa repetida
+       (posição 7) recebeu "inventa fato" 92% — o julgamento da 6, que
+       inventava — e a de e-mail (8) recebeu "repetida" 76%, o da 7.
+       Com o título citado, as mesmas perguntas deram 7% e 3%. */
+    const e = `"${limpo(etapa.titulo, 120).replace(/"/g, "'")}" (\`etapas.${i}\`)`;
 
     questions[idPergunta(i, 'c1')] = {
       type: 'choice',

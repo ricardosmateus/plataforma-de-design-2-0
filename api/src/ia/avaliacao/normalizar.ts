@@ -45,6 +45,31 @@ export type Avaliacao = {
 export const PESOS = { c1: 0.4, c2: 0.3, c3: 0.15, especificos: 0.15 } as const;
 export const TETO_ACIMA_DE_C1 = 10;
 export const LIMITE_ALERTA = 50;
+
+/* Limiar por defeito — IA-AVAL-014, segunda calibração de 29/09/2026
+   (gabarito, 22 etapas). Com 50% para tudo, "genérica" disparava em
+   etapas boas (55%–71%) e travava 4 delas em "revisar": acerto de
+   73%, precisão de 40%. Em 90%, acerto de 96% sem perder nenhuma
+   genérica de verdade. "Repetida" em 55% tirou o único falso alarme
+   (51%). "Inventa fato" acertou 100% em 50% e fica. */
+export const LIMITES = {
+  inventaFato: 50,
+  foraDoProjeto: 50,
+  generica: 90,
+  duplicada: 55,
+} as const;
+
+/* Travas — IA-AVAL-008 revista em 29/09/2026 pela calibração com
+   gabarito (calibracao/relatorio-automatico-2026-09-29.md).
+
+   A média ponderada escondia o que o JEV JÁ tinha visto: "Melhorar a
+   experiência" saía com 83 (alta) mesmo com "genérica" em 91%, porque
+   C6 pesa 15%. Um defeito grave não se compensa com qualidade no
+   resto; ele limita a nota:
+     · inventa fato ou foge do projeto → no máximo "baixa";
+     · genérica ou repetida            → no máximo "revisar". */
+export const TETO_BAIXA = 49;
+export const TETO_REVISAR = 79;
 export const CONFIANCA_MINIMA = 0.5;
 
 /* Faixas de IA-AVAL-009. */
@@ -130,6 +155,17 @@ export function calcularGeral(c1: number, c2: number, c3: number, especificos: n
   return Math.round(Math.max(0, Math.min(100, Math.min(bruta, c1 + TETO_ACIMA_DE_C1))));
 }
 
+/** IA-AVAL-008 — as travas: defeito grave limita a nota. */
+export function aplicarTravas(
+  geral: number,
+  p: { inventaFato: number; foraDoProjeto: number; generica: number; duplicada: number },
+): number {
+  let teto = 100;
+  if (p.inventaFato > LIMITES.inventaFato || p.foraDoProjeto > LIMITES.foraDoProjeto) teto = TETO_BAIXA;
+  else if (p.generica > LIMITES.generica || p.duplicada > LIMITES.duplicada) teto = TETO_REVISAR;
+  return Math.min(geral, teto);
+}
+
 /**
  * Transforma as respostas validadas em uma `Avaliacao` por etapa, na
  * mesma ordem de `etapas`. C9 (ordem da lista) entra em todas como
@@ -180,17 +216,22 @@ export function avaliarEtapas(
     if (c9) criterios.c9 = c9;
 
     const especificos = [c6, c7, c10].filter((c): c is Criterio => !!c).map((c) => c.pct);
-    const geral = calcularGeral(c1.pct, c2.pct, c3.pct, especificos);
+    const geral = aplicarTravas(calcularGeral(c1.pct, c2.pct, c3.pct, especificos), {
+      inventaFato: c4?.pct ?? 0,
+      foraDoProjeto: 100 - c3.pct,
+      generica: generica?.pct ?? 0,
+      duplicada: c8?.pct ?? 0,
+    });
 
     const alertas: Alerta[] = [];
     const r1 = respostas[idPergunta(i, 'c1')];
     if (r1?.type === 'choice' && (r1.probabilities.contradiz ?? 0) * 100 > LIMITE_ALERTA) {
       alertas.push({ codigo: 'contradiz_evidencia', texto: 'Contradiz o que está na ficha da empresa ou nas idéias validadas.' });
     }
-    if (c4 && c4.pct > LIMITE_ALERTA) {
+    if (c4 && c4.pct > LIMITES.inventaFato) {
       alertas.push({ codigo: 'inventa_fato', texto: 'Afirma sobre a empresa algo que não está na ficha.' });
     }
-    if (c8 && c8.pct > LIMITE_ALERTA) {
+    if (c8 && c8.pct > LIMITES.duplicada) {
       alertas.push({ codigo: 'duplicata_semantica', texto: 'Parece repetir uma idéia que já existe no projeto.' });
     }
 

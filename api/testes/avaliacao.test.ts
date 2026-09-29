@@ -17,6 +17,7 @@ import {
   calcularGeral,
   faixaDe,
   naoAvaliado,
+  aplicarTravas,
 } from '../src/ia/avaliacao/normalizar.js';
 
 const base: ContextoAvaliacaoIdeias = {
@@ -36,7 +37,9 @@ const base: ContextoAvaliacaoIdeias = {
 function respostasPara(lote: ReturnType<typeof montarLoteIdeias>, ajuste: Record<string, unknown> = {}) {
   const r: Record<string, unknown> = {};
   for (const [id, p] of Object.entries(lote.questions)) {
-    if (p.type === 'noul') r[id] = { type: 'noul', noul: 0.9 };
+    /* Etapa sem defeito: perguntas "boas" (C3, C7, C10) altas; as de
+       defeito (C4 inventa, C6 genérica, C8 repetida) baixas. */
+    if (p.type === 'noul') r[id] = { type: 'noul', noul: /_(c4|c6|c8)$/.test(id) ? 0.1 : 0.9 };
     if (p.type === 'choice') r[id] = { type: 'choice', choice: 'sustentada', probabilities: { sustentada: 0.9, sem_base: 0.1, contradiz: 0 }, confidence: 0.9 };
     if (p.type === 'score') r[id] = { type: 'score', score: p.criteria.length - 1, confidence: 0.9 };
   }
@@ -133,6 +136,28 @@ describe('nota geral — IA-AVAL-008/009', () => {
     assert.equal(faixaDe(49), 'baixa');
     assert.equal(faixaDe(null), 'nao_avaliado');
     assert.equal(naoAvaliado().faixa, 'nao_avaliado');
+  });
+});
+
+describe('travas — IA-AVAL-008 revista', () => {
+  test('inventa fato ou fora do projeto: no máximo baixa', () => {
+    assert.equal(aplicarTravas(90, { inventaFato: 89, foraDoProjeto: 0, generica: 0, duplicada: 0 }), 49);
+    assert.equal(aplicarTravas(83, { inventaFato: 0, foraDoProjeto: 89, generica: 0, duplicada: 0 }), 49);
+  });
+  test('genérica ou repetida: no máximo revisar', () => {
+    assert.equal(aplicarTravas(83, { inventaFato: 0, foraDoProjeto: 0, generica: 91, duplicada: 0 }), 79);
+    assert.equal(aplicarTravas(88, { inventaFato: 0, foraDoProjeto: 0, generica: 0, duplicada: 95 }), 79);
+  });
+  test('sem defeito, a nota não muda; trava nunca sobe nota', () => {
+    assert.equal(aplicarTravas(92, { inventaFato: 10, foraDoProjeto: 7, generica: 26, duplicada: 5 }), 92);
+    assert.equal(aplicarTravas(30, { inventaFato: 0, foraDoProjeto: 0, generica: 91, duplicada: 0 }), 30);
+  });
+});
+
+describe('perguntas citam o título — correção de 29/09', () => {
+  test('cada pergunta de etapa leva o título entre aspas', () => {
+    const lote = montarLoteIdeias(base);
+    assert.match(lote.questions[idPergunta(1, 'c4')]!.instructions, /"Planejar o projeto" \(`etapas\.1`\)/);
   });
 });
 

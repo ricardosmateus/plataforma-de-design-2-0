@@ -26,9 +26,9 @@ O código de avaliação está em `api/src/ia/avaliacao/`. Na Fase 1 ele roda s�
 | IA-AVAL-003 | Se os dois falham, o conteúdo é entregue como **"Não avaliado"**. A avaliação nunca bloqueia a entrega. | Decorre de IA-AVAL-002 |
 | IA-AVAL-004 | Falha do JEV: erro de rede, timeout, HTTP de erro, resposta fora do formato, pergunta sem resposta ou chave `TYPESAFE_API_KEY` ausente. **Confiança baixa não é falha**: a nota vale e sai marcada como incerta. | Planejamento §2 |
 | IA-AVAL-005 | O avaliador só julga o que recebe. "Confiança do dado" é o quanto a afirmação está **sustentada pelas evidências da plataforma** (ficha da empresa, idéias em *Finalizado*, fontes da busca). A tela nunca diz "verdadeiro" nem "falso". | Planejamento §0.1 |
-| IA-AVAL-006 | Uma pergunta, um julgamento. Todas as perguntas de um item vão numa única chamada, e quem combina as respostas é o código. | Planejamento §3 |
+| IA-AVAL-006 | Uma pergunta, um julgamento. Todas as perguntas de um item vão numa única chamada, e quem combina as respostas é o código. Cada pergunta sobre uma etapa **cita o título dela** além do caminho (`"Planejar o projeto" (etapas.3)`): só com o índice, o JEV confunde posições em listas longas (calibração de 29/09/2026). | Planejamento §3; correção de 29/09/2026 |
 | IA-AVAL-007 | O avaliador **não apaga nem edita** conteúdo. Ele marca, e quem decide é a pessoa (mesmo princípio de IA-GARANT-005). | Pedido do Ricardo, 29/09/2026 |
-| IA-AVAL-008 | Nota geral: C1 × 0,40 + C2 × 0,30 + C3 × 0,15 + específicos × 0,15, e **nunca acima de C1 + 10 pontos**. Um conteúdo que convence mas se apoia em dado sem base não pode aparecer como confiança alta. | Planejamento §3.3 |
+| IA-AVAL-008 | Nota geral: C1 × 0,40 + C2 × 0,30 + C3 × 0,15 + específicos × 0,15, **nunca acima de C1 + 10 pontos**, e com **travas**: inventa fato (C4 > 50%) ou fora do projeto (C3 < 50%) → no máximo 49 (baixa); genérica (P > 90%) ou repetida (C8 > 55%) → no máximo 79 (revisar). Os mesmos limiares disparam os alertas. Um defeito grave não se compensa com qualidade no resto. | Planejamento §3.3; travas pela calibração com gabarito de 29/09/2026 |
 | IA-AVAL-014 | Os pesos e as faixas só mudam com uma nova rodada de calibração registrada neste documento. | Planejamento §7 |
 | IA-AVAL-015 | O `state` enviado ao avaliador leva só o necessário: nada de nome, e-mail ou id de usuário. | LGPD |
 
@@ -78,4 +78,6 @@ C11 a C17 (assistente e caderno) entram nas Fases 3 e 4.
 
 | Versão | Data | Mudança |
 |---|---|---|
+| 1.2.0 | 2026-09-29 | **Segunda calibração** (gabarito, 22 etapas, depois da correção do título): faixa 82%, inventa fato 100% de acerto. "Genérica" em 50% travava etapas boas (acerto 73%, precisão 40%) — limiar sobe para **90%** (96% / 80% / 100%); "repetida" sobe para **55%** (100%). Cortes de faixa mantidos (80/50): a sugestão de 75 era efeito das travas erradas. |
+| 1.1.0 | 2026-09-29 | **Primeira calibração** (`calibracao/relatorio-automatico-2026-09-29.md`, 22 etapas com gabarito). Achados: (1) só com `etapas.N` o JEV julgava a etapa vizinha — IA-AVAL-006 passa a exigir o título citado; teste direto: repetida 9%→95%, fato inventado falso 92%→7%. (2) A média escondia defeitos que o JEV já via (genérica 91% saía "alta") — IA-AVAL-008 ganha as travas. Com as travas, o cenário da clínica passou de 4/6 para 6/6 faixas certas. As 5 avaliações reais anteriores foram feitas com as perguntas antigas. |
 | 1.0.0 | 2026-09-29 | Documento criado com IA-AVAL-001 a 017, a partir de `planejamento-jev-avaliacao.md` v0.4.0. |
