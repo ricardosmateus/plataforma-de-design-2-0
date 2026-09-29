@@ -66,3 +66,6 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Calibração do JEV: páginas e relatórios com texto de idéias de clientes
+calibracao/

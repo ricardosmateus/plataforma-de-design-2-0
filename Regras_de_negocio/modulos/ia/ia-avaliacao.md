@@ -11,6 +11,8 @@
 
 O código de avaliação está em `api/src/ia/avaliacao/`. Na Fase 1 ele roda só no **Gerar com ajuda da IA** e só **grava** a nota em `avaliacoes_ia`: nada aparece na tela ainda. O selo (§1.3) entra na Fase 2, depois da calibração.
 
+**Calibração (IA-AVAL-014):** `npm run calibrar:exportar` gera `calibracao/marcar-AAAA-MM-DD.html` (fora do git), onde a pessoa marca cada etapa sem ver a nota; `npm run calibrar:analisar -- <marcações.json>` compara com as notas e sugere cortes de faixa e limiares de alerta, sem mudar o código. Módulo puro em `api/src/ia/avaliacao/calibracao.ts`. `npm run calibrar:automatico` faz a calibração sem marcação manual, com duas referências que nunca são o próprio JEV: o **gabarito** (`gabarito.ts`, etapas com o defeito conhecido por construção — a prova) e o **revisor** (o Claude revisando as etapas reais — um indício).
+
 ---
 
 ## 1. Regras
