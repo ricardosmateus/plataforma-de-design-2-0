@@ -127,6 +127,25 @@ const esquema = z.object({
      gastar chamada. */
   IA_PERGUNTA_MAX: z.coerce.number().default(2000),
 
+  /* ---------- Avaliação do conteúdo de IA — ia-avaliacao.md ----------
+     O JEV (TypeSafe System One) avalia o que o Claude gerou; se ele
+     falhar, o Claude avalia (IA-AVAL-002/004). Sem chave, o JEV
+     "falha" e o Claude assume — nada derruba a geração.
+
+     AVALIACAO_MODO:
+       'desligada' — não avalia (padrão: nada muda até ligar);
+       'sombra'    — avalia, cobra e GRAVA, mas nada aparece na tela
+                     (Fase 1, calibração);
+       'visivel'   — Fase 2, o selo aparece. */
+  AVALIACAO_MODO: z.enum(['desligada', 'sombra', 'visivel']).default('desligada'),
+  TYPESAFE_API_KEY: z.string().optional(),
+  TYPESAFE_BASE_URL: z.string().default('https://api.typesafe.ai'),
+  TYPESAFE_MODELO: z.string().default('jev-latest'),
+  /* O JEV responde em ~100 ms por lote; 4 s já é falha. */
+  TYPESAFE_TIMEOUT_MS: z.coerce.number().default(4000),
+  /* O Claude como avaliador de reserva escreve dezenas de respostas. */
+  AVALIACAO_CLAUDE_TIMEOUT_MS: z.coerce.number().default(30000),
+
   /* ---------- Créditos ----------
      Cotação do dólar usada para converter o custo do provedor em
      real. Fase 0 do módulo de créditos: número de configuração, não

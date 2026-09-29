@@ -67,6 +67,14 @@ export const TABELA: Record<string, Preco> = {
   'claude-opus-5':     { entrada:  5_000_000, saida: 25_000_000, cacheEscrita:  6_250_000, cacheLeitura: 500_000 },
 };
 
+/* O JEV (TypeSafe, `jev-*`) NÃO está nesta tabela de propósito: a
+   documentação pública não traz preço (conferido em 29/09/2026 em
+   docs.typesafe.ai). Até o preço oficial entrar aqui, o consumo dele
+   é MEDIDO (tokens gravados, `precoDesconhecido`) e não cobrado —
+   nunca estimado (IA-AVAL-017). Cadastrar é uma linha:
+     'jev-':  { entrada: <µUSD/MTok>, saida: <µUSD/MTok>, cacheEscrita: 0, cacheLeitura: 0 },
+*/
+
 export function precoDe(modelo: string): Preco | null {
   /* Do prefixo mais longo para o mais curto: `claude-sonnet-4-5` tem
      que ganhar de um eventual `claude-sonnet`, senão o mais genérico

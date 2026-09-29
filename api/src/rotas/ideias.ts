@@ -39,7 +39,20 @@ import { segmentarIdeiaEmSegundoPlano } from '../ia/recortes.js';
 import { randomUUID } from 'node:crypto';
 import { env } from '../env.js';
 import { iaConfigurada } from '../ia/provedor.js';
-import { montarMensagem, interpretarIdeias, pedirIdeias, MAX_TOKENS_GERACAO, SISTEMA, ORIENTACAO_MAX } from '../ia/gerar-ideias.js';
+import {
+  montarMensagem,
+  interpretarIdeias,
+  pedirIdeias,
+  MAX_TOKENS_GERACAO,
+  SISTEMA,
+  ORIENTACAO_MAX,
+  IDEIAS_MAX,
+  TITULO_MAX,
+  DESCRICAO_MAX,
+} from '../ia/gerar-ideias.js';
+import { avaliarIdeias, custoDasChamadas, tetoAvaliacaoUsdMicros } from '../ia/avaliacao/avaliar.js';
+import { avaliacaoLigada, dependenciasDoAmbiente } from '../ia/avaliacao/config.js';
+import { montarLoteIdeias } from '../ia/avaliacao/perguntas.js';
 import { nomeDoTipo } from '../projetos/catalogo.js';
 import { registrar } from '../creditos/registro.js';
 import { tetoUsdMicros, custoUsdMicros } from '../creditos/precos.js';
@@ -280,6 +293,14 @@ async function buscarPossivelDuplicata(
   return achada ? (ativas.find((i: LinhaIdeia) => i.id === achada.id) ?? null) : null;
 }
 
+/* IA-AVAL-011/012: a nota acompanha o destino do texto que avaliou.
+   Registro paralelo — nunca derruba a edição nem a exclusão. */
+function marcarAvaliacao(ideiaId: string, estado: 'desatualizada' | 'excluida'): void {
+  void db.avaliacaoIa
+    .updateMany({ where: { alvoTipo: 'ideia', alvoId: ideiaId, estado: 'ativa' }, data: { estado } })
+    .catch((e: unknown) => console.error('[avaliacao] falha ao marcar a nota como ' + estado, e));
+}
+
 type LinhaIdeia = {
   id: string;
   titulo: string;
@@ -442,11 +463,37 @@ export async function rotasIdeias(app: FastifyInstance) {
       orientacao: corpo.data.orientacao ?? null,
     });
 
+    /* ---- Avaliação (IA-AVAL) — o que vai ao avaliador ----
+       Montado antes da reserva porque o teto dela entra na mesma
+       reserva (IA-AVAL-013). As etapas ainda não existem: o teto usa
+       o pior caso (IDEIAS_MAX etapas no tamanho máximo). */
+    const avaliar = avaliacaoLigada();
+    const baseAvaliacao = {
+      projetoNome: projeto.nome ?? nomeDoTipo(projeto.tipo),
+      empresaNome: projeto.empresa.nome,
+      empresaDescricao: projeto.empresa.descricao ?? null,
+      validadas: ativas.filter((i: LinhaIdeia) => i.status === 'finalizado').map((i: LinhaIdeia) => i.titulo),
+      existentes: ativas.map((i: LinhaIdeia) => i.titulo),
+      orientacao: corpo.data.orientacao ?? null,
+    };
+    const depsAvaliacao = avaliar ? dependenciasDoAmbiente() : null;
+
     /* ---- Reserva ANTES de chamar (IA-CUSTO-002) ---- */
     const operacaoId = randomUUID();
     let tetoTotalMicros = 0;
     if (env.CREDITOS_COBRAR === 'sim') {
-      const tetoUsd = tetoUsdMicros(env.IA_MODELO as string, SISTEMA + '\n' + mensagem, MAX_TOKENS_GERACAO);
+      let tetoUsd = tetoUsdMicros(env.IA_MODELO as string, SISTEMA + '\n' + mensagem, MAX_TOKENS_GERACAO);
+      if (tetoUsd !== null && avaliar && depsAvaliacao) {
+        const piorCaso = montarLoteIdeias({
+          ...baseAvaliacao,
+          etapas: Array.from({ length: IDEIAS_MAX }, () => ({
+            titulo: 'x'.repeat(TITULO_MAX),
+            descricao: 'x'.repeat(DESCRICAO_MAX),
+          })),
+        });
+        const tetoAval = tetoAvaliacaoUsdMicros(piorCaso, depsAvaliacao.jev.modelo, env.IA_MODELO as string);
+        tetoUsd = tetoAval === null ? null : tetoUsd + tetoAval;
+      }
       if (tetoUsd === null) {
         return resposta.code(503).send(erro(null, 'O assistente está indisponível no momento. Tente mais tarde.'));
       }
@@ -482,9 +529,32 @@ export async function rotasIdeias(app: FastifyInstance) {
       comparaveis.push({ id: 'nova-' + aceitas.length, titulo: g.titulo, descricao: g.descricao, status: 'ideias' });
     }
 
-    /* Custo registrado antes de decidir (a chamada já foi paga). Só é
-       `entregue` o que virou ao menos uma idéia no quadro. */
     const entregue = aceitas.length > 0;
+
+    /* ---- Avaliação das etapas aceitas (IA-AVAL-001/002) ----
+       JEV → Claude → "não avaliado". Nunca lança e nunca impede a
+       gravação (IA-AVAL-003). Só avalia o que vai para o quadro. */
+    const avaliacao = entregue && avaliar && depsAvaliacao
+      ? await avaliarIdeias({ ...baseAvaliacao, etapas: aceitas }, depsAvaliacao)
+      : null;
+    /* `warn` e não `info`: em desenvolvimento o logger só mostra de
+       `warn` para cima, e na Fase 1 (sombra) esta linha é o único
+       sinal visível de que a avaliação rodou. */
+    req.log.warn(
+      { avaliar, aceitas: aceitas.length, avaliador: avaliacao?.avaliador ?? null, falhaJev: avaliacao?.falhaJev ?? null },
+      'gerar idéias: avaliação',
+    );
+    if (avaliacao && avaliacao.falhaJev) {
+      req.log.warn(
+        { falhaJev: avaliacao.falhaJev, falhaClaude: avaliacao.falhaClaude, avaliador: avaliacao.avaliador },
+        'avaliação: o JEV não respondeu',
+      );
+    }
+
+    /* Custo registrado antes de decidir (a chamada já foi paga).
+       IDEIA-GERAR-008 revista (29/09/2026): o que não virou idéia
+       continua `descartado`, mas é cobrado — o provedor cobrou
+       (IA-AVAL-017). */
     if (r.uso && r.modelo) {
       registrar({
         usuarioId: ctx.usuarioId,
@@ -496,25 +566,45 @@ export async function rotasIdeias(app: FastifyInstance) {
         uso: r.uso,
         requisicaoId: r.requisicaoId,
         operacaoId,
+        cobravel: true,
+      });
+    }
+    /* Cada ida ao avaliador é uma linha própria, tipo `avaliacao`, com
+       a mesma operação (IA-AVAL-013). O JEV sem preço cadastrado fica
+       medido com `precoDesconhecido` — nunca estimado. */
+    for (const c of avaliacao?.chamadas ?? []) {
+      if (!c.cobrou || !c.uso) continue;
+      registrar({
+        usuarioId: ctx.usuarioId,
+        empresaId: ctx.empresaId,
+        projetoId: ctx.projetoId,
+        tipo: 'avaliacao',
+        resultado: c.fornecedor === avaliacao!.avaliador ? 'entregue' : 'descartado',
+        modelo: c.modelo,
+        uso: c.uso,
+        requisicaoId: c.requisicaoId,
+        operacaoId,
+        cobravel: true,
       });
     }
 
-    /* ---- Acerta a reserva pelo custo verdadeiro (IA-CUSTO-003) ---- */
+    /* ---- Acerta a reserva pelo custo verdadeiro (IA-CUSTO-003) ----
+       Um só consumo por operação: geração + avaliação somadas. */
     if (tetoTotalMicros > 0) {
       await liberar(ctx.usuarioId, tetoTotalMicros, operacaoId, 'assistente');
-      if (entregue && r.uso && r.modelo) {
-        const usdReal = custoUsdMicros(r.modelo, r.uso);
-        if (usdReal !== null) {
-          const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
-          const totalReal = comissaoSobre(usdParaMicrosBrl(usdReal, cotacao)).totalMicros;
-          if (totalReal > 0) await consumir(ctx.usuarioId, totalReal, operacaoId, 'assistente');
-        }
+      let usdReal = 0;
+      if (r.uso && r.modelo) usdReal += custoUsdMicros(r.modelo, r.uso) ?? 0;
+      if (avaliacao) usdReal += custoDasChamadas(avaliacao.chamadas).usdMicros;
+      if (usdReal > 0) {
+        const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
+        const totalReal = comissaoSobre(usdParaMicrosBrl(usdReal, cotacao)).totalMicros;
+        if (totalReal > 0) await consumir(ctx.usuarioId, totalReal, operacaoId, 'assistente');
       }
     }
 
     if (!entregue) {
-      /* Nada gravado, nada cobrado. As duas mensagens pedem ações
-         diferentes: tentar de novo ou desistir de gerar o que já está lá. */
+      /* Nada gravado. As duas mensagens pedem ações diferentes:
+         tentar de novo ou desistir de gerar o que já está lá. */
       if (geradas.length > 0) {
         return resposta.code(200).send({ ideias: [], parecidas });
       }
@@ -547,7 +637,43 @@ export async function rotasIdeias(app: FastifyInstance) {
       ),
     );
 
-    return resposta.code(201).send({ ideias: criadas.map(ideiaParaResposta), parecidas });
+    /* ---- Grava as notas (Fase 1: modo sombra) ----
+       Falhar aqui não desfaz as idéias: elas já estão no quadro e a
+       nota é informação a mais (IA-AVAL-003). */
+    if (avaliacao) {
+      try {
+        await db.avaliacaoIa.createMany({
+          data: criadas.map((c: { id: string }, i: number) => {
+            const a = avaliacao.avaliacoes[i];
+            return {
+              alvoTipo: 'ideia' as const,
+              alvoId: c.id,
+              projetoId: ctx.projetoId,
+              avaliador: a?.avaliador ?? 'nenhum',
+              modelo: a?.modelo ?? null,
+              geral: a?.geral ?? null,
+              faixa: a?.faixa ?? 'nao_avaliado',
+              incerta: a?.incerta ?? false,
+              criterios: a?.criterios ?? {},
+              alertas: a?.alertas ?? [],
+              operacaoId,
+            };
+          }),
+        });
+      } catch (e) {
+        req.log.error({ err: e, operacaoId }, 'avaliação: falha ao gravar as notas (as idéias foram criadas)');
+      }
+    }
+
+    /* Fase 2 (`visivel`): a nota vai junto de cada idéia. Em `sombra`,
+       nada muda na resposta — a tela continua igual. */
+    const mostrar = env.AVALIACAO_MODO === 'visivel' && avaliacao;
+    return resposta.code(201).send({
+      ideias: criadas.map((c: LinhaIdeia, i: number) =>
+        mostrar ? { ...ideiaParaResposta(c), avaliacao: avaliacao!.avaliacoes[i] ?? null } : ideiaParaResposta(c),
+      ),
+      parecidas,
+    });
   });
 
   /* ---------- Editar — IDEIA-CRIA-001/004 ---------- */
@@ -598,6 +724,11 @@ export async function rotasIdeias(app: FastifyInstance) {
     if (ideia.status === 'finalizado' && textoMudou) {
       void classificarIdeiaEmSegundoPlano(ideia.id).catch(() => {});
     }
+
+    /* IA-AVAL-011: o texto agora é da pessoa, e a nota era do texto
+       que a IA gerou. Sem a checagem de `textoMudou`, mudar só a
+       importância apagaria a nota à toa. */
+    if (textoMudou) marcarAvaliacao(existente.id, 'desatualizada');
 
     return resposta.send({ ideia: ideiaParaResposta(ideia) });
   });
@@ -832,6 +963,7 @@ export async function rotasIdeias(app: FastifyInstance) {
       where: { id: existente.id },
       data: { arquivadoEm: new Date() },
     });
+    marcarAvaliacao(existente.id, 'excluida');
 
     return resposta.code(200).send({ ok: true });
   });

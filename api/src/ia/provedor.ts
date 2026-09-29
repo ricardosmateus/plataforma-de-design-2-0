@@ -45,7 +45,15 @@ export type RespostaBruta = {
 /* Erro tipado para a rota distinguir "provedor fora" (503) de
    "configuração ausente" (503 também, mas com outra mensagem) e de
    um erro de programação, que não deve virar 503 nenhum. */
+/* Medição de uma chamada que o provedor COBROU e que ainda assim
+   falhou do nosso lado (vazia, cortada no teto, fora do formato).
+   IA-CUSTO-003 revista (IA-AVAL-017, 29/09/2026): esse custo é
+   repassado — e para repassar é preciso saber quanto foi. */
+export type MedicaoCobrada = { uso: Uso; modelo: string; requisicaoId?: string };
+
 export class FalhaDoProvedor extends Error {
+  medicao?: MedicaoCobrada;
+
   constructor(
     mensagem: string,
     readonly configuracao = false,
@@ -154,8 +162,21 @@ class ProvedorAnthropic implements Provedor {
       .map((p) => p.text as string)
       .join('');
 
+    /* Daqui em diante a chamada RODOU e foi cobrada pelo provedor:
+       toda falha sai com a medição junto (IA-CUSTO-003 revista). */
+    const medicao: MedicaoCobrada = {
+      uso: lerUso(dados.usage),
+      modelo: this.modelo,
+      requisicaoId: resposta.headers.get('request-id') ?? undefined,
+    };
+    const falhaCobrada = (mensagem: string) => {
+      const f = new FalhaDoProvedor(mensagem);
+      f.medicao = medicao;
+      return f;
+    };
+
     if (!texto.trim()) {
-      throw new FalhaDoProvedor('O assistente devolveu uma resposta vazia.');
+      throw falhaCobrada('O assistente devolveu uma resposta vazia.');
     }
 
     /* ------------------------------------------------------------
@@ -171,7 +192,7 @@ class ProvedorAnthropic implements Provedor {
        acionável: quem lê sabe que precisa de um teto maior ou de uma
        pergunta mais estreita. */
     if (dados.stop_reason === 'max_tokens') {
-      throw new FalhaDoProvedor(
+      throw falhaCobrada(
         'A resposta passou do tamanho máximo e foi cortada. Refaça a pergunta de forma ' +
           'mais específica, ou aumente IA_MAX_TOKENS.',
       );
@@ -180,12 +201,14 @@ class ProvedorAnthropic implements Provedor {
     /* O `usage` vinha sendo descartado — e sem ele não há como
        cobrar, porque não há como saber o que a chamada custou.
        Ler aqui é o pré-requisito de todo o módulo de créditos. */
-    return {
-      ...extrairJson(texto),
-      uso: lerUso(dados.usage),
-      modelo: this.modelo,
-      requisicaoId: resposta.headers.get('request-id') ?? undefined,
-    };
+    let extraida: RespostaBruta;
+    try {
+      extraida = extrairJson(texto);
+    } catch (e) {
+      if (e instanceof FalhaDoProvedor) e.medicao = medicao;
+      throw e;
+    }
+    return { ...extraida, ...medicao };
   }
 }
 

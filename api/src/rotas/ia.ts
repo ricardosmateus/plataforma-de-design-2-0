@@ -494,16 +494,39 @@ export async function rotasIa(app: FastifyInstance) {
     try {
       bruta = await provedorAtual().responder(pedido);
     } catch (e) {
+      /* IA-CUSTO-003 revista (IA-AVAL-017, 29/09/2026): se o provedor
+         COBROU (a chamada rodou e voltou vazia, cortada ou fora do
+         formato), o custo é medido e repassado. Se não cobrou (rede,
+         HTTP de erro), não há o que repassar. Em nenhum dos dois casos
+         a conversa é gravada — meia conversa deixaria a pergunta
+         órfã no histórico. */
+      const cobrada = e instanceof FalhaDoProvedor ? e.medicao : undefined;
+      if (cobrada) {
+        registrar({
+          usuarioId: ctx.usuarioId,
+          empresaId: ctx.empresaId,
+          projetoId: ctx.projetoId,
+          tipo: 'assistente',
+          resultado: 'descartado',
+          modelo: cobrada.modelo,
+          uso: cobrada.uso,
+          requisicaoId: cobrada.requisicaoId,
+          operacaoId,
+          cobravel: true,
+        });
+      }
       if (tetoTotalMicros > 0) {
-        /* A chamada não aconteceu (ou não terminou) — devolve a
-           reserva inteira. Nada foi cobrado. */
         await liberar(ctx.usuarioId, tetoTotalMicros, operacaoId, 'assistente');
+        if (cobrada) {
+          const usdReal = custoUsdMicros(cobrada.modelo, cobrada.uso);
+          if (usdReal !== null) {
+            const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);
+            const totalReal = comissaoSobre(usdParaMicrosBrl(usdReal, cotacao)).totalMicros;
+            if (totalReal > 0) await consumir(ctx.usuarioId, totalReal, operacaoId, 'assistente');
+          }
+        }
       }
       if (e instanceof FalhaDoProvedor) {
-        /* IA-CUSTO-003: falha do provedor não consome crédito e não
-           grava nada. Cobrar por resposta que não veio é cobrar por
-           nada — e gravar meia conversa deixaria a pergunta órfã no
-           histórico. */
         return resposta.code(503).send(erro(null, e.message));
       }
       throw e;
@@ -517,9 +540,9 @@ export async function rotasIa(app: FastifyInstance) {
        qualquer `return`. A chamada foi paga nos dois casos — a
        verificação acontece do nosso lado, o provedor já cobrou.
 
-       Uma resposta descartada entra como `descartado`/`cobravel:
-       false`: não se cobra do usuário por uma resposta que o próprio
-       servidor recusou (IA-CUSTO-003), mas o dinheiro saiu, e a
+       Uma resposta descartada entra como `descartado`. Desde
+       29/09/2026 ela é cobrada (IA-CUSTO-003 revista, IA-AVAL-017):
+       o dinheiro saiu, e a
        linha é o que torna esse desperdício visível. Sem ela, uma
        verificação falhando muito seria um vazamento invisível. */
     if (bruta.uso && bruta.modelo) {
@@ -533,6 +556,9 @@ export async function rotasIa(app: FastifyInstance) {
         uso: bruta.uso,
         requisicaoId: bruta.requisicaoId,
         operacaoId,
+        /* IA-CUSTO-003 revista: descartada pela verificação também é
+           cobrada — o provedor cobrou (IA-AVAL-017). */
+        cobravel: true,
       });
     }
 
@@ -540,13 +566,14 @@ export async function rotasIa(app: FastifyInstance) {
        A reserva cobriu um TETO; agora que o `usage` real chegou, ela
        é devolvida por inteiro e o custo verdadeiro é debitado à
        parte — o efeito líquido é sempre o custo real, nunca o teto.
-       Resposta descartada (IA-CUSTO-003): a reserva volta inteira e
-       nada mais é cobrado — o gasto real com o provedor já ficou
-       visível em `registrar()`, que rodou acima de qualquer jeito. */
+       Resposta descartada: desde 29/09/2026 também é cobrada
+       (IA-CUSTO-003 revista, IA-AVAL-017) — o provedor cobrou. */
     if (tetoTotalMicros > 0) {
       await liberar(ctx.usuarioId, tetoTotalMicros, operacaoId, 'assistente');
 
-      if (veredito.ok && bruta.uso && bruta.modelo) {
+      /* IA-CUSTO-003 revista (29/09/2026): a resposta descartada pela
+         verificação também é cobrada — o provedor cobrou por ela. */
+      if (bruta.uso && bruta.modelo) {
         const usdReal = custoUsdMicros(bruta.modelo, bruta.uso);
         if (usdReal !== null) {
           const cotacao = cotacaoParaMilesimos(env.COTACAO_USD_BRL);

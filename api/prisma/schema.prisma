@@ -833,6 +833,7 @@ enum TipoConsumoIa {
   assistente     // pergunta no painel lateral
   classificacao  // taxonomia automática da idéia
   sintese_tema   // enriquecimento de um tema (leitura guiada, gráficos, lacunas)
+  avaliacao      // avaliação do conteúdo de IA pelo JEV ou pelo Claude (IA-AVAL-013)
 }
 
 enum ResultadoConsumoIa {
@@ -1508,4 +1509,73 @@ model ConsumoPesquisa {
   @@index([sessaoId])
   @@index([operacaoId])
   @@map("consumos_pesquisa")
+}
+
+// ------------------------------------------------------------
+// AVALIAÇÃO DO CONTEÚDO DE IA — ia-avaliacao.md (IA-AVAL)
+//
+// O Claude gera; o JEV (ou o Claude, quando o JEV falha) avalia.
+// Uma linha por item avaliado. O alvo é polimórfico (idéia hoje;
+// mensagem, ação e fonte do assistente nas Fases 3 e 4), por isso
+// não há FOREIGN KEY para ele — mesmo motivo de `consumos_ia`.
+//
+// A avaliação nunca edita o conteúdo (IA-AVAL-007). `estado` só diz
+// se a nota ainda vale para o texto que está no card: editar à mão
+// a torna `desatualizada` (IA-AVAL-011).
+// ------------------------------------------------------------
+enum AlvoAvaliacaoIa {
+  ideia
+  mensagem
+  acao
+  fonte
+}
+
+enum AvaliadorIa {
+  jev
+  claude
+  nenhum
+}
+
+enum FaixaAvaliacaoIa {
+  alta
+  revisar
+  baixa
+  nao_avaliado
+}
+
+enum EstadoAvaliacaoIa {
+  ativa
+  excluida
+  desatualizada
+}
+
+model AvaliacaoIa {
+  id String @id @default(uuid()) @db.Uuid
+
+  alvoTipo  AlvoAvaliacaoIa @map("alvo_tipo")
+  alvoId    String          @map("alvo_id") @db.Uuid
+  projetoId String          @map("projeto_id") @db.Uuid
+
+  avaliador AvaliadorIa
+  modelo    String?
+  geral     Int?
+  faixa     FaixaAvaliacaoIa
+  incerta   Boolean          @default(false)
+
+  // { "c1": { "pct": 90, "confianca": 0.9 }, ... } — ia-avaliacao.md §1.2
+  criterios Json @default("{}")
+  // [{ "codigo": "inventa_fato", "texto": "..." }]
+  alertas   Json @default("[]")
+
+  estado EstadoAvaliacaoIa @default(ativa)
+
+  // Liga a nota ao consumo cobrado (mesma chave de `consumos_ia`).
+  operacaoId String? @map("operacao_id") @db.Uuid
+
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@index([alvoTipo, alvoId])
+  @@index([projetoId, criadoEm])
+  @@map("avaliacoes_ia")
 }

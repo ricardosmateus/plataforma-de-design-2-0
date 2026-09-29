@@ -31,7 +31,7 @@ export type Registro = {
   empresaId?: string | null;
   projetoId?: string | null;
   ideiaId?: string | null;
-  tipo: 'assistente' | 'classificacao' | 'sintese_tema';
+  tipo: 'assistente' | 'classificacao' | 'sintese_tema' | 'avaliacao';
   resultado: 'entregue' | 'descartado';
   modelo: string;
   uso: Uso;
@@ -42,6 +42,13 @@ export type Registro = {
      sabe, quando não há lançamento, que o consumo foi medido sem ser
      cobrado (`CREDITOS_COBRAR=nao`) em vez de não ter acontecido. */
   operacaoId?: string | null;
+
+  /* IA-AVAL-017 (decisão D8, 29/09/2026): todo custo que o provedor
+     cobrou é repassado. Quem já segue a regra nova passa `true` e a
+     linha `descartado` fica marcada como cobrável. Sem o campo, vale
+     o comportamento antigo (`descartado` = não cobrável), que ainda é
+     o das rotas fora da Visão do Projeto. */
+  cobravel?: boolean;
 };
 
 /* A cotação é configuração, não consulta — nesta fase. A Fase 1
@@ -90,7 +97,7 @@ export async function registrarConsumo(r: Registro): Promise<void> {
          é cobrar por nada (IA-CUSTO-003). Registrar mesmo assim é o
          que revela quanto dinheiro está indo embora nessa recusa —
          custo que, sem esta linha, seria invisível. */
-      cobravel: r.resultado === 'entregue',
+      cobravel: r.cobravel ?? r.resultado === 'entregue',
       requisicaoId: r.requisicaoId ?? null,
     },
   });

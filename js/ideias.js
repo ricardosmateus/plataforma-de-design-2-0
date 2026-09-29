@@ -138,7 +138,10 @@
         var parecidas = (r && r.parecidas) || 0;
 
         if (criadas.length === 0) {
-          aviso('As idéias sugeridas já estão no quadro. Nenhuma idéia nova foi criada.');
+          /* IDEIA-GERAR-010 (29/09/2026): a geração aconteceu e foi
+             cobrada (IDEIA-GERAR-008) — o texto não pode soar como se
+             nada tivesse sido feito. */
+          aviso('A IA gerou as etapas, mas todas eram parecidas com idéias que já existem. Nada foi criado.');
           return r;
         }
 
