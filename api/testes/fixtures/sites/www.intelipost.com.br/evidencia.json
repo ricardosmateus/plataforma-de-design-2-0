@@ -1,0 +1,151 @@
+{
+  "site": "https://www.intelipost.com.br/",
+  "redirecionouPara": null,
+  "lidoEm": "2026-09-30T20:16:23.702Z",
+  "cores": [
+    {
+      "hex": "#2ad04b",
+      "vezes": 22,
+      "origens": [
+        "svg",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#017050",
+      "vezes": 13,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#002716",
+      "vezes": 5,
+      "origens": [
+        "svg"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#00cd3a",
+      "vezes": 5,
+      "origens": [
+        "svg"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#072b1d",
+      "vezes": 5,
+      "origens": [
+        "svg"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#1890d7",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#6645eb",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#8368ef",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#353535",
+      "vezes": 28,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#ffffff",
+      "vezes": 24,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#020101",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#000000",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "IBM Plex Sans",
+      "vezes": 33,
+      "origens": [
+        "google-fonts",
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "Roboto",
+      "vezes": 9,
+      "origens": [
+        "google-fonts",
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "Montserrat",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "inherit",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    }
+  ],
+  "coresDoLogo": [
+    "#002716",
+    "#00cd3a",
+    "#072b1d",
+    "#2ad04b"
+  ],
+  "logo": {
+    "url": "https://www.intelipost.com.br/wp-content/uploads/2023/07/Despacho-Intelipost-1.jpg",
+    "formato": "image/jpeg"
+  },
+  "avisos": []
+}

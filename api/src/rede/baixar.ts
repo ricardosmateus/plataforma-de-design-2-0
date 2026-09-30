@@ -30,7 +30,7 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 
 export type ResultadoDownload =
-  | { ok: true; dados: Buffer; tipo: string | null; urlFinal: string }
+  | { ok: true; dados: Buffer; tipo: string | null; urlFinal: string; truncado?: boolean }
   | { ok: false; motivo: string };
 
 export const REDIRECIONAMENTOS_MAX = 3;
@@ -104,7 +104,12 @@ async function resolveParaPublico(host: string): Promise<boolean> {
    ------------------------------------------------------------ */
 export async function baixarSeguro(
   endereco: string,
-  opcoes: { maxBytes: number; timeoutMs?: number; aceitar?: string },
+  /* `truncar` (30/09/2026, BOARD-VISUAL-010): em vez de recusar o que
+     passa de `maxBytes`, fica com o COMEÇO. Serve para ler uma página
+     inicial grande (a da Olist, no dado real), onde o que interessa —
+     <head>, cabeçalho, logotipo — está no começo. Imagem e documento
+     continuam sem truncar: cortados, não servem. */
+  opcoes: { maxBytes: number; timeoutMs?: number; aceitar?: string; truncar?: boolean },
 ): Promise<ResultadoDownload> {
   const prazo = AbortSignal.timeout(opcoes.timeoutMs ?? 12_000);
   let atual = endereco;
@@ -138,12 +143,13 @@ export async function baixarSeguro(
     }
 
     const declarado = Number(r.headers.get('content-length') ?? NaN);
-    if (Number.isFinite(declarado) && declarado > opcoes.maxBytes) {
+    if (Number.isFinite(declarado) && declarado > opcoes.maxBytes && !opcoes.truncar) {
       await r.body.cancel().catch(() => undefined);
       return { ok: false, motivo: 'grande demais' };
     }
 
     const pedacos: Uint8Array[] = [];
+    let truncado = false;
     let total = 0;
     try {
       const leitor = r.body.getReader();
@@ -153,7 +159,11 @@ export async function baixarSeguro(
         total += value.byteLength;
         if (total > opcoes.maxBytes) {
           await leitor.cancel().catch(() => undefined);
-          return { ok: false, motivo: 'grande demais' };
+          if (!opcoes.truncar) return { ok: false, motivo: 'grande demais' };
+          const cabe = value.byteLength - (total - opcoes.maxBytes);
+          if (cabe > 0) pedacos.push(value.subarray(0, cabe));
+          truncado = true;
+          break;
         }
         pedacos.push(value);
       }
@@ -166,6 +176,7 @@ export async function baixarSeguro(
       dados: Buffer.concat(pedacos),
       tipo: r.headers.get('content-type'),
       urlFinal: url.toString(),
+      ...(truncado ? { truncado: true } : {}),
     };
   }
   return { ok: false, motivo: 'redirecionamentos demais' };

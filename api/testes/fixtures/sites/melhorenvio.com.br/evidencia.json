@@ -1,0 +1,132 @@
+{
+  "site": "https://melhorenvio.com.br/",
+  "redirecionouPara": null,
+  "lidoEm": "2026-09-30T20:16:28.417Z",
+  "cores": [
+    {
+      "hex": "#005cb2",
+      "vezes": 9,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#1976d2",
+      "vezes": 9,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#00519d",
+      "vezes": 8,
+      "origens": [
+        "svg",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#e53935",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#ff6f60",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#f3b331",
+      "vezes": 5,
+      "origens": [
+        "svg"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#61a8ea",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#00701a",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#428f59",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#6bacea",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#76d275",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#a3d9b1",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "Lato",
+      "vezes": 8,
+      "origens": [
+        "font-face"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "-apple-system",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    }
+  ],
+  "coresDoLogo": [
+    "#c4c4c4",
+    "#00519d",
+    "#f3b331"
+  ],
+  "logo": {
+    "url": "https://www.melhorenvio.com.br/nuxt-assets/images/favicons/apple-touch-icon.png",
+    "formato": "image/png"
+  },
+  "avisos": []
+}

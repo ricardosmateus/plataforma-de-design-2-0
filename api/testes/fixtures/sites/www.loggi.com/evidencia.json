@@ -1,0 +1,164 @@
+{
+  "site": "https://www.loggi.com/",
+  "redirecionouPara": null,
+  "lidoEm": "2026-09-30T20:16:21.518Z",
+  "cores": [
+    {
+      "hex": "#0055ff",
+      "vezes": 32,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#006aff",
+      "vezes": 15,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#00baff",
+      "vezes": 14,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0040e6",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0d1e3e",
+      "vezes": 5,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#171e43",
+      "vezes": 4,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#003db8",
+      "vezes": 4,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#011555",
+      "vezes": 4,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0095ff",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#003b99",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#1b71f7",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#d2ffdf",
+      "vezes": 3,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "Montserrat",
+      "vezes": 124,
+      "origens": [
+        "font-face",
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "Sora",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "ui-monospace",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    },
+    {
+      "familia": "inherit",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    },
+    {
+      "familia": "courier",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    },
+    {
+      "familia": "monospace",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    }
+  ],
+  "coresDoLogo": [],
+  "logo": {
+    "url": "https://www.loggi.com/_next/image?url=https://wp-admin.loggi.com/wp-content/uploads/2025/08/Image-from-Loggi.webp&w=3840&q=100",
+    "formato": "image/jpeg"
+  },
+  "avisos": []
+}

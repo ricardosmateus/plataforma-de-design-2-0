@@ -15,10 +15,11 @@ for (const site of sites) {
   mkdirSync(pasta, { recursive: true });
   writeFileSync(new URL('pagina.html', pasta), r.bruto.html);
   r.bruto.folhas.forEach((f, i) => writeFileSync(new URL(`estilo-${i + 1}.css`, pasta), `/* ${f.url} */\n${f.css}`));
-  const { logoBytes, bruto, ...evidencia } = r;
+  const { logoBytes, bruto, logoSvg, candidatos, ...evidencia } = r;
   writeFileSync(new URL('evidencia.json', pasta), JSON.stringify(evidencia, null, 2));
   console.log(`\n== ${r.site}`);
-  console.log('  logotipo:', r.logo ? `${r.logo.formato} ${r.logo.url}` : '—', r.coresDoLogo.length ? `| cores do SVG: ${r.coresDoLogo.join(' ')}` : '');
+  console.log('  logotipo:', r.logo ? `${r.logo.formato} ${r.logo.url}` : (r.logoSvg ? 'SVG (lido como texto)' : '—'), r.coresDoLogo.length ? `| cores do SVG: ${r.coresDoLogo.join(' ')}` : '');
+  console.log('  por quê: ', candidatos[0] ? `${candidatos[0].tipo}, ${candidatos[0].pontos} pontos: ${candidatos[0].motivos.join(', ')}` : '—');
   console.log('  cores:   ', r.cores.map((c) => `${c.hex}${c.neutra ? '·' : ''}(${c.origens.join('+')})`).join('  ') || '—');
   console.log('  fontes:  ', r.fontes.map((f) => `${f.familia}${f.sistema ? '·' : ''}(${f.origens.join('+')})`).join('  ') || '—');
   for (const a of r.avisos) console.log('  aviso:   ', a);

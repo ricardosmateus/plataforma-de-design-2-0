@@ -1,0 +1,112 @@
+{
+  "site": "https://www.jadlog.com.br/jadlog/home",
+  "redirecionouPara": null,
+  "lidoEm": "2026-09-30T20:16:22.522Z",
+  "cores": [
+    {
+      "hex": "#ba1e34",
+      "vezes": 17,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#dc0032",
+      "vezes": 7,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#961533",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0a1737",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#ffffff",
+      "vezes": 21,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#3d3d3d",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#f5f5f5",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#e0dee1",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#474747",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#000000",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#e7e8ea",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "Pluto Sans DPD",
+      "vezes": 9,
+      "origens": [
+        "font-face",
+        "css"
+      ],
+      "sistema": false
+    }
+  ],
+  "coresDoLogo": [],
+  "logo": {
+    "url": "https://www.jadlog.com.br/jadlog/img/logo_home_mob.png",
+    "formato": "image/png"
+  },
+  "avisos": []
+}

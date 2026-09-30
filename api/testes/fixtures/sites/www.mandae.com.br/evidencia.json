@@ -1,0 +1,87 @@
+{
+  "site": "https://www.mandae.com.br/",
+  "redirecionouPara": null,
+  "lidoEm": "2026-09-30T20:16:25.199Z",
+  "cores": [
+    {
+      "hex": "#0050c3",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#ffffff",
+      "vezes": 5,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#32373c",
+      "vezes": 3,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#dddddd",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#666666",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#020101",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    },
+    {
+      "hex": "#000000",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "neutra": true
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "Plus Jakarta Sans",
+      "vezes": 5,
+      "origens": [
+        "google-fonts"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "inherit",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    }
+  ],
+  "coresDoLogo": [],
+  "logo": {
+    "url": "https://www.mandae.com.br/wp-content/uploads/2024/07/logo-mandae_.webp",
+    "formato": "image/webp"
+  },
+  "avisos": []
+}

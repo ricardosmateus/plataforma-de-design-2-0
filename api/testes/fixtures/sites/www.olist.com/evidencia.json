@@ -1,0 +1,153 @@
+{
+  "site": "https://www.olist.com/",
+  "redirecionouPara": null,
+  "lidoEm": "2026-09-30T20:16:28.955Z",
+  "cores": [
+    {
+      "hex": "#0a4ee4",
+      "vezes": 77,
+      "origens": [
+        "theme-color",
+        "svg",
+        "css",
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#001647",
+      "vezes": 73,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#8dd7d7",
+      "vezes": 31,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0c29d0",
+      "vezes": 15,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0a1f9c",
+      "vezes": 11,
+      "origens": [
+        "css",
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#2a6cff",
+      "vezes": 8,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#007aff",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#e64e36",
+      "vezes": 5,
+      "origens": [
+        "svg"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0d52e4",
+      "vezes": 5,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#0b134a",
+      "vezes": 4,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#4d5c7e",
+      "vezes": 4,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#779e3d",
+      "vezes": 4,
+      "origens": [
+        "css"
+      ],
+      "neutra": false
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "Plus Jakarta Sans",
+      "vezes": 22,
+      "origens": [
+        "font-face",
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "soleil",
+      "vezes": 6,
+      "origens": [
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "Slack-Lato",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "sans-serif",
+      "vezes": 1,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    }
+  ],
+  "coresDoLogo": [
+    "#e64e36",
+    "#0a4ee4"
+  ],
+  "logo": {
+    "url": "https://d3hw41hpah8tvx.cloudfront.net/images/content_4461494ff8.png",
+    "formato": "image/png"
+  },
+  "avisos": [
+    "A página é grande; li só o começo dela (o cabeçalho e o logotipo ficam lá)."
+  ]
+}

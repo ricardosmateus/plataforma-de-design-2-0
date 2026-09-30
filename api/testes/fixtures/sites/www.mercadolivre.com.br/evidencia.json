@@ -1,0 +1,142 @@
+{
+  "site": "https://www.mercadolivre.com.br/ajuda/38279",
+  "redirecionouPara": "mercadolivre.com.br",
+  "lidoEm": "2026-09-30T20:16:26.007Z",
+  "cores": [
+    {
+      "hex": "#3483fa",
+      "vezes": 85,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#4189e6",
+      "vezes": 45,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#2968c8",
+      "vezes": 38,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#ffe600",
+      "vezes": 37,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#1f4e96",
+      "vezes": 30,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#00a650",
+      "vezes": 27,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#f23d4f",
+      "vezes": 23,
+      "origens": [
+        "variavel",
+        "css"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#ff7733",
+      "vezes": 21,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#fff394",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#e6540b",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#d12440",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    },
+    {
+      "hex": "#008744",
+      "vezes": 6,
+      "origens": [
+        "variavel"
+      ],
+      "neutra": false
+    }
+  ],
+  "fontes": [
+    {
+      "familia": "Proxima Nova",
+      "vezes": 30,
+      "origens": [
+        "font-face",
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "navigation",
+      "vezes": 12,
+      "origens": [
+        "font-face",
+        "css"
+      ],
+      "sistema": false
+    },
+    {
+      "familia": "inherit",
+      "vezes": 2,
+      "origens": [
+        "css"
+      ],
+      "sistema": true
+    }
+  ],
+  "coresDoLogo": [],
+  "logo": null,
+  "avisos": [
+    "kangu.com.br redireciona para mercadolivre.com.br: os dados abaixo são de mercadolivre.com.br.",
+    "Nenhum logotipo foi atribuído: o site levou a outra marca."
+  ]
+}
