@@ -1528,6 +1528,7 @@ enum AlvoAvaliacaoIa {
   mensagem
   acao
   fonte
+  tarefa
 }
 
 enum AvaliadorIa {

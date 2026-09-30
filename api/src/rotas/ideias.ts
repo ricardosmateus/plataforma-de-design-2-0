@@ -52,6 +52,7 @@ import {
 } from '../ia/gerar-ideias.js';
 import { avaliarIdeias, custoDasChamadas, tetoAvaliacaoUsdMicros } from '../ia/avaliacao/avaliar.js';
 import { avaliacaoLigada, dependenciasDoAmbiente } from '../ia/avaliacao/config.js';
+import { marcarAvaliacao } from '../ia/avaliacao/marcar.js';
 import { montarLoteIdeias } from '../ia/avaliacao/perguntas.js';
 import { nomeDoTipo } from '../projetos/catalogo.js';
 import { registrar } from '../creditos/registro.js';
@@ -335,13 +336,8 @@ async function notasVisiveis(ids: string[]): Promise<Map<string, NotaTela>> {
   return mapa;
 }
 
-/* IA-AVAL-011/012: a nota acompanha o destino do texto que avaliou.
-   Registro paralelo — nunca derruba a edição nem a exclusão. */
-function marcarAvaliacao(ideiaId: string, estado: 'desatualizada' | 'excluida'): void {
-  void db.avaliacaoIa
-    .updateMany({ where: { alvoTipo: 'ideia', alvoId: ideiaId, estado: 'ativa' }, data: { estado } })
-    .catch((e: unknown) => console.error('[avaliacao] falha ao marcar a nota como ' + estado, e));
-}
+/* IA-AVAL-011/012: marcarAvaliacao mora em ia/avaliacao/marcar.ts desde
+   30/09/2026 — a tarefa gerada usa a mesma regra. */
 
 type LinhaIdeia = {
   id: string;
@@ -784,7 +780,7 @@ export async function rotasIdeias(app: FastifyInstance) {
     /* IA-AVAL-011: o texto agora é da pessoa, e a nota era do texto
        que a IA gerou. Sem a checagem de `textoMudou`, mudar só a
        importância apagaria a nota à toa. */
-    if (textoMudou) marcarAvaliacao(existente.id, 'desatualizada');
+    if (textoMudou) marcarAvaliacao('ideia', existente.id, 'desatualizada');
 
     return resposta.send({ ideia: ideiaParaResposta(ideia) });
   });
@@ -1019,7 +1015,7 @@ export async function rotasIdeias(app: FastifyInstance) {
       where: { id: existente.id },
       data: { arquivadoEm: new Date() },
     });
-    marcarAvaliacao(existente.id, 'excluida');
+    marcarAvaliacao('ideia', existente.id, 'excluida');
 
     return resposta.code(200).send({ ok: true });
   });

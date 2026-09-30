@@ -17,6 +17,12 @@
         documentos e grava os cards (referencias/coleta.ts);
      5. acerta a reserva pelo custo real.
 
+   Avaliação (IA-AVAL-018/019, planejamento-jev-tarefas.md §2): com
+   AVALIACAO_MODO_TAREFA ligado, o JEV julga a proposta ENTRE o passo 2
+   e o 3, na requisição. Se ele falhar, a tarefa sai sem nota e o
+   Claude avalia DEPOIS da resposta, com reserva própria — esperar até
+   30 s por uma nota atrasaria a tarefa e a pesquisa que vem atrás.
+
    Pesquisa e Matriz CSD param no passo 3 aqui. A Pesquisa é
    executada pelo board, que já sabe pesquisar (a resposta diz
    `proximo: 'pesquisar'`): uma segunda pesquisa no servidor seria um
@@ -36,6 +42,8 @@ import { ORIENTACAO_MAX } from '../ia/gerar-ideias.js';
 import {
   SISTEMA_TAREFA,
   MAX_TOKENS_PROPOSTA,
+  TITULO_MAX,
+  DESCRICAO_MAX,
   montarMensagemTarefa,
   interpretarTarefa,
   pedirTarefa,
@@ -61,6 +69,11 @@ import { usdParaMicrosBrl, comissaoSobre, cotacaoParaMilesimos } from '../credit
 import { reservar, liberar, consumir, SaldoInsuficiente } from '../creditos/reserva.js';
 import { abrirContexto, podeEscrever, criarTarefaNoFim, tarefaParaResposta, TIPOS_VALIDOS } from './tarefas.js';
 import { pacoteInternoDa } from './pesquisa.js';
+import { avaliarTarefaGerada, custoDasChamadas, tetoAvaliacaoPartes, type ResultadoAvaliacaoDe } from '../ia/avaliacao/avaliar.js';
+import { avaliacaoTarefaLigada, modoAvaliacaoTarefa, dependenciasDoAmbiente } from '../ia/avaliacao/config.js';
+import { montarLoteTarefa, type ContextoAvaliacaoTarefa } from '../ia/avaliacao/perguntas-tarefa.js';
+import { proximoAposGerar, type Avaliacao } from '../ia/avaliacao/normalizar.js';
+import type { Chamada } from '../ia/avaliacao/chamada.js';
 
 type Erro = { campo: string | null; mensagem: string };
 const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensagem });
@@ -72,6 +85,62 @@ const corpoGerar = z.object({
 
 function emReais(usdMicros: number): number {
   return comissaoSobre(usdParaMicrosBrl(usdMicros, cotacaoParaMilesimos(env.COTACAO_USD_BRL))).totalMicros;
+}
+
+/* ATV-GERAR-018 só vale quando a TELA souber o que fazer com
+   `proximo: 'revisar'` — isso é a Fase 4. Até lá, mesmo com o modo em
+   `visivel`, a rota responde como hoje: uma resposta que a tela não
+   conhece seria uma pesquisa que não começa sem ninguém saber por quê. */
+const FASE_4_LIGADA = false;
+
+type ContaAvaliacao = { usuarioId: string; empresaId: string; projetoId: string; ideiaId: string };
+
+/* IA-AVAL-013/017: cada ida ao avaliador é uma linha `avaliacao`, na
+   operação que a pagou. Sem preço (o JEV hoje) fica medido, não
+   cobrado — `registrar` marca `precoDesconhecido`. */
+function registrarChamadas(conta: ContaAvaliacao, chamadas: Chamada[], avaliador: string, operacaoId: string): void {
+  for (const c of chamadas) {
+    if (!c.cobrou || !c.uso) continue;
+    registrar({
+      ...conta,
+      tipo: 'avaliacao',
+      resultado: c.fornecedor === avaliador ? 'entregue' : 'descartado',
+      modelo: c.modelo,
+      uso: c.uso,
+      requisicaoId: c.requisicaoId,
+      operacaoId,
+      cobravel: true,
+    });
+  }
+}
+
+/* Grava a nota. Falhar aqui não desfaz a tarefa (IA-AVAL-003). */
+async function gravarNota(
+  tarefaId: string,
+  projetoId: string,
+  a: Avaliacao,
+  operacaoId: string,
+  log: { error: (o: object, m: string) => void },
+): Promise<void> {
+  try {
+    await db.avaliacaoIa.create({
+      data: {
+        alvoTipo: 'tarefa',
+        alvoId: tarefaId,
+        projetoId,
+        avaliador: a.avaliador,
+        modelo: a.modelo,
+        geral: a.geral,
+        faixa: a.faixa,
+        incerta: a.incerta,
+        criterios: a.criterios,
+        alertas: a.alertas,
+        operacaoId,
+      },
+    });
+  } catch (e) {
+    log.error({ err: e, operacaoId, tarefaId }, 'avaliação da tarefa: falha ao gravar a nota (a tarefa foi criada)');
+  }
 }
 
 export async function rotasGerarTarefa(app: FastifyInstance) {
@@ -129,6 +198,31 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
       orientacao: corpo.data.orientacao ?? null,
     });
 
+    /* ---- Avaliação (IA-AVAL-018) — o que vai ao avaliador ----
+       Evidências com o MESMO recorte da Visão: idéias finalizadas do
+       projeto (IA-AVAL-020). Material de consulta não confirma fato
+       (IA-CONHEC-005). */
+    const avaliar = avaliacaoTarefaLigada();
+    const depsAvaliacao = avaliar ? dependenciasDoAmbiente() : null;
+    const validadas = avaliar
+      ? await db.ideia.findMany({
+          where: { projetoId: ctx.projetoId, arquivadoEm: null, status: 'finalizado' },
+          orderBy: { criadoEm: 'desc' },
+          select: { titulo: true },
+        })
+      : [];
+    const baseAvaliacao: Omit<ContextoAvaliacaoTarefa, 'tarefa'> = {
+      tipo,
+      projetoNome: projeto.nome ?? nomeDoTipo(projeto.tipo),
+      empresaNome: projeto.empresa.nome,
+      empresaDescricao: projeto.empresa.descricao ?? null,
+      atividadeTitulo: ctx.ideia.titulo,
+      atividadeDescricao: ctx.ideia.descricao,
+      validadas: validadas.map((i: { titulo: string }) => i.titulo),
+      existentes: tarefas.map((t: { titulo: string }) => t.titulo),
+      orientacao: corpo.data.orientacao ?? null,
+    };
+
     /* ---- Reserva de TUDO antes de chamar qualquer coisa ----
        A busca é reservada junto com a proposta: descobrir falta de
        saldo depois de a tarefa existir deixaria uma Referência vazia
@@ -147,7 +241,27 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
     if (tetoPropostaUsd === null || tetoBuscaReais === null) {
       return resposta.code(503).send(erro(null, 'O assistente está indisponível no momento. Tente mais tarde.'));
     }
-    const tetoProposta = emReais(tetoPropostaUsd);
+    /* ATV-GERAR-016 revista (T3): a reserva soma a avaliação. O JEV
+       entra na operação da proposta (fecha na requisição); o Claude
+       numa operação PRÓPRIA, porque pode rodar depois da resposta
+       (IA-AVAL-019). Pior caso: título e descrição no tamanho máximo. */
+    const opAvalClaude = randomUUID();
+    let tetoJevUsd = 0;
+    let tetoClaudeUsd = 0;
+    if (avaliar && depsAvaliacao) {
+      const piorCaso = montarLoteTarefa({
+        ...baseAvaliacao,
+        tarefa: { titulo: 'x'.repeat(TITULO_MAX), descricao: 'x'.repeat(DESCRICAO_MAX) },
+      });
+      const partes = tetoAvaliacaoPartes(piorCaso, depsAvaliacao.jev.modelo, env.IA_MODELO as string);
+      if (partes === null) {
+        return resposta.code(503).send(erro(null, 'O assistente está indisponível no momento. Tente mais tarde.'));
+      }
+      tetoJevUsd = partes.jev;
+      tetoClaudeUsd = partes.claude;
+    }
+    const tetoProposta = emReais(tetoPropostaUsd + tetoJevUsd);
+    const tetoAvalClaude = tetoClaudeUsd > 0 ? emReais(tetoClaudeUsd) : 0;
     const tetoBusca = tetoBuscaReais;
 
     try {
@@ -158,11 +272,23 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
       }
       throw e;
     }
+    if (tetoAvalClaude > 0) {
+      try {
+        await reservar(ctx.usuarioId, tetoAvalClaude, opAvalClaude, 'assistente');
+      } catch (e) {
+        await liberar(ctx.usuarioId, tetoProposta, opProposta, 'assistente');
+        if (e instanceof SaldoInsuficiente) {
+          return resposta.code(402).send(erro(null, 'Saldo insuficiente para gerar a tarefa. Adicione créditos para continuar.'));
+        }
+        throw e;
+      }
+    }
     if (ehReferencia) {
       try {
         await reservar(ctx.usuarioId, tetoBusca, opBusca, 'pesquisa');
       } catch (e) {
         await liberar(ctx.usuarioId, tetoProposta, opProposta, 'assistente');
+        if (tetoAvalClaude > 0) await liberar(ctx.usuarioId, tetoAvalClaude, opAvalClaude, 'assistente');
         if (e instanceof SaldoInsuficiente) {
           return resposta.code(402).send(erro(null, 'Saldo insuficiente para buscar as referências. Adicione créditos para continuar.'));
         }
@@ -173,38 +299,91 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
     /* ---- 2. A proposta ---- */
     const r = await pedirTarefa(mensagem);
     const proposta = r.ok ? interpretarTarefa(r.bruto) : null;
+    const conta: ContaAvaliacao = { usuarioId: ctx.usuarioId, empresaId: ctx.empresaId, projetoId: ctx.projetoId, ideiaId: ctx.ideia.id };
+
+    /* ---- 2b. A avaliação pelo JEV, na requisição (IA-AVAL-019) ----
+       Só o JEV aqui: o Claude, se preciso, roda depois da resposta. */
+    const ctxAvaliacao: ContextoAvaliacaoTarefa | null = proposta ? { ...baseAvaliacao, tarefa: proposta } : null;
+    const loteAvaliacao = ctxAvaliacao ? montarLoteTarefa(ctxAvaliacao) : null;
+    const avaliacaoJev: ResultadoAvaliacaoDe<Avaliacao> | null =
+      ctxAvaliacao && loteAvaliacao && avaliar && depsAvaliacao
+        ? await avaliarTarefaGerada(ctxAvaliacao, depsAvaliacao, { apenas: 'jev' }, loteAvaliacao)
+        : null;
+    if (avaliar) {
+      /* `warn`: em sombra, esta linha é o único sinal de que rodou. */
+      req.log.warn(
+        { tipo, avaliador: avaliacaoJev?.avaliador ?? null, falhaJev: avaliacaoJev?.falhaJev ?? null, faixa: avaliacaoJev?.resultado.faixa ?? null },
+        'gerar tarefa: avaliação',
+      );
+    }
+
+    /* T3 (30/09/2026) — ATV-GERAR-016 segue IA-AVAL-017: o que o
+       provedor cobrou é repassado, inclusive a proposta fora do formato
+       (fica `descartado` no Histórico). */
     if (r.uso && r.modelo) {
       registrar({
-        usuarioId: ctx.usuarioId,
-        empresaId: ctx.empresaId,
-        projetoId: ctx.projetoId,
-        ideiaId: ctx.ideia.id,
+        ...conta,
         tipo: 'assistente',
         resultado: proposta ? 'entregue' : 'descartado',
         modelo: r.modelo,
         uso: r.uso,
         requisicaoId: r.requisicaoId,
         operacaoId: opProposta,
+        cobravel: true,
       });
     }
+    if (avaliacaoJev) registrarChamadas(conta, avaliacaoJev.chamadas, avaliacaoJev.avaliador, opProposta);
+
     await liberar(ctx.usuarioId, tetoProposta, opProposta, 'assistente');
+    {
+      let usd = 0;
+      if (r.uso && r.modelo) usd += custoUsdMicros(r.modelo, r.uso) ?? 0;
+      if (avaliacaoJev) usd += custoDasChamadas(avaliacaoJev.chamadas).usdMicros;
+      if (usd > 0) await consumir(ctx.usuarioId, emReais(usd), opProposta, 'assistente');
+    }
+
+    /* O Claude só vai rodar se o JEV falhou numa proposta que existe.
+       Em qualquer outro caso a reserva dele volta agora. */
+    const claudeDepois = !!(proposta && avaliar && depsAvaliacao && avaliacaoJev && avaliacaoJev.avaliador === 'nenhum' && tetoAvalClaude > 0);
+    if (tetoAvalClaude > 0 && !claudeDepois) await liberar(ctx.usuarioId, tetoAvalClaude, opAvalClaude, 'assistente');
 
     if (!proposta) {
-      /* Nada criado, nada cobrado (IA-CUSTO-003) — nem a busca, que
-         nem começou. */
+      /* Nada criado. A proposta, se o provedor cobrou, já foi
+         consumida acima (T3); a busca nem começou. */
       if (ehReferencia) await liberar(ctx.usuarioId, tetoBusca, opBusca, 'pesquisa');
       const msg = !r.ok && r.motivo === 'rede'
         ? 'Não foi possível falar com o provedor de IA. Tente de novo.'
         : 'Não foi possível gerar a tarefa agora. Tente de novo em instantes.';
       return resposta.code(503).send(erro(null, msg));
     }
-    if (r.uso && r.modelo) {
-      const usd = custoUsdMicros(r.modelo, r.uso);
-      if (usd !== null && usd > 0) await consumir(ctx.usuarioId, emReais(usd), opProposta, 'assistente');
-    }
 
     /* ---- 3. A tarefa ---- */
     const tarefa = await criarTarefaNoFim(ctx.ideia.id, { titulo: proposta.titulo, descricao: proposta.descricao, tipo });
+
+    /* ---- 3b. A nota ----
+       JEV respondeu: grava agora. JEV falhou: o Claude avalia em
+       segundo plano, grava a nota dele (ou "não avaliado") e acerta a
+       reserva própria. Nada disto segura a resposta nem a pesquisa. */
+    if (avaliacaoJev && avaliacaoJev.avaliador === 'jev') {
+      await gravarNota(tarefa.id, ctx.projetoId, avaliacaoJev.resultado, opProposta, req.log);
+    } else if (claudeDepois && ctxAvaliacao && loteAvaliacao && depsAvaliacao) {
+      const log = req.log;
+      void (async () => {
+        try {
+          const rc = await avaliarTarefaGerada(ctxAvaliacao, depsAvaliacao, { apenas: 'claude' }, loteAvaliacao);
+          registrarChamadas(conta, rc.chamadas, rc.avaliador, opAvalClaude);
+          await gravarNota(tarefa.id, ctx.projetoId, rc.resultado, opAvalClaude, log);
+          await liberar(ctx.usuarioId, tetoAvalClaude, opAvalClaude, 'assistente');
+          const usd = custoDasChamadas(rc.chamadas).usdMicros;
+          if (usd > 0) await consumir(ctx.usuarioId, emReais(usd), opAvalClaude, 'assistente');
+          log.warn({ tarefaId: tarefa.id, avaliador: rc.avaliador, falhaClaude: rc.falhaClaude }, 'gerar tarefa: avaliação em segundo plano');
+        } catch (e) {
+          /* A reserva precisa voltar mesmo se algo acima lançou. */
+          log.error({ err: e, tarefaId: tarefa.id }, 'gerar tarefa: avaliação em segundo plano falhou');
+          await liberar(ctx.usuarioId, tetoAvalClaude, opAvalClaude, 'assistente').catch(() => {});
+        }
+      })();
+    }
 
     /* ---- 4. Referência: a busca e os cards ---- */
     let coleta: ResultadoColeta | null = null;
@@ -225,7 +404,13 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
     return resposta.code(201).send({
       tarefa: tarefaParaResposta(tarefa),
       /* O que a tela faz em seguida. */
-      proximo: tipo === 'pesquisa' ? 'pesquisar' : ehReferencia ? 'abrir' : 'classificar',
+      /* ATV-GERAR-018/019: `revisar` só com JEV + t1 baixo + `visivel`
+         — e só quando a Fase 4 ensinar a tela a tratá-lo. */
+      proximo: proximoAposGerar(
+        tipo,
+        FASE_4_LIGADA ? modoAvaliacaoTarefa() : 'sombra',
+        avaliacaoJev && avaliacaoJev.avaliador === 'jev' ? avaliacaoJev.resultado : null,
+      ),
       referencias: coleta
         ? { concorrentes: concorrentesAchados, sites: coleta.sites, imagens: coleta.imagens, documentos: coleta.documentos }
         : null,

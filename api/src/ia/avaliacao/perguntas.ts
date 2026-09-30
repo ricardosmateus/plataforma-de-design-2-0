@@ -81,7 +81,7 @@ export function idPergunta(i: number, criterio: string): string {
 }
 export const ID_C9 = 'lista_c9';
 
-function limpo(t: string | null | undefined, max = 2000): string {
+export function limpo(t: string | null | undefined, max = 2000): string {
   return String(t ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 

@@ -24,7 +24,13 @@ export type Resposta =
 
 export type Criterio = { pct: number; confianca: number | null };
 
-export type CodigoAlerta = 'inventa_fato' | 'contradiz_evidencia' | 'duplicata_semantica';
+export type CodigoAlerta =
+  | 'inventa_fato'
+  | 'contradiz_evidencia'
+  | 'duplicata_semantica'
+  /* F6 — tarefa gerada (planejamento-jev-tarefas.md §3.3) */
+  | 'nao_pesquisavel'
+  | 'ja_respondida';
 export type Alerta = { codigo: CodigoAlerta; texto: string };
 
 export type Avaliador = 'jev' | 'claude' | 'nenhum';
@@ -244,4 +250,128 @@ export function avaliarEtapas(
   }
 
   return saida;
+}
+
+/* ============================================================
+   F6 — a tarefa do "Gerar com ajuda da IA" da atividade
+   ============================================================
+   Regras: IA-AVAL-018/020/021; ATV-GERAR-018/019
+   Plano:  planejamento-jev-tarefas.md §3.3 e §6.2
+
+   Mesma fórmula da Visão (calcularGeral, aplicarTravas), com o que
+   é próprio da tarefa por cima. Os limites novos ficam FORA de
+   `LIMITES` de propósito: `calibracao.ts` lê aquele objeto, e um
+   campo a mais ali mudaria a calibração da Visão sem ninguém pedir.
+
+   Todos em 50% até a Fase 2 calibrar (IA-AVAL-014). */
+export const LIMITES_TAREFA = {
+  /* t1 perguntado no positivo ("pede fatos?"); o limite é sobre o
+     contrário, P(NÃO pesquisável) = 100 − t1. */
+  naoPesquisavel: 50,
+  jaRespondida: 50,
+} as const;
+
+/**
+ * Transforma as respostas validadas em UMA `Avaliacao` para a tarefa.
+ * c1, c2 e c3 são obrigatórios — sem eles, "não avaliado", como na
+ * Visão. Os específicos entram na média do que houver.
+ */
+export function avaliarTarefa(
+  lote: Lote,
+  respostas: Record<string, Resposta>,
+  avaliador: Exclude<Avaliador, 'nenhum'>,
+  modelo: string | null,
+): Avaliacao {
+  const ler = (cod: string): Criterio | null => {
+    const p = lote.questions[cod];
+    const r = respostas[cod];
+    return p && r ? criterioDe(p, r) : null;
+  };
+
+  const c1 = ler('c1');
+  const c2 = ler('c2');
+  const c3 = ler('c3');
+  if (!c1 || !c2 || !c3) return naoAvaliado();
+
+  const c4 = ler('c4');
+  const generica = ler('c6');
+  const c8 = ler('c8');
+  const c10 = ler('c10');
+  const t: Record<string, Criterio | null> = {
+    t1: ler('t1'), t2: ler('t2'), t3: ler('t3'), t4: ler('t4'), t5: ler('t5'), t6: ler('t6'),
+  };
+
+  const c6: Criterio | null = generica ? { pct: 100 - generica.pct, confianca: null } : null;
+
+  const criterios: Record<string, Criterio> = { c1, c2, c3 };
+  if (c4) criterios.c4 = c4;
+  if (c6) criterios.c6 = c6;
+  if (c8) criterios.c8 = c8;
+  if (c10) criterios.c10 = c10;
+  for (const [k, v] of Object.entries(t)) if (v) criterios[k] = v;
+
+  /* t2 ("já respondida?") é alerta, não qualidade da pergunta: não
+     entra na média. Os demais t são "a descrição faz o que o tipo
+     pede?" — sim é bom. */
+  const especificos = [c6, c10, t.t1, t.t3, t.t4, t.t5, t.t6]
+    .filter((c): c is Criterio => !!c)
+    .map((c) => c.pct);
+
+  let geral = aplicarTravas(calcularGeral(c1.pct, c2.pct, c3.pct, especificos), {
+    inventaFato: c4?.pct ?? 0,
+    foraDoProjeto: 100 - c3.pct,
+    generica: generica?.pct ?? 0,
+    duplicada: c8?.pct ?? 0,
+  });
+
+  /* IA-AVAL-021: pergunta que não se responde por fonte não pode sair
+     como "confiança alta". */
+  const naoPesquisavel = t.t1 ? 100 - t.t1.pct : 0;
+  if (naoPesquisavel > LIMITES_TAREFA.naoPesquisavel) geral = Math.min(geral, TETO_REVISAR);
+
+  const alertas: Alerta[] = [];
+  const r1 = respostas.c1;
+  if (r1?.type === 'choice' && (r1.probabilities.contradiz ?? 0) * 100 > LIMITE_ALERTA) {
+    alertas.push({ codigo: 'contradiz_evidencia', texto: 'Contradiz o que está na ficha da empresa ou nas idéias validadas.' });
+  }
+  if (c4 && c4.pct > LIMITES.inventaFato) {
+    alertas.push({ codigo: 'inventa_fato', texto: 'Afirma sobre a empresa algo que não está na ficha.' });
+  }
+  if (t.t1 && naoPesquisavel > LIMITES_TAREFA.naoPesquisavel) {
+    alertas.push({ codigo: 'nao_pesquisavel', texto: 'Esta pergunta pode não ter resposta em fontes da web.' });
+  }
+  if (c8 && c8.pct > LIMITES.duplicada) {
+    alertas.push({ codigo: 'duplicata_semantica', texto: 'Parece repetir uma tarefa que já existe nesta atividade.' });
+  }
+  if (t.t2 && t.t2.pct > LIMITES_TAREFA.jaRespondida) {
+    alertas.push({ codigo: 'ja_respondida', texto: 'Parece já estar respondida pelo que a empresa sabe.' });
+  }
+
+  const incerta = [c1, c2].some((c) => c.confianca !== null && c.confianca < CONFIANCA_MINIMA);
+
+  return { avaliador, modelo, geral, faixa: faixaDe(geral), incerta, criterios, alertas };
+}
+
+export type ModoAvaliacao = 'desligada' | 'sombra' | 'visivel';
+export type ProximoAposGerar = 'pesquisar' | 'revisar' | 'abrir' | 'classificar';
+
+/**
+ * ATV-GERAR-018/019 — o que a tela faz depois de "Gerar com ajuda da
+ * IA". Só `revisar` é novo, e ele exige as TRÊS coisas: modo
+ * `visivel`, nota do JEV (a do Claude chega depois da resposta e não
+ * decide nada) e t1 abaixo do limite. Qualquer dúvida — sem nota,
+ * JEV que falhou, sombra — vale o caminho de hoje (ATV-GERAR-012):
+ * falha do avaliador nunca decide sozinha que algo não roda.
+ */
+export function proximoAposGerar(
+  tipo: 'pesquisa' | 'matriz_csd' | 'referencias_visuais',
+  modo: ModoAvaliacao,
+  avaliacao: Avaliacao | null,
+): ProximoAposGerar {
+  if (tipo === 'referencias_visuais') return 'abrir';
+  if (tipo === 'matriz_csd') return 'classificar';
+  if (modo !== 'visivel' || !avaliacao || avaliacao.avaliador !== 'jev') return 'pesquisar';
+  const t1 = avaliacao.criterios.t1;
+  if (!t1) return 'pesquisar';
+  return 100 - t1.pct > LIMITES_TAREFA.naoPesquisavel ? 'revisar' : 'pesquisar';
 }

@@ -9,6 +9,15 @@ export function avaliacaoLigada(): boolean {
   return env.AVALIACAO_MODO !== 'desligada';
 }
 
+/** IA-AVAL-022 — o modo da tarefa gerada na atividade, separado. */
+export function avaliacaoTarefaLigada(): boolean {
+  return env.AVALIACAO_MODO_TAREFA !== 'desligada';
+}
+
+export function modoAvaliacaoTarefa(): 'desligada' | 'sombra' | 'visivel' {
+  return env.AVALIACAO_MODO_TAREFA;
+}
+
 export function dependenciasDoAmbiente(): DependenciasAvaliacao {
   return {
     jev: {

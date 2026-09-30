@@ -138,9 +138,18 @@ const esquema = z.object({
                      (Fase 1, calibração);
        'visivel'   — Fase 2, o selo aparece. */
   AVALIACAO_MODO: z.enum(['desligada', 'sombra', 'visivel']).default('desligada'),
+  /* IA-AVAL-022 (T2, 30/09/2026): a tarefa do "Gerar com ajuda da IA"
+     da atividade tem modo PRÓPRIO — a Visão pode estar em `visivel`
+     enquanto a tarefa ainda calibra em `sombra`. Mesmos três valores;
+     em `visivel`, além do selo, uma Pesquisa com t1 baixo não começa
+     sozinha (ATV-GERAR-018). */
+  AVALIACAO_MODO_TAREFA: z.enum(['desligada', 'sombra', 'visivel']).default('desligada'),
   TYPESAFE_API_KEY: z.string().optional(),
   TYPESAFE_BASE_URL: z.string().default('https://api.typesafe.ai'),
-  TYPESAFE_MODELO: z.string().default('jev-latest'),
+  /* IA-AVAL-023 (T4, 30/09/2026): versão FIXA. `jev-latest` muda de
+     comportamento sem aviso e invalida a calibração, que foi feita
+     contra a 1.13.0. Trocar de versão pede nova rodada (IA-AVAL-014). */
+  TYPESAFE_MODELO: z.string().default('jev-1.13.0'),
   /* O JEV responde em ~100 ms por lote; 4 s já é falha. */
   TYPESAFE_TIMEOUT_MS: z.coerce.number().default(4000),
   /* O Claude como avaliador de reserva escreve dezenas de respostas. */
