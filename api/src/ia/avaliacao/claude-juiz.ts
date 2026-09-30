@@ -55,6 +55,29 @@ export function tokensEntradaJuiz(lote: Lote): number {
   return tokensEstimados(SISTEMA_JUIZ + '\n' + mensagemJuiz(lote));
 }
 
+/**
+ * Lê o JSON do juiz. Aceita, em ordem: o objeto inteiro (sem prefill,
+ * o normal desde 30/09/2026), com cercas de código ou texto em volta; e
+ * a continuação de `{"answers":{` (respostas antigas, testes antigos).
+ */
+export function lerRespostaJuiz(texto: string): unknown | null {
+  const limpo = String(texto ?? '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const tentativas = [limpo];
+  const i = limpo.indexOf('{');
+  const f = limpo.lastIndexOf('}');
+  if (i >= 0 && f > i) tentativas.push(limpo.slice(i, f + 1));
+  tentativas.push(PREFIXO + limpo);
+  for (const t of tentativas) {
+    try {
+      const o = JSON.parse(t) as { answers?: unknown };
+      if (o && typeof o === 'object' && o.answers && typeof o.answers === 'object') return o;
+    } catch {
+      /* próxima forma */
+    }
+  }
+  return null;
+}
+
 export async function avaliarComClaude(lote: Lote, cfg: ConfigClaude, buscar: Buscar = fetch): Promise<ResultadoAvaliador> {
   if (!cfg.chave || !cfg.modelo) return { ok: false, motivo: 'sem-configuracao', chamada: null };
   const modelo = cfg.modelo;
@@ -72,10 +95,11 @@ export async function avaliarComClaude(lote: Lote, cfg: ConfigClaude, buscar: Bu
         model: modelo,
         max_tokens: maxTokensJuiz(Object.keys(lote.questions).length),
         system: [{ type: 'text', text: SISTEMA_JUIZ, cache_control: { type: 'ephemeral' } }],
-        messages: [
-          { role: 'user', content: mensagemJuiz(lote) },
-          { role: 'assistant', content: PREFIXO },
-        ],
+        /* Sem prefill desde 30/09/2026 — a mesma lição da proposta de
+           tarefa (gerar-tarefa.ts), onde o modelo recomeçou o objeto
+           dentro do começo imposto e esqueceu aspas. A leitura abaixo
+           aceita as duas formas: o JSON inteiro e a continuação. */
+        messages: [{ role: 'user', content: mensagemJuiz(lote) }],
       }),
       signal: AbortSignal.timeout(cfg.timeoutMs),
     });
@@ -104,19 +128,13 @@ export async function avaliarComClaude(lote: Lote, cfg: ConfigClaude, buscar: Bu
 
   if (corpo.stop_reason === 'max_tokens') return { ok: false, motivo: 'cortada', chamada };
 
-  const texto =
-    PREFIXO +
-    (corpo.content ?? [])
-      .filter((p) => p?.type === 'text' && typeof p.text === 'string')
-      .map((p) => p.text as string)
-      .join('');
+  const texto = (corpo.content ?? [])
+    .filter((p) => p?.type === 'text' && typeof p.text === 'string')
+    .map((p) => p.text as string)
+    .join('');
 
-  let dados: unknown;
-  try {
-    dados = JSON.parse(texto.trim().replace(/\s*```$/, ''));
-  } catch {
-    return { ok: false, motivo: 'formato', chamada };
-  }
+  const dados = lerRespostaJuiz(texto);
+  if (dados === null) return { ok: false, motivo: 'formato', chamada };
 
   const respostas = validarRespostas(lote, (dados as { answers?: unknown })?.answers);
   if (!respostas) return { ok: false, motivo: 'formato', chamada };

@@ -106,6 +106,7 @@ import {
   gravarRodada,
 } from '../pesquisa/caderno.js';
 import { detectarMatriz, type ModeloMatriz } from '../pesquisa/matriz.js';
+import { textoDaBusca, avaliarSeRespondeu } from '../pesquisa/entrega.js';
 
 /* Como a narração chama cada formato — frase que a pessoa lê. */
 const NOME_MATRIZ: Record<ModeloMatriz, string> = {
@@ -629,11 +630,12 @@ export async function rotasPesquisa(app: FastifyInstance) {
     if (reservadoMicros > 0) {
       await liberar(usuarioId, reservadoMicros, operacaoId, 'pesquisa');
 
-      if (resultado !== 'falhou') {
-        const real = custoDe(consumo);
-        if (real && real.totalMicros > 0) {
-          await consumir(usuarioId, real.totalMicros, operacaoId, 'pesquisa');
-        }
+      /* BOARD-PESQUISA-010 revista em 30/09/2026 (B7, IA-AVAL-017): o
+         que o provedor cobrou é repassado, `falhou` incluído. Chamada
+         que não completou não traz uso, e o custo dela sai zero. */
+      const real = custoDe(consumo);
+      if (real && real.totalMicros > 0) {
+        await consumir(usuarioId, real.totalMicros, operacaoId, 'pesquisa');
       }
     }
 
@@ -1448,8 +1450,15 @@ export async function rotasPesquisa(app: FastifyInstance) {
         if (reservadoBusca > 0) await liberar(usuarioId, reservadoBusca, operacaoBusca, 'pesquisa');
       }
 
-      const achados = saida.resposta.trim() ? 1 : 0;
-      const resultado = classificarResultado({ itens: achados, erro: saida.erro });
+      /* BOARD-PESQUISA-088: texto não é achado. Resposta SEM FONTE que
+         devolve perguntas ou pede esclarecimento é uma busca que não
+         pesquisou — foi o caso de 30/09/2026, registrado como
+         `entregue` quatro vezes. */
+      const veredito = avaliarSeRespondeu(saida.resposta, saida.fontes ?? []);
+      const achados = veredito.respondeu && saida.resposta.trim() ? 1 : 0;
+      const resultado = veredito.respondeu
+        ? classificarResultado({ itens: achados, erro: saida.erro })
+        : ('falhou' as const);
 
       const consumoBusca = {
         usuarioId,
@@ -1463,14 +1472,19 @@ export async function rotasPesquisa(app: FastifyInstance) {
         requisicoes: saida.custo?.requisicoes,
         buscas: saida.custo?.buscas,
       };
-      /* `falhou` não cobra — a chamada não completou. `vazio` cobra:
-         a busca rodou e o provedor cobrou de nós (BOARD-PESQUISA-010). */
+      /* BOARD-PESQUISA-010 revista em 30/09/2026 (B7, IA-AVAL-017):
+         o que o provedor cobrou é repassado, INCLUSIVE quando a busca
+         não pesquisou. Chamada que não completou não traz uso, e o
+         custo dela sai zero — é isso que continua sem débito. A
+         reclassificação para `falhou` muda o que a pessoa VÊ, não o
+         que ela paga. */
       const custoBusca = custoDe(consumoBusca);
-      if (custoBusca && custoBusca.totalMicros > 0 && resultado !== 'falhou') {
+      if (custoBusca && custoBusca.totalMicros > 0) {
         await consumir(usuarioId, custoBusca.totalMicros, operacaoBusca, 'pesquisa');
       }
 
-      const afirmacoes = saida.afirmacoes ?? [];
+      /* Negociação não vira "afirmação sem fonte" no quadro. */
+      const afirmacoes = veredito.respondeu ? (saida.afirmacoes ?? []) : [];
 
       const gravado = await gravarInvestigacao({
         sessaoId,
@@ -1496,6 +1510,17 @@ export async function rotasPesquisa(app: FastifyInstance) {
           .filter(Boolean)
           .join(' · ') + '.',
       );
+
+      /* BOARD-PESQUISA-090: a busca que não pesquisou fecha como
+         falha, pelo caminho de erro que o navegador já conhece — a
+         narração diz o que houve e nada vai para o quadro. A consulta
+         e o texto ficam gravados: foram pagos, e são a prova. */
+      if (!veredito.respondeu) {
+        req.log?.warn?.({ invId, motivo: veredito.motivo }, 'investigar/buscar: a busca não pesquisou');
+        await fecharInvestigacao(invId, { estado: 'falhou', fecho: veredito.mensagem, consultaId: gravado.consultaId });
+        enviar('erro', { mensagem: veredito.mensagem, status: 422 });
+        return resposta.raw.end();
+      }
 
       /* PES-006 na narração: afirmação sem fonte é DITA, não
          escondida. O número nu é mais honesto que um adjetivo. */
@@ -1861,12 +1886,9 @@ export async function pacoteInternoDa(sessao: {
    derivadas dela, e mandar só as derivadas perderia o enquadramento
    — "Quais marcas vendem periféricos no Brasil?" sozinha não diz
    que quem pergunta é um concorrente querendo se comparar. */
-function textoDaBusca(tarefa: string, perguntas: { pergunta: string }[]): string {
-  return (
-    `${tarefa}\n\nResponda, com fonte, cada uma destas perguntas:\n` +
-    perguntas.map((p, i) => `${i + 1}. ${p.pergunta}`).join('\n')
-  );
-}
+/* `textoDaBusca` mora em pesquisa/entrega.ts desde 30/09/2026
+   (BOARD-PESQUISA-089): as perguntas vão primeiro e a tarefa vira só
+   contexto — e assim ela é testável sem esta rota. */
 
 /* ------------------------------------------------------------
    A escrita

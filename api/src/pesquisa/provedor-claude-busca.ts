@@ -265,10 +265,15 @@ function comContexto(base: string, contexto?: ContextoDeNegocio): string {
   return (
     base +
     `\n\nQUEM ESTA PERGUNTANDO\n${linhas.join('\n')}\n\n` +
-    'Use isto para interpretar a pergunta. Se ela for ambigua e o contexto acima ' +
-    'resolver a ambiguidade, resolva por ele e responda — nao devolva pedido de ' +
-    'esclarecimento sobre o que ja esta escrito aqui. So peca esclarecimento sobre o ' +
-    'que este contexto nao responde, e nesse caso diga exatamente o que falta.'
+    /* BOARD-PESQUISA-091 (30/09/2026): a última frase AUTORIZAVA pedir
+       esclarecimento, e foi o que a busca fez na tarefa 93a6236f —
+       quatro vezes, sem fonte, cobrada. Agora ela escolhe a leitura
+       mais provável e diz qual; quem confere é avaliarSeRespondeu
+       (pesquisa/entrega.ts), porque instrução não é garantia. */
+    'Use isto para interpretar a pergunta. Nunca devolva pedido de esclarecimento: ' +
+    'se a pergunta for ambigua, escolha a leitura mais provavel por este contexto, ' +
+    'diga numa linha qual leitura usou e responda. Se parte do pedido nao for algo ' +
+    'que uma busca na web produz, responda o resto e diga numa linha o que ficou de fora.'
   );
 }
 
