@@ -319,7 +319,7 @@ export type Medicao = { uso?: Uso; modelo?: string; requisicaoId?: string; busca
 
 export async function pedirTarefa(
   mensagem: string,
-): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string } & Medicao> {
+): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string; status?: number } & Medicao> {
   if (env.IA_DRIVER !== 'anthropic' || !env.IA_API_KEY || !env.IA_MODELO) return { ok: false, motivo: 'sem-ia' };
   const PREFIXO = '{"titulo":';
   let r: Response;
@@ -340,7 +340,9 @@ export async function pedirTarefa(
   } catch {
     return { ok: false, motivo: 'rede' };
   }
-  if (!r.ok) return { ok: false, motivo: 'recusa-http' };
+  /* O status sai junto: 429 (limite), 529 (sobrecarga) e 400 (pedido
+     recusado) pedem consertos diferentes, e sem ele a falha era muda. */
+  if (!r.ok) return { ok: false, motivo: 'recusa-http', status: r.status };
   const j = (await r.json()) as { content?: Array<{ type?: string; text?: string }>; usage?: unknown; stop_reason?: string };
   const medicao: Medicao = { uso: lerUso(j.usage), modelo: env.IA_MODELO, requisicaoId: r.headers.get('request-id') ?? undefined };
   if (j.stop_reason === 'max_tokens') return { ok: false, motivo: 'cortada', ...medicao };

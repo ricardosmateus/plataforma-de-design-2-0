@@ -348,6 +348,19 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
     if (tetoAvalClaude > 0 && !claudeDepois) await liberar(ctx.usuarioId, tetoAvalClaude, opAvalClaude, 'assistente');
 
     if (!proposta) {
+      /* Saída que era muda: o 503 chegava sem dizer POR QUÊ. `formato`
+         leva o começo do que o modelo respondeu — é o que diz se o JSON
+         veio quebrado, cortado ou com texto em volta. */
+      req.log.warn(
+        {
+          tipo,
+          motivo: r.ok ? 'formato' : r.motivo,
+          status: !r.ok ? (r.status ?? null) : null,
+          inicioDaResposta: r.ok ? r.bruto.slice(0, 300) : null,
+          requisicaoId: r.requisicaoId ?? null,
+        },
+        'gerar tarefa: a proposta falhou',
+      );
       /* Nada criado. A proposta, se o provedor cobrou, já foi
          consumida acima (T3); a busca nem começou. */
       if (ehReferencia) await liberar(ctx.usuarioId, tetoBusca, opBusca, 'pesquisa');
