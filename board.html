@@ -6241,6 +6241,22 @@ body.modal-open{overflow:hidden}
     setTimeout(function(){ botao.click(); }, 0);
   });
 
+  /* BOARD-PESQUISA-092: o botão gira enquanto HOUVER investigação em
+     andamento — venha ela deste clique ou de um botão da narração
+     ("Investigar de novo", "Continuar a pesquisa"). Só a promessa do
+     clique não basta: ela acaba quando a narração oferece a escolha,
+     e a investigação escolhida corre depois, sem sinal. Enquanto gira,
+     o botão também não aceita um segundo clique, que abriria outra
+     busca paga. */
+  var investigando = false;
+  document.addEventListener('pesquisa:andamento', function(ev){
+    investigando = !!(ev.detail && ev.detail.ativa);
+    carregando(investigando);
+    /* Tarefa concluída não pesquisa (BOARD-LEITURA-003): apagar o
+       giro não pode reabilitar o botão que a conclusão desativou. */
+    if(!investigando && document.body.classList.contains('is-readonly')) botao.disabled = true;
+  });
+
   botao.addEventListener('click', function(){
     /* BOARD-REF-010: numa tarefa de Referência o "Pesquisar" faz o que
        o "Gerar com ajuda da IA" faz na criação — busca sites,
@@ -6270,7 +6286,10 @@ body.modal-open{overflow:hidden}
     carregando(true);
     painel.pesquisarNoQuadro(descricao ? descricao.textContent.trim() : '')
       .catch(function(){ return false; })   // rede morta nao pode deixar o botao girando para sempre
-      .then(function(){ carregando(false); });
+      /* Só apaga se não houver investigação correndo: quando a
+         narração oferece "Investigar de novo" e a pessoa escolhe, é o
+         evento `pesquisa:andamento` que manda. */
+      .then(function(){ if(!investigando) carregando(false); });
   });
 
   /* ---------- Download do relatório ----------

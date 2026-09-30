@@ -21,7 +21,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
+import { randomUUID } from 'node:crypto';
 import { db } from '../db.js';
+import { lotesDoBoard } from './quadros-em-lote.js';
 import * as sessao from '../seguranca/sessao.js';
 
 type Erro = { campo: string | null; mensagem: string };
@@ -343,35 +345,23 @@ export async function rotasBoard(app: FastifyInstance) {
        nunca guarda id de registro entre um autosave e o seguinte
        (BOARD-SALVA-003). Cascade cuida de colunas e registros: não
        é preciso apagar os três níveis à mão. */
-    await db.$transaction(async (tx) => {
-      await tx.quadro.deleteMany({ where: { tarefaId: ctx.tarefaId } });
-
-      for (let q = 0; q < dados.data.quadros.length; q++) {
-        const quadro = dados.data.quadros[q]!;
-        await tx.quadro.create({
-          data: {
-            tarefaId: ctx.tarefaId,
-            titulo: quadro.titulo,
-            tipo: quadro.tipo,
-            modelo: quadro.tipo === 'matriz' ? quadro.modelo ?? null : null,
-            ordem: q,
-            colunas: {
-              create: quadro.colunas.map((coluna, c) => ({
-                titulo: coluna.titulo,
-                ordem: c,
-                registros: {
-                  create: coluna.registros.map((registro, r) => ({
-                    titulo: registro.titulo,
-                    descricao: registro.descricao,
-                    ordem: r,
-                  })),
-                },
-              })),
-            },
-          },
-        });
-      }
-    });
+    /* BOARD-SALVA-008 (30/09/2026): em LOTE — três `createMany`, um
+       por nível, com os ids gerados antes (quadros-em-lote.ts). Antes
+       era `create` aninhado por quadro, um INSERT por quadro, coluna e
+       registro; um board de pesquisa estourava os 5 s da transação
+       (P2028) e NÃO era salvo. O prazo também sobe: o banco pode estar
+       acordando (cold start do Neon), e perder o board por isso é pior
+       do que esperar alguns segundos a mais. */
+    const lotes = lotesDoBoard(ctx.tarefaId, dados.data.quadros, randomUUID);
+    await db.$transaction(
+      async (tx) => {
+        await tx.quadro.deleteMany({ where: { tarefaId: ctx.tarefaId } });
+        if (lotes.quadros.length) await tx.quadro.createMany({ data: lotes.quadros });
+        if (lotes.colunas.length) await tx.quadroColuna.createMany({ data: lotes.colunas });
+        if (lotes.registros.length) await tx.registro.createMany({ data: lotes.registros });
+      },
+      { maxWait: 10_000, timeout: 20_000 },
+    );
 
     /* Relê do banco em vez de devolver o que chegou: é o que
        garante que a tela e a tabela não divirjam nem por um id. */

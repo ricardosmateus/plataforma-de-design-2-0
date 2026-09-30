@@ -1627,7 +1627,37 @@
      mostra "Continuar a pesquisa" em vez de confirmar para sempre.
      Um laço aqui não seria uma tela travada — seria dinheiro saindo
      em rodadas, que é o pior defeito que este arquivo pode ter. */
+  /* BOARD-PESQUISA-092 (30/09/2026): QUALQUER investigação em
+     andamento avisa a tela — não só a que o botão "Pesquisar" abriu.
+     Antes, o botão girava enquanto durava a PROMESSA do clique; quando
+     a investigação nascia de um botão da narração ("Investigar de
+     novo", "Continuar a pesquisa"), o clique já tinha acabado, o botão
+     voltava a "Pesquisar" e os quadros chegavam 30 a 60 s depois, sem
+     sinal nenhum. Um contador, porque planejar e buscar são dois
+     streams encadeados e o aviso só pode apagar quando os dois
+     acabarem. */
+  var investigacoesAbertas = 0;
+  function marcarInvestigacao(delta) {
+    var antes = investigacoesAbertas > 0;
+    investigacoesAbertas = Math.max(0, investigacoesAbertas + delta);
+    var agora = investigacoesAbertas > 0;
+    if (antes !== agora) {
+      document.dispatchEvent(new CustomEvent('pesquisa:andamento', { detail: { ativa: agora } }));
+    }
+  }
+
   function correrStream(abrir, texto, idN, seguirSozinho) {
+    marcarInvestigacao(+1);
+    function acabou() { marcarInvestigacao(-1); }
+    /* `correrStreamBruto` nunca rejeita (ver o fim dele), mas o aviso
+       precisa apagar mesmo se um dia rejeitar. */
+    return correrStreamBruto(abrir, texto, idN, seguirSozinho).then(
+      function (v) { acabou(); return v; },
+      function (e) { acabou(); throw e; }
+    );
+  }
+
+  function correrStreamBruto(abrir, texto, idN, seguirSozinho) {
     var N = narracao();
     var entregue = false;
     /* O stream que planeja termina no `aguardando` e dispara a busca
@@ -3384,6 +3414,12 @@
        investigação já ter sido recuperada. */
     temRelatorio: function () {
       return !!relatorioAtual;
+    },
+
+    /* BOARD-PESQUISA-092: para a tela perguntar, além de ouvir o
+       evento `pesquisa:andamento`. */
+    emAndamento: function () {
+      return investigacoesAbertas > 0;
     },
 
     /* Remonta no assistente a investigação anterior desta tarefa, A
