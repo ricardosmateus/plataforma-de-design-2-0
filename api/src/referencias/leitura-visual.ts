@@ -519,6 +519,12 @@ export function logosDaMarca(html: string, paginaUrl: string, nomes: string[] = 
     const texto = [arquivo, atributo(tag, 'alt'), atributo(tag, 'title'), atributo(tag, 'class'), atributo(tag, 'id')].join(' ');
     const { pontos, motivos } = pontuar(pos, texto, tag);
     if (pontos < PONTOS_MINIMOS_LOGO || !/nome da marca|link da página inicial/.test(motivos.join())) continue;
+    /* BOARD-VISUAL-011: o nome da marca SOZINHO não faz de uma imagem o
+       logotipo. No dado real, `Image-from-Loggi.webp` e
+       `Despacho-Intelipost-1.jpg` são FOTOS — e iam para a análise com
+       visão como se fossem a marca. Precisa também de "logo" no nome ou
+       de estar no link da página inicial. */
+    if (!motivos.includes('"logo" no nome') && !motivos.includes('link da página inicial')) continue;
     let url: string | null = null;
     try { url = new URL(src.replace(/&amp;/g, '&'), base).href; } catch { continue; }
     saida.push({ tipo: /\.svg(\?|#|$)/i.test(real) ? 'svg-url' : 'imagem', url, svg: null, pontos, motivos });

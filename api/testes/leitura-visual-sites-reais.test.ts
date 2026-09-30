@@ -113,3 +113,18 @@ test('carrossel com o nome da marca no arquivo continua fora (escrito à mão)',
   const logos = logosDaMarca(html, 'https://www.acme.com.br');
   assert.deepEqual(logos.map((c) => c.url), ['https://www.acme.com.br/logo-acme.png']);
 });
+
+/* BOARD-VISUAL-011, do segundo passe no dado real: com o logotipo em
+   SVG, a busca por uma imagem para a análise com visão aceitava qualquer
+   arquivo com o nome da marca — e escolhia FOTOS. */
+test('foto com o nome da marca não é logotipo (Loggi, Intelipost, Melhor Envio)', () => {
+  const casos: Array<[string, string, RegExp]> = [
+    ['www.loggi.com', 'https://www.loggi.com', /Image-from-Loggi|Hero\.webp/i],
+    ['www.intelipost.com.br', 'https://www.intelipost.com.br', /Despacho-Intelipost/i],
+    ['melhorenvio.com.br', 'https://www.melhorenvio.com.br', /banner-/i],
+  ];
+  for (const [host, pedido, foto] of casos) {
+    const { logos } = ler(host, pedido);
+    assert.ok(!logos.some((c) => foto.test(c.url ?? '')), `${host}: foto como candidata a logotipo`);
+  }
+});
