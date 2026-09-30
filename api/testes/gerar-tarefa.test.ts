@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   montarMensagemTarefa,
   interpretarTarefa,
+  PREFIXO_TAREFA,
   interpretarReferencias,
   urlsDosResultados,
   textoFinal,
@@ -115,4 +116,32 @@ test('texto final: só o que vem depois da última ferramenta, juntando os peda�
 test('nome do arquivo na URL', () => {
   assert.equal(nomeDoArquivoNaUrl('https://x.com/brand/Manual%20da%20Marca.pdf?v=2'), 'Manual da Marca.pdf');
   assert.equal(nomeDoArquivoNaUrl('https://x.com/'), '');
+});
+
+/* ---------- O prefill recomeçado — falha real de 30/09/2026 ----------
+   req_011CfZrQqwQVChXrDC7HSEJZ: em vez de CONTINUAR `{"titulo":`, o
+   modelo recomeçou o objeto, e a resposta virou
+   `{"titulo":{"titulo":"…","descricao":"…"}`. Proposta boa, JSON quebrado:
+   503 intermitente, cobrado (T3), sem aviso na tela. O começo do texto
+   abaixo é o do log; o resto completa o que o log cortou. */
+const PT_TITULO = 'Analisar posicionamento visual de logtech concorrentes';
+const PT_DESC = 'Pesquisar logotipos, paletas de cores e estilos visuais de 5-8 empresas de logtech e plataformas de entrega que atuam em condominios.';
+const PT_INTERNO = `{"titulo":"${PT_TITULO}","descricao":"${PT_DESC}"}`;
+const PT_OK = { titulo: PT_TITULO, descricao: PT_DESC };
+
+test('proposta: o modelo que CONTINUA o prefill continua funcionando', () => {
+  assert.deepEqual(interpretarTarefa(PREFIXO_TAREFA + `"${PT_TITULO}","descricao":"${PT_DESC}"}`), PT_OK);
+});
+
+test('proposta: o modelo que RECOMEÇA o objeto dentro do prefill é lido (a falha real)', () => {
+  assert.deepEqual(interpretarTarefa(PREFIXO_TAREFA + PT_INTERNO), PT_OK);
+  assert.deepEqual(interpretarTarefa(PREFIXO_TAREFA + PT_INTERNO + '}'), PT_OK);
+  assert.deepEqual(interpretarTarefa(PREFIXO_TAREFA + '\n  ' + PT_INTERNO), PT_OK);
+  assert.deepEqual(interpretarTarefa(PREFIXO_TAREFA + PT_INTERNO + '\n\nEspero que ajude!'), PT_OK);
+});
+
+test('proposta: tolerar o prefill não é aceitar qualquer coisa', () => {
+  assert.equal(interpretarTarefa(PREFIXO_TAREFA + `{"titulo":"${PT_TITULO}"}`), null);
+  assert.equal(interpretarTarefa(PREFIXO_TAREFA + 'desculpe, não consigo'), null);
+  assert.equal(interpretarTarefa(`{"titulo":{"titulo":${PT_INTERNO}}}`), null);
 });

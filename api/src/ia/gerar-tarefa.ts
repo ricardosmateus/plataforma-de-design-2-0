@@ -155,13 +155,44 @@ function primeiroJson(bruto: string): unknown {
   }
 }
 
-export function interpretarTarefa(bruto: string): { titulo: string; descricao: string } | null {
-  const o = primeiroJson(bruto) as { titulo?: unknown; descricao?: unknown } | null;
-  if (!o || typeof o.titulo !== 'string' || typeof o.descricao !== 'string') return null;
-  const titulo = encurtar(o.titulo, TITULO_MAX);
-  const descricao = encurtar(o.descricao, DESCRICAO_MAX);
+/* O começo que `pedirTarefa` põe na boca do modelo (prefill). */
+export const PREFIXO_TAREFA = '{"titulo":';
+
+type Proposta = { titulo: string; descricao: string };
+
+function lerProposta(o: unknown, fundo = 0): Proposta | null {
+  const obj = o as { titulo?: unknown; descricao?: unknown } | null;
+  if (!obj || typeof obj !== 'object') return null;
+  /* O objeto veio embrulhado dentro de "titulo" — ver interpretarTarefa. */
+  if (fundo === 0 && obj.titulo && typeof obj.titulo === 'object') return lerProposta(obj.titulo, 1);
+  if (typeof obj.titulo !== 'string' || typeof obj.descricao !== 'string') return null;
+  const titulo = encurtar(obj.titulo, TITULO_MAX);
+  const descricao = encurtar(obj.descricao, DESCRICAO_MAX);
   if (!titulo || !descricao) return null;
   return { titulo, descricao };
+}
+
+/**
+ * Lê a proposta. Tolera o defeito visto em produção em 30/09/2026
+ * (req_011CfZrQqwQVChXrDC7HSEJZ): em vez de CONTINUAR o prefill
+ * `{"titulo":`, o modelo às vezes recomeça o objeto inteiro, e o texto
+ * vira `{"titulo":{"titulo":"…","descricao":"…"}`. A proposta estava
+ * boa; o JSON é que ficava quebrado — 503 intermitente, cobrado (T3), e
+ * a tarefa não nascia. Tenta, em ordem: o texto como veio; o texto sem
+ * o prefixo repetido; e, nos dois, o objeto embrulhado em "titulo".
+ */
+export function interpretarTarefa(bruto: string): Proposta | null {
+  const candidatos = [bruto];
+  const t = bruto.trimStart();
+  if (t.startsWith(PREFIXO_TAREFA)) {
+    const resto = t.slice(PREFIXO_TAREFA.length).trimStart();
+    if (resto.startsWith('{')) candidatos.push(resto);
+  }
+  for (const c of candidatos) {
+    const p = lerProposta(primeiroJson(c));
+    if (p) return p;
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------
@@ -321,7 +352,7 @@ export async function pedirTarefa(
   mensagem: string,
 ): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string; status?: number } & Medicao> {
   if (env.IA_DRIVER !== 'anthropic' || !env.IA_API_KEY || !env.IA_MODELO) return { ok: false, motivo: 'sem-ia' };
-  const PREFIXO = '{"titulo":';
+  const PREFIXO = PREFIXO_TAREFA;
   let r: Response;
   try {
     r = await fetch('https://api.anthropic.com/v1/messages', {
