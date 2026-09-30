@@ -566,7 +566,9 @@
       '.orq-gerando::after{content:"";position:absolute;inset:0;' +
       'background:linear-gradient(90deg,transparent,rgba(0,0,0,.06),transparent);' +
       'transform:translateX(-100%);animation:esq-brilho 1.4s var(--ease-in-out,ease-in-out) infinite}' +
-      '#generateWithAIBtn[aria-busy="true"]{opacity:.6;pointer-events:none}';
+      '#generateWithAIBtn[aria-busy="true"]{opacity:.6;pointer-events:none}' +
+      '#taskGerandoAviso[data-erro]{background:var(--bg-danger);color:var(--text-danger)}' +
+      '#taskGerandoAviso[data-erro]::before{display:none}';
     document.head.appendChild(s);
   }
 
@@ -635,23 +637,55 @@
      .../tarefas/gerar) chama o Senior Product Designer com os dados
      da empresa, o que ela já sabe, a atividade e esse tipo, e CRIA a
      tarefa. Na Referência, já com os sites, logotipos e documentos
-     dos concorrentes. Na Pesquisa, a tela abre o board e a pesquisa
-     começa sozinha.
+     dos concorrentes.
+
+     ATV-GERAR-021 (decisão do Ricardo, 30/09/2026): gerar SÓ cria. O
+     modal fecha, a pessoa continua na atividade e vê a tarefa nova na
+     lista; abrir o board, pesquisar ou classificar a matriz é um
+     segundo gesto dela. Até esta data a Pesquisa abria o board e
+     pesquisava sozinha, e a Matriz abria já classificando
+     (ATV-GERAR-012/015, revistas). O `proximo` que a rota devolve
+     continua chegando e é ignorado aqui de propósito.
 
      A heurística antiga (proporProximaTarefa) continua exportada
      para quem a usar como diagnóstico, mas não decide mais nada.
      ------------------------------------------------------------ */
   var TEXTO_GERANDO = {
-    pesquisa: 'A IA está escrevendo a pergunta da pesquisa a partir do que a empresa já sabe. Depois a pesquisa começa no quadro da tarefa.',
-    matriz_csd: 'A IA está montando a tarefa da Matriz CSD. Depois a matriz abre e as tarefas da atividade já são classificadas.',
+    /* Não prometem o que não vai acontecer: desde ATV-GERAR-021 nada
+       abre sozinho depois de gerar. */
+    pesquisa: 'A IA está escrevendo a pergunta da pesquisa a partir do que a empresa já sabe.',
+    matriz_csd: 'A IA está montando a tarefa da Matriz CSD.',
     referencias_visuais: 'A IA está buscando os concorrentes na web e juntando sites, logotipos e documentos de marca. Isso pode levar até um minuto.'
   };
 
   function avisoGerando(tipo) {
     var el = document.getElementById('taskGerandoAviso');
     if (!el) return;
+    el.removeAttribute('data-erro');
     el.textContent = tipo ? (TEXTO_GERANDO[tipo] || 'A IA está gerando a tarefa.') : '';
     el.hidden = !tipo;
+  }
+
+  /* ATV-GERAR-022 — o erro aparece DENTRO do modal.
+     O modal é um <dialog> aberto com showModal(): fica na camada de
+     cima da página, e o toast (#atvToast) fica fora dele. No erro o
+     modal continua aberto, então o toast aparecia POR BAIXO e sumia em
+     3 s sem ninguém ver — a "tela muda" de 30/09/2026. O aviso que já
+     diz "a IA está gerando" passa a dizer o que deu errado, no mesmo
+     lugar, até a pessoa tentar de novo ou fechar o modal. */
+  function erroNoModal(msg) {
+    var el = document.getElementById('taskGerandoAviso');
+    if (!el) { toast(msg, 'erro'); return; }
+    garantirEstilo();
+    el.setAttribute('data-erro', '');
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function mensagemDeErro(e, fallback) {
+    return e && e.rede
+      ? 'Não conseguimos falar com o servidor. Verifique sua conexão.'
+      : (e && e.dados && e.dados.mensagem) || fallback;
   }
 
   function travarModal(ligado) {
@@ -705,38 +739,42 @@
       travarModal(true);
       avisoGerando(tipo);
 
+      var erroMsg = null;
       window.AtividadeAcoes.gerar(tipo, orientacao).then(function (r) {
         if (c.titulo) c.titulo.value = '';
         if (c.desc) c.desc.value = '';
         if (typeof window.closeTaskModal === 'function') window.closeTaskModal();
 
+        /* ATV-GERAR-021: fica na atividade. A tarefa nova já foi
+           desenhada na lista por AtividadeAcoes.gerar; o toast diz qual
+           é. Nenhum location.href aqui. */
         var tarefa = r && r.tarefa;
-        if (r && r.proximo === 'pesquisar' && tarefa && window.AtividadeAcoes.urlDoBoard) {
-          /* ATV-GERAR-012: o clique em "Gerar" já autorizou o gasto —
-             o board recebe `pesquisar=1` e começa a pesquisa sozinho. */
-          location.href = window.AtividadeAcoes.urlDoBoard(tarefa.id) + '&pesquisar=1';
-          return;
-        }
-        if (r && r.proximo === 'classificar' && tarefa && window.AtividadeAcoes.urlDaMatriz) {
-          /* ATV-GERAR-015: a Matriz CSD abre e já classifica. */
-          location.href = window.AtividadeAcoes.urlDaMatriz(tarefa.id) + '&classificar=1';
-          return;
-        }
         if (r && r.referencias) {
           toast(resumoReferencias(r));
           if (r.avisos && r.avisos.length) console.info('[Orquestrador] referências que ficaram de fora:', r.avisos);
           return;
         }
-        toast('Tarefa criada com a ajuda da IA. Revise o título e a descrição se quiser ajustar.');
+        toast(tarefa && tarefa.titulo
+          ? 'Tarefa criada: \u201c' + tarefa.titulo + '\u201d.'
+          : 'Tarefa criada com a ajuda da IA.');
       }, function (e) {
-        tratarErro(e, 'Não foi possível gerar a tarefa agora.');
+        erroMsg = mensagemDeErro(e, 'Não foi possível gerar a tarefa agora. Tente de novo.');
+        console.error('[Orquestrador]', erroMsg, e);
       }).then(function () {
         gerando = false;
         marcarGerando(false);
         travarModal(false);
         avisoGerando(null);
+        if (erroMsg) erroNoModal(erroMsg);
       });
     });
+
+    /* O erro não sobrevive ao modal: fechado e reaberto, ele volta limpo. */
+    var modal = document.getElementById('taskModal');
+    if (modal && !modal.dataset.orqLimpaErro) {
+      modal.dataset.orqLimpaErro = '1';
+      modal.addEventListener('close', function () { avisoGerando(null); });
+    }
     return true;
   }
 
