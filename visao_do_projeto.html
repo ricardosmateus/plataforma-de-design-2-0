@@ -521,6 +521,37 @@ body.is-carregando-quadro .toolbar{opacity:.5;pointer-events:none}
 .idea-date{font-size:13px;line-height:18px;font-weight:500;color:var(--text-muted);white-space:nowrap}
 .idea-desc{font-size:14px;line-height:22px;color:var(--text-secondary);overflow-wrap:anywhere}
 
+/* ---------- Selo da avaliação de IA — IA-AVAL-009/010 ----------
+   Só informativo: não abre painel nem tem ação própria (IA-AVAL-012).
+   Número e rótulo escritos, nunca só a cor. A explicação vem num
+   balão que abre no hover E no foco do teclado — `title` sozinho não
+   abre pelo teclado. */
+.aval{position:relative;align-self:flex-start;max-width:100%}
+.aval-selo{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;line-height:18px;font-weight:600;
+  padding:3px 10px;border-radius:999px;
+  cursor:help;white-space:nowrap;
+}
+.aval-selo svg{width:14px;height:14px;flex-shrink:0;fill:currentColor}
+.aval-selo:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
+.aval-selo--alta{background:var(--bg-success);color:var(--text-success)}
+.aval-selo--revisar{background:var(--bg-warning);color:var(--text-warning)}
+.aval-selo--baixa{background:var(--bg-danger);color:var(--text-danger)}
+.aval-selo--nao_avaliado{background:var(--neutral-100);color:var(--text-secondary)}
+.aval-dica{
+  position:absolute;left:0;bottom:calc(100% + 8px);z-index:5;
+  width:max-content;max-width:260px;
+  padding:8px 10px;border-radius:var(--radius);
+  background:var(--neutral-900);color:var(--neutral-0);
+  font-size:12px;line-height:17px;font-weight:400;white-space:normal;
+  box-shadow:var(--shadow-lg);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity var(--dur-fast) var(--ease-out);
+}
+.aval-dica p + p{margin-top:4px}
+.aval:hover .aval-dica,.aval-selo:focus-visible + .aval-dica{opacity:1;visibility:visible}
+
 /* ---------- Card ilustrado (ex.: "Matriz CSD") ----------
    Variante do Figma sem estrelas/descrição: no lugar entra uma
    ilustração quadrada de 209x210, herdada do frame "Idéias". */
@@ -2106,6 +2137,42 @@ body.modal-open{overflow:hidden}
     return out + '</div>';
   }
 
+  /* ---------- Selo da avaliação — IA-AVAL-009/010 ----------
+     Só aparece quando a API manda `avaliacao` (AVALIACAO_MODO=visivel
+     e nota ainda válida para este texto). Sem ela, o card é o de
+     sempre. */
+  var ROTULO_FAIXA = { alta: 'Confiança alta', revisar: 'Revisar', baixa: 'Confiança baixa', nao_avaliado: 'Não avaliado' };
+  var ICON_BRILHO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0Z"/></svg>';
+
+  function seloDeAvaliacao(ideia){
+    var a = ideia.avaliacao;
+    if(!a || !ROTULO_FAIXA[a.faixa]) return '';
+    var texto = a.faixa === 'nao_avaliado' || a.geral == null
+      ? ROTULO_FAIXA.nao_avaliado
+      : a.geral + '% · ' + ROTULO_FAIXA[a.faixa];
+    var quem = a.avaliador === 'jev'
+      ? 'Avaliado pelo JEV.'
+      : a.avaliador === 'claude'
+        ? 'Avaliado pelo Claude — o avaliador principal não respondeu.'
+        : 'Não foi possível avaliar este conteúdo agora.';
+    var linhas = [];
+    if(a.alerta) linhas.push(a.alerta);
+    if(a.incerta) linhas.push('O avaliador ficou em dúvida. Leia com atenção.');
+    if(a.faixa !== 'nao_avaliado') linhas.push('Percentual estimado pela IA a partir da ficha da empresa e das idéias validadas. Não é uma garantia.');
+    linhas.push(quem);
+    var dicaId = 'aval-' + escapar(ideia.id);
+    return (
+      '<div class="aval">' +
+        '<span class="aval-selo aval-selo--' + escapar(a.faixa) + '" tabindex="0" aria-describedby="' + dicaId + '">' +
+          ICON_BRILHO + escapar(texto) +
+        '</span>' +
+        '<div class="aval-dica" role="tooltip" id="' + dicaId + '">' +
+          linhas.map(function(l){ return '<p>' + escapar(l) + '</p>'; }).join('') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function cardDeIdeia(ideia, coluna){
     var operavel = podeEscrever(papelAtual);
     var temMenu  = operavel || podeExcluir(papelAtual);
@@ -2129,6 +2196,7 @@ body.modal-open{overflow:hidden}
           '<span class="idea-date">' + escapar(formatarData(ideia.criado_em)) + '</span>' +
         '</div>' +
         '<p class="idea-desc">' + escapar(ideia.descricao) + '</p>' +
+        seloDeAvaliacao(ideia) +
         (coluna.id === 'ideias' ? '' :
           '<button type="button" class="btn btn--secondary" data-mover="' + escapar(ideia.id) + '">' +
             'Acessar<span class="sr-only"> a idéia ' + escapar(ideia.titulo) + '</span>' +

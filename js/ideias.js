@@ -149,6 +149,14 @@
           var texto = criadas.length === 1
             ? '1 idéia criada em Minhas idéias.'
             : criadas.length + ' idéias criadas em Minhas idéias, na ordem de execução. Comece pela primeira.';
+          /* IA-AVAL (Fase 2): quantas o avaliador marcou para revisar.
+             Só conta quando a nota veio (AVALIACAO_MODO=visivel). */
+          var paraRevisar = criadas.filter(function (i) {
+            return i.avaliacao && (i.avaliacao.faixa === 'revisar' || i.avaliacao.faixa === 'baixa');
+          }).length;
+          if (paraRevisar > 0) {
+            texto += paraRevisar === 1 ? ' 1 pede revisão.' : ' ' + paraRevisar + ' pedem revisão.';
+          }
           if (parecidas > 0) {
             texto += parecidas === 1
               ? ' 1 ficou de fora por ser parecida com uma que já existe.'

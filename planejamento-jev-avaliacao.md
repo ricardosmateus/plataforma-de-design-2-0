@@ -1,6 +1,6 @@
 # Planejamento — JEV como avaliador do conteúdo de IA na Visão do Projeto
 
-> **Data:** 29/09/2026 · **Página:** `visao_do_projeto.html` · **Status:** Fase 0 e Fase 1 (modo sombra) construídas no branch `feat/jev-avaliacao`; Fases 2 a 5 pendentes
+> **Data:** 29/09/2026 · **Página:** `visao_do_projeto.html` · **Status:** Fases 0, 1 (modo sombra + calibração) e 2 (selo) construídas no branch `feat/jev-avaliacao`; Fases 3 a 5 pendentes
 > **Não substitui nada:** o Claude continua gerando e buscando o conteúdo com as regras que já existem. O JEV entra **depois**, para avaliar o que o Claude trouxe.
 > **Regras afetadas:** `ideias/ideias-criacao.md` §1.5 (`IDEIA-GERAR`), `ia/ia-assistente-conhecimento.md` (`IA-GARANT`, `IA-ACAO`), `creditos-pagamentos-regras.md`
 > **Regras novas:** `ia/ia-avaliacao.md` (`IA-AVAL-001` a `017`)

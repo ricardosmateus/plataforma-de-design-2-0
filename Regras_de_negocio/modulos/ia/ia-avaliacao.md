@@ -9,7 +9,7 @@
 
 ## Estado atual
 
-O código de avaliação está em `api/src/ia/avaliacao/`. Na Fase 1 ele roda só no **Gerar com ajuda da IA** e só **grava** a nota em `avaliacoes_ia`: nada aparece na tela ainda. O selo (§1.3) entra na Fase 2, depois da calibração.
+O código de avaliação está em `api/src/ia/avaliacao/`. Na Fase 1 ele roda só no **Gerar com ajuda da IA** e só **grava** a nota em `avaliacoes_ia`: nada aparece na tela ainda. **Fase 2 (29/09/2026):** com `AVALIACAO_MODO=visivel`, o quadro mostra o selo (§1.3) nas idéias geradas pela IA cuja nota ainda vale (`estado = ativa`), e o toast de "Gerar" conta quantas "pedem revisão" (faixa revisar ou baixa). Em `sombra`, nada muda na tela.
 
 **Calibração (IA-AVAL-014):** `npm run calibrar:exportar` gera `calibracao/marcar-AAAA-MM-DD.html` (fora do git), onde a pessoa marca cada etapa sem ver a nota; `npm run calibrar:analisar -- <marcações.json>` compara com as notas e sugere cortes de faixa e limiares de alerta, sem mudar o código. Módulo puro em `api/src/ia/avaliacao/calibracao.ts`. `npm run calibrar:automatico` faz a calibração sem marcação manual, com duas referências que nunca são o próprio JEV: o **gabarito** (`gabarito.ts`, etapas com o defeito conhecido por construção — a prova) e o **revisor** (o Claude revisando as etapas reais — um indício).
 
@@ -78,6 +78,7 @@ C11 a C17 (assistente e caderno) entram nas Fases 3 e 4.
 
 | Versão | Data | Mudança |
 |---|---|---|
+| 1.3.0 | 2026-09-29 | **Fase 2 construída.** `GET .../ideias` devolve `avaliacao` (geral, faixa, avaliador, incerta, alerta mais grave) por idéia em modo `visivel`; o card desenha o selo com balão no hover e no foco do teclado (IA-AVAL-009/010); o toast de gerar diz quantas pedem revisão. O detalhe por critério não vai à tela (IA-AVAL-012). |
 | 1.2.0 | 2026-09-29 | **Segunda calibração** (gabarito, 22 etapas, depois da correção do título): faixa 82%, inventa fato 100% de acerto. "Genérica" em 50% travava etapas boas (acerto 73%, precisão 40%) — limiar sobe para **90%** (96% / 80% / 100%); "repetida" sobe para **55%** (100%). Cortes de faixa mantidos (80/50): a sugestão de 75 era efeito das travas erradas. |
 | 1.1.0 | 2026-09-29 | **Primeira calibração** (`calibracao/relatorio-automatico-2026-09-29.md`, 22 etapas com gabarito). Achados: (1) só com `etapas.N` o JEV julgava a etapa vizinha — IA-AVAL-006 passa a exigir o título citado; teste direto: repetida 9%→95%, fato inventado falso 92%→7%. (2) A média escondia defeitos que o JEV já via (genérica 91% saía "alta") — IA-AVAL-008 ganha as travas. Com as travas, o cenário da clínica passou de 4/6 para 6/6 faixas certas. As 5 avaliações reais anteriores foram feitas com as perguntas antigas. |
 | 1.0.0 | 2026-09-29 | Documento criado com IA-AVAL-001 a 017, a partir de `planejamento-jev-avaliacao.md` v0.4.0. |

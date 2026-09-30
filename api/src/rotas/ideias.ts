@@ -293,6 +293,48 @@ async function buscarPossivelDuplicata(
   return achada ? (ativas.find((i: LinhaIdeia) => i.id === achada.id) ?? null) : null;
 }
 
+/* ------------------------------------------------------------
+   A nota como a tela a recebe — IA-AVAL-009/010
+   ------------------------------------------------------------
+   Só o que o selo mostra: número, faixa, quem avaliou, se ficou em
+   dúvida e o alerta mais grave. O detalhe por critério fica no banco
+   (auditoria e calibração), não no card (IA-AVAL-012). */
+type NotaTela = {
+  geral: number | null;
+  faixa: string;
+  avaliador: string;
+  incerta: boolean;
+  alerta: string | null;
+};
+
+const GRAVIDADE: Record<string, number> = { contradiz_evidencia: 0, inventa_fato: 1, duplicata_semantica: 2 };
+
+function notaParaTela(a: { geral: number | null; faixa: string; avaliador: string; incerta: boolean; alertas: unknown }): NotaTela {
+  const alertas = (Array.isArray(a.alertas) ? a.alertas : []) as Array<{ codigo?: string; texto?: string }>;
+  const principal = [...alertas]
+    .filter((x) => typeof x?.texto === 'string')
+    .sort((x, y) => (GRAVIDADE[x.codigo ?? ''] ?? 9) - (GRAVIDADE[y.codigo ?? ''] ?? 9))[0];
+  return { geral: a.geral, faixa: a.faixa, avaliador: a.avaliador, incerta: a.incerta, alerta: principal?.texto ?? null };
+}
+
+/* A nota ATIVA mais recente de cada idéia. Desatualizada (texto
+   editado) e excluída não aparecem — IA-AVAL-011. Falhar aqui não
+   pode derrubar o quadro: sem nota, o card sai sem selo. */
+async function notasVisiveis(ids: string[]): Promise<Map<string, NotaTela>> {
+  const mapa = new Map<string, NotaTela>();
+  if (!ids.length) return mapa;
+  try {
+    const linhas = await db.avaliacaoIa.findMany({
+      where: { alvoTipo: 'ideia', alvoId: { in: ids }, estado: 'ativa' },
+      orderBy: { criadoEm: 'desc' },
+    });
+    for (const a of linhas) if (!mapa.has(a.alvoId)) mapa.set(a.alvoId, notaParaTela(a));
+  } catch (e) {
+    console.error('[avaliacao] falha ao ler as notas (o quadro segue sem selo)', e);
+  }
+  return mapa;
+}
+
 /* IA-AVAL-011/012: a nota acompanha o destino do texto que avaliou.
    Registro paralelo — nunca derruba a edição nem a exclusão. */
 function marcarAvaliacao(ideiaId: string, estado: 'desatualizada' | 'excluida'): void {
@@ -361,7 +403,20 @@ export async function rotasIdeias(app: FastifyInstance) {
     /* `papel` vai uma vez na raiz, não repetido em cada idéia: é o
        mesmo valor para todas, e repetir seria peso à toa em cada
        card (ideias-quadro.md §2). */
-    return resposta.send({ ideias: ideias.map(ideiaParaResposta), papel: ctx.papel });
+    /* IA-AVAL-009 (Fase 2): com a avaliação visível, cada idéia gerada
+       pela IA leva a nota que ainda vale para o seu texto. Em `sombra`
+       ou `desligada`, a resposta é idêntica à de antes. */
+    const notas = env.AVALIACAO_MODO === 'visivel'
+      ? await notasVisiveis(ideias.map((i: LinhaIdeia) => i.id))
+      : null;
+
+    return resposta.send({
+      ideias: ideias.map((i: LinhaIdeia) => {
+        const nota = notas?.get(i.id);
+        return nota ? { ...ideiaParaResposta(i), avaliacao: nota } : ideiaParaResposta(i);
+      }),
+      papel: ctx.papel,
+    });
   });
 
   /* ---------- Criar — IDEIA-CRIA-001 a 010 ---------- */
@@ -669,9 +724,10 @@ export async function rotasIdeias(app: FastifyInstance) {
        nada muda na resposta — a tela continua igual. */
     const mostrar = env.AVALIACAO_MODO === 'visivel' && avaliacao;
     return resposta.code(201).send({
-      ideias: criadas.map((c: LinhaIdeia, i: number) =>
-        mostrar ? { ...ideiaParaResposta(c), avaliacao: avaliacao!.avaliacoes[i] ?? null } : ideiaParaResposta(c),
-      ),
+      ideias: criadas.map((c: LinhaIdeia, i: number) => {
+        const a = mostrar ? avaliacao!.avaliacoes[i] : undefined;
+        return a ? { ...ideiaParaResposta(c), avaliacao: notaParaTela(a) } : ideiaParaResposta(c);
+      }),
       parecidas,
     });
   });
