@@ -1,6 +1,6 @@
 # Regras de Negócio — Assistente de IA: a conversa
 
-> **Versão:** 1.8.0 · **Status:** Implementado e verificado ao vivo · `IA-CONV-NARRA` **construída em 14/09/2026** · `IA-CONV-CADERNO` **construída em 14/09/2026**
+> **Versão:** 1.9.0 · **Status:** Implementado e verificado ao vivo · `IA-CONV-NARRA` **construída em 14/09/2026** · `IA-CONV-CADERNO` **construída em 14/09/2026**
 > **Módulo:** Assistente de IA · **Página:** `visao_do_projeto.html`, `atividade.html` e `board.html` (painel lateral, mesma conversa por projeto — `IA-CONV-001`)
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
 > **Documentos irmãos:** [`ia-assistente-conhecimento.md`](ia-assistente-conhecimento.md) · [`ia-assistente-isolamento.md`](ia-assistente-isolamento.md)
@@ -80,7 +80,7 @@ Origem: pedido do Ricardo, 27/08/2026 — a conversa não deve viver mais do que
 |---|---|---|
 | IA-CUSTO-001 | Toda pergunta consome crédito. Não há uso gratuito ilimitado. | Modelo de negócio da plataforma |
 | IA-CUSTO-002 | Sem saldo, a pergunta é recusada **antes** de chamar o provedor — com `402` e explicação. Nunca se gasta chamada que não será cobrável. | Decisão A15 |
-| IA-CUSTO-003 | Falha do provedor (`503`) **não consome crédito**. Cobrar por resposta que não veio é cobrar por nada. | Decisão A15 |
+| IA-CUSTO-003 | **Todo custo que o provedor cobrou é repassado ao usuário**, mesmo quando a resposta não chega à tela (veio fora do formato, não passou na verificação de procedência). O consumo continua registrado como `descartado`, para o Histórico de uso mostrar que foi pago e não entregue. Só não há débito quando o provedor **não cobrou** nada (erro de rede, timeout sem resposta, `5xx`). | Revista em 29/09/2026 (IA-AVAL-017, decisão D8 de `planejamento-jev-avaliacao.md`). Antes: "falha do provedor não consome crédito" (Decisão A15) |
 | IA-CUSTO-004 | O limite de tamanho da pergunta e do contexto é do servidor, não da tela. Uma pergunta enorme é recusada com `400`, não enviada e cobrada. | Decisão A12 |
 
 ### 1.5 Abrir/fechar o painel — `IA-CONV-PAINEL`
@@ -228,6 +228,7 @@ Sem coluna de custo por mensagem: o consumo pertence ao módulo de créditos, ai
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.9.0 | 2026-09-29 | **IA-CUSTO-003 revista:** todo custo que o provedor cobrou é repassado ao usuário, inclusive resposta descartada. Só não há débito quando o provedor não cobrou. Decorre de IA-AVAL-017 (`ia-avaliacao.md`). |
 | 1.8.0 | 2026-09-16 | **A narração passou a ser lida como parte da conversa.** `IA-CONV-NARRA-002` revista: ela continua sendo entrada de tipo próprio no que importa — procedência, persistência e ausência do contexto do modelo —, mas veste a formatação comum da conversa; o cartão branco com sombra numa thread sem cartões era uma caixa flutuando no meio do texto. Nova `009`: a narração entra na **sequência cronológica**, por um contador único carimbado na entrada e ordenado só no desenho (as duas listas continuam separadas). Corrige, achado em uso, a narração de ontem reaparecendo embaixo de uma pergunta feita agora. Nova `010`: dentro da conversa, escolha é **link sublinhado**, nunca botão sólido — vale para as saídas da narração e para confirmar/descartar ação proposta; componente acrescentado ao sistema de design (`.link`, `.link--sublinhado`, `.link--apoio`) e documentado em `styleguide.html`. |
 | 1.7.0 | 2026-09-14 | **O painel passou a atender dois interlocutores** (`IA-CONV-CADERNO`, Fase 3a). O mesmo compositor pergunta ao assistente do projeto ou às fontes de uma investigação; o modo é ligado por gesto, fica visível enquanto durar e sai com um clique. A conversa do caderno **não entra** no contexto do assistente — persistência própria, mesma lógica de `IA-CONV-NARRA-003` — e a resposta se identifica na tela como vinda das fontes. Regras da investigação em `board-lista.md` `BOARD-PESQUISA-047` a `052`; prova em `ferramentas/provar-fase3a.mjs`, que confere o **corpo** da requisição ao assistente depois de uma conversa com o caderno. |
 | 1.6.0 | 2026-09-14 | `IA-CONV-NARRA` **construída** na Fase 0, menos as etapas internas da busca. `js/ia.js` ganhou uma lista `narracoes` separada de `mensagens` e a porta `window.IaNarracao` (`abrir`/`passo`/`fechar`/`retomar`/`remover`), usada por `js/pesquisa.js`. A separação faz `IA-CONV-NARRA-003` valer por construção: para a narração chegar ao modelo seria preciso movê-la para `mensagens`, mudança visível em revisão. É também onde vivem os botões de `BOARD-PESQUISA-012` — um toast não segura botão. Verificado com DOM real (`ferramentas/provar-fase0.mjs`), incluindo a prova de que uma pergunta feita logo depois de uma investigação não leva nada da narração no corpo. |

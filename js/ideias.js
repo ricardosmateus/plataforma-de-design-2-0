@@ -138,7 +138,10 @@
         var parecidas = (r && r.parecidas) || 0;
 
         if (criadas.length === 0) {
-          aviso('As idéias sugeridas já estão no quadro. Nenhuma idéia nova foi criada.');
+          /* IDEIA-GERAR-010 (29/09/2026): a geração aconteceu e foi
+             cobrada (IDEIA-GERAR-008) — o texto não pode soar como se
+             nada tivesse sido feito. */
+          aviso('A IA gerou as etapas, mas todas eram parecidas com idéias que já existem. Nada foi criado.');
           return r;
         }
 
@@ -146,6 +149,14 @@
           var texto = criadas.length === 1
             ? '1 idéia criada em Minhas idéias.'
             : criadas.length + ' idéias criadas em Minhas idéias, na ordem de execução. Comece pela primeira.';
+          /* IA-AVAL (Fase 2): quantas o avaliador marcou para revisar.
+             Só conta quando a nota veio (AVALIACAO_MODO=visivel). */
+          var paraRevisar = criadas.filter(function (i) {
+            return i.avaliacao && (i.avaliacao.faixa === 'revisar' || i.avaliacao.faixa === 'baixa');
+          }).length;
+          if (paraRevisar > 0) {
+            texto += paraRevisar === 1 ? ' 1 pede revisão.' : ' ' + paraRevisar + ' pedem revisão.';
+          }
           if (parecidas > 0) {
             texto += parecidas === 1
               ? ' 1 ficou de fora por ser parecida com uma que já existe.'

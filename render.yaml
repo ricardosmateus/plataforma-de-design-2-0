@@ -110,6 +110,15 @@ services:
       - key: IA_API_KEY
         sync: false
 
+      # ---- Avaliação do conteúdo de IA (ia-avaliacao.md) ----
+      # O JEV avalia o que o Claude gerou; sem chave, o Claude avalia.
+      # 'sombra' grava a nota sem mostrar (Fase 1, calibração). Trocar
+      # para 'visivel' só depois da calibração (IA-AVAL-014).
+      - key: AVALIACAO_MODO
+        value: desligada
+      - key: TYPESAFE_API_KEY
+        sync: false
+
       # ---- Cobrança e pagamento ----
       #
       # Cobrança LIGADA, junto com o Pix real. As duas viram juntas

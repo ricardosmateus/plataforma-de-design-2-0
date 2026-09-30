@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calibração do JEV</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --text:#1c1c1a; --muted:#6b6b66; --line:#e3e2dd;
+  --accent:#2f5bd3; --accent-text:#ffffff;
+  --alta-bg:#e3f4e8; --alta-fg:#1d6b37; --rev-bg:#fdf1d8; --rev-fg:#8a5a00; --baixa-bg:#fbe4e2; --baixa-fg:#a3261c;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161615; --surface:#20201e; --text:#ecebe6; --muted:#a3a29b; --line:#34332f;
+    --accent:#7b9cff; --accent-text:#101010;
+    --alta-bg:#16341f; --alta-fg:#8fd9a6; --rev-bg:#3a2d10; --rev-fg:#f1c96b; --baixa-bg:#3d1714; --baixa-fg:#f2a39b;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line);padding:14px 16px}
+.topo{max-width:880px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:18px;margin:0}
+.progresso{color:var(--muted);font-size:14px}
+.barra{height:4px;background:var(--line);border-radius:2px;margin-top:10px;overflow:hidden;max-width:880px;margin-left:auto;margin-right:auto}
+.barra span{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);padding:8px 14px}
+button.primario{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+main{max-width:880px;margin:0 auto;padding:16px}
+.intro{color:var(--muted);font-size:14px;margin:0 0 16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card.marcado{border-color:var(--accent)}
+.meta{font-size:12px;color:var(--muted);margin-bottom:4px}
+.titulo{font-weight:600;margin:0 0 4px}
+.desc{margin:0 0 12px;color:var(--text)}
+.pergunta{font-size:13px;color:var(--muted);margin:10px 0 6px}
+.opcoes{display:flex;flex-wrap:wrap;gap:8px}
+.opcoes label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:14px;user-select:none}
+.opcoes input{margin:0}
+.opcoes label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.nota{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;font-size:13px;display:none}
+.card.marcado .nota{display:block}
+.selo{display:inline-block;border-radius:999px;padding:2px 10px;font-weight:600;font-size:13px}
+.selo.alta{background:var(--alta-bg);color:var(--alta-fg)}
+.selo.revisar{background:var(--rev-bg);color:var(--rev-fg)}
+.selo.baixa{background:var(--baixa-bg);color:var(--baixa-fg)}
+.selo.nao_avaliado{background:var(--line);color:var(--muted)}
+.crit{color:var(--muted);margin-top:6px;word-break:break-word}
+.alerta{color:var(--baixa-fg)}
+.vazio{color:var(--muted);text-align:center;padding:40px 0}
+.acoes{display:flex;gap:8px;flex-wrap:wrap}
+.aviso{max-width:880px;margin:10px auto 0;font-size:14px;border-radius:8px;padding:10px 12px;background:color-mix(in srgb,var(--accent) 12%,transparent);display:none}
+.aviso.visivel{display:block}
+.aviso code{font-size:13px}
+.aviso textarea{width:100%;height:120px;margin-top:8px;font:12px/1.4 ui-monospace,Menlo,monospace;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:6px}
+@media (max-width:520px){ .topo{flex-direction:column;align-items:stretch} button{width:100%} }
+</style>
+</head>
+<body>
+<header>
+  <div class="topo">
+    <div>
+      <h1>Calibração do JEV</h1>
+      <div class="progresso" id="progresso" aria-live="polite"></div>
+    </div>
+    <div class="acoes">
+      <button class="primario" id="copiar" type="button">Copiar marcações</button>
+      <button id="baixar" type="button">Baixar .json</button>
+    </div>
+  </div>
+  <div class="barra" aria-hidden="true"><span id="barra"></span></div>
+  <div class="aviso" id="aviso" role="status"></div>
+</header>
+<main>
+  <p class="intro">
+    Leia cada etapa gerada pela IA e marque o que <strong>você</strong> acha dela. A nota do JEV fica escondida até você
+    escolher a faixa, para não influenciar. As marcações ficam salvas neste navegador. Ao terminar, clique em
+    <strong>Copiar marcações</strong> e, na pasta <code>api</code>, rode <code>pbpaste | npm run calibrar:analisar -- -</code>.
+  </p>
+  <div id="lista"></div>
+</main>
+<script>
+const DADOS = /*__DADOS__*/null;
+/* Chave fixa: exportar de novo (com mais etapas) mantém o que já foi
+   marcado — as marcações são por id de avaliação. */
+const CHAVE = 'calibracao-jev:marcas';
+const ROTULO = { alta: 'Confiança alta', revisar: 'Revisar', baixa: 'Confiança baixa', nao_avaliado: 'Não avaliado' };
+const NOMES = { c1: 'Confiança do dado', c2: 'Atende ao pedido', c3: 'Compatível', c4: 'Inventa fato', c6: 'Específica', c7: 'Entrega concreta', c8: 'Repete idéia', c9: 'Ordem da lista', c10: 'Respeita orientação' };
+
+let marcas = {};
+try { marcas = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) { marcas = {}; }
+function salvar(){ try { localStorage.setItem(CHAVE, JSON.stringify(marcas)); } catch (e) {} }
+
+function el(tag, attrs, filhos){
+  const n = document.createElement(tag);
+  for (const k in (attrs || {})) { if (k === 'class') n.className = attrs[k]; else if (k === 'text') n.textContent = attrs[k]; else n.setAttribute(k, attrs[k]); }
+  (filhos || []).forEach(f => n.append(f));
+  return n;
+}
+
+function opcao(tipo, nome, valor, rotulo, marcado, aoMudar){
+  const input = el('input', { type: tipo, name: nome, value: valor });
+  input.checked = !!marcado;
+  input.addEventListener('change', aoMudar);
+  return el('label', {}, [input, rotulo]);
+}
+
+function atualizarProgresso(){
+  const total = DADOS.itens.length;
+  const feitos = DADOS.itens.filter(i => marcas[i.id] && marcas[i.id].faixa).length;
+  document.getElementById('progresso').textContent = feitos + ' de ' + total + ' marcadas';
+  document.getElementById('barra').style.width = (total ? (100 * feitos / total) : 0) + '%';
+}
+
+function desenharNota(item){
+  const selo = el('span', { class: 'selo ' + item.faixa, text: (item.geral == null ? '—' : item.geral + '%') + ' · ' + ROTULO[item.faixa] });
+  const crit = Object.keys(item.criterios || {}).map(k => (NOMES[k] || k) + ' ' + item.criterios[k].pct + '%').join(' · ');
+  const alertas = (item.alertas || []).map(a => a.texto).join(' ');
+  return el('div', { class: 'nota' }, [
+    el('div', {}, ['Nota do ' + (item.avaliador === 'jev' ? 'JEV' : item.avaliador === 'claude' ? 'Claude' : 'avaliador') + ': ', selo]),
+    el('div', { class: 'crit', text: crit }),
+    alertas ? el('div', { class: 'crit alerta', text: alertas }) : '',
+  ]);
+}
+
+function desenhar(){
+  const lista = document.getElementById('lista');
+  lista.textContent = '';
+  if (!DADOS || !DADOS.itens.length) {
+    lista.append(el('p', { class: 'vazio', text: 'Nenhuma etapa avaliada ainda. Gere idéias com AVALIACAO_MODO=sombra e rode o script de novo.' }));
+    return;
+  }
+  DADOS.itens.forEach((item, i) => {
+    const m = marcas[item.id] || {};
+    const card = el('article', { class: 'card' + (m.faixa ? ' marcado' : ''), 'aria-label': 'Etapa ' + (i + 1) });
+    const mudar = () => {
+      const faixa = card.querySelector('input[name="f-' + item.id + '"]:checked');
+      marcas[item.id] = {
+        faixa: faixa ? faixa.value : undefined,
+        generica: card.querySelector('[value="generica"]').checked,
+        inventaFato: card.querySelector('[value="inventaFato"]').checked,
+        duplicada: card.querySelector('[value="duplicada"]').checked,
+      };
+      card.classList.toggle('marcado', !!marcas[item.id].faixa);
+      salvar(); atualizarProgresso();
+    };
+    card.append(
+      el('div', { class: 'meta', text: (i + 1) + ' · ' + item.projeto + (item.empresa ? ' · ' + item.empresa : '') }),
+      el('p', { class: 'titulo', text: item.titulo }),
+      el('p', { class: 'desc', text: item.descricao }),
+      el('div', { class: 'pergunta', text: 'Na sua opinião, esta etapa é…' }),
+      el('div', { class: 'opcoes', role: 'radiogroup' }, [
+        opcao('radio', 'f-' + item.id, 'alta', 'Boa, manteria', m.faixa === 'alta', mudar),
+        opcao('radio', 'f-' + item.id, 'revisar', 'Precisa revisar', m.faixa === 'revisar', mudar),
+        opcao('radio', 'f-' + item.id, 'baixa', 'Ruim, excluiria', m.faixa === 'baixa', mudar),
+      ]),
+      el('div', { class: 'pergunta', text: 'Marque se valer:' }),
+      el('div', { class: 'opcoes' }, [
+        opcao('checkbox', 'g-' + item.id, 'generica', 'É genérica', m.generica, mudar),
+        opcao('checkbox', 'i-' + item.id, 'inventaFato', 'Inventa fato sobre a empresa', m.inventaFato, mudar),
+        opcao('checkbox', 'd-' + item.id, 'duplicada', 'Repete idéia que já existia', m.duplicada, mudar),
+      ]),
+      desenharNota(item),
+    );
+    lista.append(card);
+  });
+  atualizarProgresso();
+}
+
+function exportar(){
+  const marcacoes = DADOS.itens
+    .filter(i => marcas[i.id] && marcas[i.id].faixa)
+    .map(i => Object.assign({ id: i.id }, marcas[i.id]));
+  return { total: marcacoes.length, json: JSON.stringify({ geradoEm: DADOS.geradoEm, marcacoes }, null, 2) };
+}
+
+function avisar(filhos){
+  const a = document.getElementById('aviso');
+  a.textContent = '';
+  filhos.forEach(f => a.append(f));
+  a.classList.add('visivel');
+}
+
+function semNada(){
+  avisar(['Nenhuma etapa com faixa escolhida ainda. Marque "Boa", "Precisa revisar" ou "Ruim" em pelo menos uma.']);
+}
+
+/* Copiar é o caminho principal: download de página aberta do disco
+   (file://) às vezes não acontece, sem erro nenhum — foi o que houve
+   no primeiro uso, 29/09/2026. Se a área de transferência também for
+   recusada, o JSON aparece num campo já selecionado para Cmd+C. */
+document.getElementById('copiar').addEventListener('click', async () => {
+  const { total, json } = exportar();
+  if (!total) return semNada();
+  const comando = el('code', { text: 'pbpaste | npm run calibrar:analisar -- -' });
+  try {
+    await navigator.clipboard.writeText(json);
+    avisar([total + ' marcação(ões) copiada(s). No Terminal, na pasta api, rode: ', comando]);
+  } catch (e) {
+    const campo = el('textarea', { readonly: '', 'aria-label': 'Marcações em JSON' });
+    campo.value = json;
+    avisar(['Não consegui copiar sozinho. Aperte Cmd+C com o texto abaixo selecionado e depois rode ', comando, campo]);
+    campo.focus(); campo.select();
+  }
+});
+
+document.getElementById('baixar').addEventListener('click', () => {
+  const { total, json } = exportar();
+  if (!total) return semNada();
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = el('a', { href: URL.createObjectURL(blob), download: 'marcacoes-jev-' + DADOS.geradoEm.slice(0, 10) + '.json' });
+  document.body.append(a); a.click(); a.remove();
+  avisar([total + ' marcação(ões) no arquivo. Se ele não aparecer em Downloads, use "Copiar marcações".']);
+});
+
+desenhar();
+</script>
+</body>
+</html>

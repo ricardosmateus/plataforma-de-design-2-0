@@ -389,6 +389,9 @@ if (env.NODE_ENV !== 'test') {
     console.log(`API em http://localhost:${env.PORTA}`);
     console.log(`Origens permitidas: ${origensPermitidas.join(', ')}`);
     console.log(`Driver de e-mail: ${env.EMAIL_DRIVER}`);
+    /* ia-avaliacao.md: diz na partida se a avaliação está ligada e se o
+       JEV tem chave — sem isso, "não gravou nada" não tem por onde começar. */
+    console.log(`Avaliação de IA: ${env.AVALIACAO_MODO}${env.AVALIACAO_MODO === 'desligada' ? '' : ` · JEV ${env.TYPESAFE_API_KEY ? 'com chave' : 'SEM chave (o Claude avalia)'}`}`);
   } catch (e) {
     app.log.error(e);
     process.exit(1);
