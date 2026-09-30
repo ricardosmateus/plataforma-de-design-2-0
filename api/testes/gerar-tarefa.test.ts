@@ -15,6 +15,7 @@ import {
   DOCUMENTOS_POR_CONCORRENTE,
 } from '../src/ia/gerar-tarefa.js';
 import { nomeDoArquivoNaUrl } from '../src/referencias/regras.js';
+import { readFileSync } from 'node:fs';
 
 const base = {
   empresaNome: 'iHouseLog',
@@ -144,4 +145,31 @@ test('proposta: tolerar o prefill não é aceitar qualquer coisa', () => {
   assert.equal(interpretarTarefa(PREFIXO_TAREFA + `{"titulo":"${PT_TITULO}"}`), null);
   assert.equal(interpretarTarefa(PREFIXO_TAREFA + 'desculpe, não consigo'), null);
   assert.equal(interpretarTarefa(`{"titulo":{"titulo":${PT_INTERNO}}}`), null);
+});
+
+/* ---------- A segunda forma, no mesmo dia ----------
+   req_011CfZz4mgK4AyzNkXbioqg7: o modelo CONTINUOU o prefill, mas
+   esqueceu a aspa de abertura do valor. Texto exatamente como veio. */
+const FORMA2 = '{"titulo":Pesquisar como e-commerces e logtechs comunicam confiança e inovação","descricao":"Qual tom de voz, palavras-chave e estilo visual usam Amazon, Shopee, Loggi e Movile para falar de entrega, tecnologia e facilidade? Como elas se posicionam na marca?"}';
+
+test('proposta: a aspa esquecida depois do prefill é lida (a segunda falha real)', () => {
+  const p = interpretarTarefa(FORMA2);
+  assert.equal(p?.titulo, 'Pesquisar como e-commerces e logtechs comunicam confiança e inovação');
+  assert.ok(p?.descricao.startsWith('Qual tom de voz'));
+});
+
+test('proposta: sem prefill, o JSON inteiro escrito pelo modelo é lido', () => {
+  assert.deepEqual(interpretarTarefa(PT_INTERNO), PT_OK);
+  assert.deepEqual(interpretarTarefa('Aqui está:\n' + PT_INTERNO), PT_OK);
+});
+
+/* Duas formas quebradas no mesmo dia vieram do começo imposto ao
+   modelo. Se alguém devolver o prefill a pedirTarefa, este teste cai
+   antes de a produção descobrir de novo. */
+test('pedirTarefa não manda prefill ao modelo', () => {
+  const fonte = readFileSync(new URL('../src/ia/gerar-tarefa.ts', import.meta.url), 'utf8');
+  const a = fonte.indexOf('export async function pedirTarefa(');
+  const b = fonte.indexOf('export async function buscarReferencias(');
+  assert.ok(a >= 0 && b > a, 'não achei pedirTarefa no arquivo');
+  assert.ok(!/role:\s*'assistant'/.test(fonte.slice(a, b)), 'pedirTarefa voltou a mandar uma mensagem de assistant (prefill)');
 });

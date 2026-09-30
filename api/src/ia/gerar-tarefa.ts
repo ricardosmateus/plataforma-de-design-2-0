@@ -155,7 +155,10 @@ function primeiroJson(bruto: string): unknown {
   }
 }
 
-/* O começo que `pedirTarefa` põe na boca do modelo (prefill). */
+/* O começo que `pedirTarefa` punha na boca do modelo (prefill) até
+   30/09/2026. Não é mais enviado; a leitura continua tolerando as duas
+   formas quebradas que ele produziu, para respostas antigas e para o
+   caso de o modelo imitar o formato por conta própria. */
 export const PREFIXO_TAREFA = '{"titulo":';
 
 type Proposta = { titulo: string; descricao: string };
@@ -179,14 +182,20 @@ function lerProposta(o: unknown, fundo = 0): Proposta | null {
  * vira `{"titulo":{"titulo":"…","descricao":"…"}`. A proposta estava
  * boa; o JSON é que ficava quebrado — 503 intermitente, cobrado (T3), e
  * a tarefa não nascia. Tenta, em ordem: o texto como veio; o texto sem
- * o prefixo repetido; e, nos dois, o objeto embrulhado em "titulo".
+ * o prefixo repetido (ou com a aspa que faltou); e o objeto embrulhado
+ * em "titulo". No mesmo dia apareceu a segunda forma
+ * (req_011CfZz4mgK4AyzNkXbioqg7), e o prefill foi tirado de pedirTarefa.
  */
 export function interpretarTarefa(bruto: string): Proposta | null {
   const candidatos = [bruto];
   const t = bruto.trimStart();
   if (t.startsWith(PREFIXO_TAREFA)) {
     const resto = t.slice(PREFIXO_TAREFA.length).trimStart();
+    /* Forma 1 (req_011CfZrQqwQVChXrDC7HSEJZ): o objeto recomeçado. */
     if (resto.startsWith('{')) candidatos.push(resto);
+    /* Forma 2 (req_011CfZz4mgK4AyzNkXbioqg7): a aspa de abertura do
+       valor esquecida — `{"titulo":Pesquisar…","descricao":…`. */
+    else if (!resto.startsWith('"')) candidatos.push(PREFIXO_TAREFA + '"' + resto);
   }
   for (const c of candidatos) {
     const p = lerProposta(primeiroJson(c));
@@ -352,7 +361,6 @@ export async function pedirTarefa(
   mensagem: string,
 ): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string; status?: number } & Medicao> {
   if (env.IA_DRIVER !== 'anthropic' || !env.IA_API_KEY || !env.IA_MODELO) return { ok: false, motivo: 'sem-ia' };
-  const PREFIXO = PREFIXO_TAREFA;
   let r: Response;
   try {
     r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -362,10 +370,12 @@ export async function pedirTarefa(
         model: env.IA_MODELO,
         max_tokens: MAX_TOKENS_PROPOSTA,
         system: [{ type: 'text', text: SISTEMA_TAREFA, cache_control: { type: 'ephemeral' } }],
-        messages: [
-          { role: 'user', content: mensagem },
-          { role: 'assistant', content: PREFIXO },
-        ],
+        /* Sem prefill desde 30/09/2026. O começo imposto (`{"titulo":`)
+           foi seguido de dois jeitos errados em produção no mesmo dia —
+           o objeto recomeçado dentro dele e a aspa do valor esquecida —
+           e cada um virava 503 cobrado. O prompt já pede SÓ o JSON, e
+           `interpretarTarefa` acha o objeto no meio de texto. */
+        messages: [{ role: 'user', content: mensagem }],
       }),
     });
   } catch {
@@ -378,7 +388,7 @@ export async function pedirTarefa(
   const medicao: Medicao = { uso: lerUso(j.usage), modelo: env.IA_MODELO, requisicaoId: r.headers.get('request-id') ?? undefined };
   if (j.stop_reason === 'max_tokens') return { ok: false, motivo: 'cortada', ...medicao };
   const texto = (j.content ?? []).filter((p) => p?.type === 'text').map((p) => p.text ?? '').join('');
-  return { ok: true, bruto: PREFIXO + texto, ...medicao };
+  return { ok: true, bruto: texto, ...medicao };
 }
 
 export async function buscarReferencias(
