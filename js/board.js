@@ -92,6 +92,20 @@
   }
   function ehReferencias(t) { return !!t && t.tipo === 'referencias_visuais'; }
 
+  /* ATV-TAR-CRIA-009 / BOARD-MATRIZ-TAREFA: o tipo da tarefa que É uma
+     matriz, e o modelo de quadro que ela abre. Mesmos nomes de
+     MATRIZ_MODELOS (board.html) e de Quadro.modelo no banco. */
+  var MODELO_DA_TAREFA = { swot: 'swot', impacto_esforco: 'impacto_esforco', comparativa: 'comparativa' };
+  function modeloDaTarefa(t) { return (t && MODELO_DA_TAREFA[t.tipo]) || null; }
+  /* A comparativa não tem quadrantes fixos: cada coluna é uma empresa,
+     cada card um critério. Vazia, nasce com duas empresas para
+     renomear — é o mínimo que uma comparação precisa. */
+  function colunasIniciais(modelo) {
+    if (modelo !== 'comparativa') return null;
+    return [{ titulo: 'Empresa A', registros: [] }, { titulo: 'Empresa B', registros: [] }];
+  }
+
+
   /* Erro de uma ação de referência: os fatais (sessão, suspensão) e a
      tarefa que sumiu são tratados aqui, como no resto do board; o
      resto volta para a tela, que mostra a mensagem dentro do quadro
@@ -636,6 +650,22 @@
             carregado = true;
             /* Esconde a barra de progresso: tudo carregado, de verdade. */
             progressoControl.esconder();
+
+            /* BOARD-MATRIZ-TAREFA: tarefa que é uma matriz. "Pesquisar"
+               some — a matriz é preenchida à mão, com post-its. E o board
+               vazio ganha a matriz do modelo: só DEPOIS de `carregado`,
+               porque é aí que o autosave passa a valer (BOARD-SALVA-006),
+               e só com o board vazio, para nunca sobrepor o que já está
+               gravado. Concluída não cria nada (criarQuadroMatriz respeita
+               o modo leitura). */
+            var modelo = modeloDaTarefa(achada);
+            if (modelo) {
+              var btnPesquisar = document.getElementById('btnGerarIA');
+              if (btnPesquisar) btnPesquisar.hidden = true;
+              if (!((rq && rq.quadros) || []).length && typeof window.criarQuadroMatriz === 'function') {
+                window.criarQuadroMatriz(null, modelo, colunasIniciais(modelo));
+              }
+            }
 
             /* ATV-GERAR-012: quem precisa agir DEPOIS que a tarefa e os
                quadros estão na tela (a pesquisa pedida pelo "Gerar com

@@ -36,7 +36,10 @@ const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensage
 
 /* Mesmos limites de idéia (ATV-TAR-CRIA-001, decisão A18) —
    consistência entre módulos, não coincidência. */
-export const TIPOS_VALIDOS = ['pesquisa', 'matriz_csd', 'referencias_visuais'] as const;
+/* ATV-TAR-CRIA-009 (30/09/2026): SWOT, Impacto × Esforço e Tabela
+   comparativa são tipos próprios — o board delas nasce com a matriz
+   vazia do modelo de mesmo nome (js/board.js). */
+export const TIPOS_VALIDOS = ['pesquisa', 'matriz_csd', 'referencias_visuais', 'swot', 'impacto_esforco', 'comparativa'] as const;
 type TipoTarefa = (typeof TIPOS_VALIDOS)[number];
 
 /* ATV-TAR-CRIA-008: tipo cuja tarefa já se explica sozinha não pede
@@ -45,13 +48,33 @@ type TipoTarefa = (typeof TIPOS_VALIDOS)[number];
    proposta da URL) grave o mesmo texto. Quem manda texto próprio
    continua podendo. */
 const TEXTO_PADRAO: Partial<Record<TipoTarefa, { titulo: string; descricao: string }>> = {
+  /* ATV-TAR-CRIA-008 estendida à Matriz CSD (30/09/2026). A descrição
+     é obrigatória no esquema abaixo: sem este texto, o modal sem
+     campos mandaria descrição vazia e levaria 400. */
+  matriz_csd: {
+    titulo: 'Matriz CSD',
+    descricao: 'Organizar o que o time sabe sobre o projeto em certezas, suposições e dúvidas.',
+  },
+  /* ATV-TAR-CRIA-009: os tipos-matriz também se explicam pelo tipo. */
+  swot: {
+    titulo: 'Matriz SWOT',
+    descricao: 'Organizar forças, fraquezas, oportunidades e ameaças do projeto.',
+  },
+  impacto_esforco: {
+    titulo: 'Impacto × Esforço',
+    descricao: 'Priorizar ações por impacto e esforço: fazer já, planejar, se sobrar tempo e evitar.',
+  },
+  comparativa: {
+    titulo: 'Tabela comparativa',
+    descricao: 'Comparar empresas ou produtos lado a lado, critério por critério.',
+  },
   referencias_visuais: {
     titulo: 'Referência',
     descricao: 'Reunir sites, documentos e imagens de referência do projeto.',
   },
 };
 
-function comTextoPadrao(corpo: unknown): unknown {
+export function comTextoPadrao(corpo: unknown): unknown {
   if (!corpo || typeof corpo !== 'object') return corpo;
   const c = corpo as Record<string, unknown>;
   const padrao = TEXTO_PADRAO[c.tipo as TipoTarefa];
@@ -64,7 +87,7 @@ function comTextoPadrao(corpo: unknown): unknown {
   };
 }
 
-const conteudoTarefa = z.object({
+export const conteudoTarefa = z.object({
   titulo: z
     .string({ required_error: 'Informe o título da tarefa.' })
     .trim()

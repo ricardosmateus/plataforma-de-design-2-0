@@ -1587,6 +1587,9 @@ body.modal-open{overflow:hidden}
       <button type="button" class="np-side-item" role="radio" data-tipo="pesquisa" aria-checked="true" tabindex="0">Pesquisa</button>
       <button type="button" class="np-side-item" role="radio" data-tipo="matriz_csd" aria-checked="false" tabindex="-1">Matriz CSD</button>
       <button type="button" class="np-side-item" role="radio" data-tipo="referencias_visuais" aria-checked="false" tabindex="-1">Referência</button>
+      <button type="button" class="np-side-item" role="radio" data-tipo="swot" aria-checked="false" tabindex="-1">Matriz SWOT</button>
+      <button type="button" class="np-side-item" role="radio" data-tipo="impacto_esforco" aria-checked="false" tabindex="-1">Impacto × Esforço</button>
+      <button type="button" class="np-side-item" role="radio" data-tipo="comparativa" aria-checked="false" tabindex="-1">Tabela comparativa</button>
     </nav>
 
     <div class="np-divider" aria-hidden="true"></div>
@@ -2086,12 +2089,43 @@ var TIPOS_TAREFA = {
   pesquisa: {
     nome: 'Pesquisa',
     descricao: 'Levante informações para responder a uma pergunta do projeto. A IA busca na internet e no que a empresa já sabe, e organiza o resultado em quadros, mostrando a fonte de cada informação.',
-    rotuloTitulo: 'Título da pesquisa'
+    rotuloTitulo: 'Título da pesquisa',
+    /* ATV-GERAR-023: só a Pesquisa tem o que a IA configurar — a
+       pergunta. Matriz CSD e Referência não mostram o botão. */
+    gerarComIa: true
   },
   matriz_csd: {
     nome: 'Matriz CSD',
     descricao: 'Organize o que o time sabe sobre o projeto em três colunas: certezas, suposições e dúvidas. Ajuda a ver o que já está validado e o que ainda precisa ser investigado.',
-    rotuloTitulo: 'Título da Matriz CSD'
+    rotuloTitulo: 'Título da Matriz CSD',
+    /* ATV-TAR-CRIA-008, estendida em 30/09/2026 (decisão do Ricardo):
+       a Matriz também se explica pelo tipo, e o modal não pede título
+       nem descrição. Quem preenche é o servidor (TEXTO_PADRAO em
+       api/src/rotas/tarefas.ts), como na Referência — a descrição é
+       obrigatória lá, e mandar vazio sem esse texto levaria 400. */
+    semCampos: true
+  },
+  /* ATV-TAR-CRIA-009 (30/09/2026): tipos que SÃO uma matriz de
+     decisão. Como a Matriz CSD, não pedem título nem descrição — o
+     servidor grava o texto padrão (TEXTO_PADRAO) —, não têm "Gerar com
+     ajuda da IA", e o board deles abre com a matriz vazia do mesmo nome. */
+  swot: {
+    nome: 'Matriz SWOT',
+    descricao: 'Organize forças, fraquezas, oportunidades e ameaças em quatro quadrantes. Ajuda a ver o que joga a favor e contra o projeto, dentro e fora da empresa.',
+    rotuloTitulo: 'Título da Matriz SWOT',
+    semCampos: true
+  },
+  impacto_esforco: {
+    nome: 'Impacto × Esforço',
+    descricao: 'Priorize ações em quatro quadrantes: fazer já, planejar, se sobrar tempo e evitar. Ajuda a decidir por onde começar.',
+    rotuloTitulo: 'Título da matriz de Impacto × Esforço',
+    semCampos: true
+  },
+  comparativa: {
+    nome: 'Tabela comparativa',
+    descricao: 'Compare empresas ou produtos lado a lado, critério por critério. Cada coluna é uma empresa e cada linha, um critério.',
+    rotuloTitulo: 'Título da tabela comparativa',
+    semCampos: true
   },
   /* Texto definido pelo Ricardo em 23/09/2026. Atenção: ele promete
      mais do que existe hoje — o board aceita só sites e imagens, e a
@@ -2125,14 +2159,14 @@ function aplicarCamposDoTipo(info){
     var campo = f.querySelector('input, textarea');
     if(campo) campo.disabled = sem;
   });
-  /* ATV-GERAR-010: "Gerar com ajuda da IA" vale para TODOS os tipos,
-     Referência incluída — ali ela busca os concorrentes e monta os
-     cards. Só some na edição: gerar cria uma tarefa NOVA, e no modo
-     edição isso seria outra coisa do que a pessoa abriu para fazer.
-     Lido pelo id a cada vez: js/orquestrador-gateway.js troca o nó
-     do botão (clone) depois que esta página carrega. */
+  /* ATV-GERAR-023 (30/09/2026): "Gerar com ajuda da IA" só aparece
+     para o tipo que a IA tem o que configurar — hoje, a Pesquisa, que
+     precisa de uma pergunta. Matriz CSD e Referência se montam
+     dentro da própria tarefa. Continua sumindo na edição: gerar cria
+     uma tarefa NOVA. Lido pelo id a cada vez: js/orquestrador-gateway.js
+     troca o nó do botão (clone) depois que esta página carrega. */
   var gerar = document.getElementById('generateWithAIBtn');
-  if(gerar) gerar.hidden = !criando;
+  if(gerar) gerar.hidden = !(criando && info && info.gerarComIa);
 }
 
 function pintarInfoTipo(tipo){

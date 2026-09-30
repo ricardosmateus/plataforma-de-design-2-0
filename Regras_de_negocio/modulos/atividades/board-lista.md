@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.42.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.43.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -409,6 +409,18 @@ Decidido em 28/09/2026 com o Ricardo. Algumas tarefas de pesquisa pedem o result
 | BOARD-PESQUISA-MATRIZ-006 | O quadro-matriz é feito de post-its: editar, recolorir, excluir e arrastar funcionam como em qualquer quadro. A cor segue o **quadrante** — arrastar de Forças para Ameaças muda a cor, porque muda o que o card diz. Grava-se como `tipo = matriz` + `modelo`; modelo desconhecido volta como quadro de colunas comum (perde o desenho, não o conteúdo). | `board.html`, `js/board.js`, `rotas/board.ts` |
 | BOARD-PESQUISA-MATRIZ-007 | O assistente lê o card de matriz com o quadrante na frente ("(Ameaças) Lockers dos marketplaces…"): o mesmo texto em Forças e em Ameaças são afirmações opostas. | `rotas/ia.ts` |
 
+### 1.8.2 Tarefa que é uma matriz — `BOARD-MATRIZ-TAREFA`
+
+Decidido em 30/09/2026 com o Ricardo. Os quadros-matriz de §1.8.1 deixam de existir só como resultado de pesquisa: as tarefas `swot`, `impacto_esforco` e `comparativa` (`ATV-TAR-CRIA-009`) abrem o board com a matriz vazia, para o time preencher.
+
+| ID | Regra | Onde |
+|---|---|---|
+| BOARD-MATRIZ-TAREFA-001 | Board **vazio** de uma tarefa desses tipos ganha a matriz do modelo de mesmo nome, criada por `criarQuadroMatriz` e gravada pelo autosave. Só depois de `carregado` (`BOARD-SALVA-006`), e só com o board vazio: matriz já gravada nunca é sobreposta. | `js/board.js` (`MODELO_DA_TAREFA`) |
+| BOARD-MATRIZ-TAREFA-002 | A **comparativa** vazia nasce com as colunas "Empresa A" e "Empresa B", para renomear: cada coluna é uma empresa e cada card um critério (`BOARD-PESQUISA-MATRIZ-001`), e comparar pede pelo menos duas. | `js/board.js` (`colunasIniciais`) |
+| BOARD-MATRIZ-TAREFA-003 | Nessas tarefas o botão **"Pesquisar" não aparece**: a matriz é preenchida à mão, com post-its. Editar, recolorir e arrastar seguem `BOARD-PESQUISA-MATRIZ-006`. | `js/board.js` |
+| BOARD-MATRIZ-TAREFA-004 | Tarefa **concluída** e vazia não ganha matriz: `criarQuadroMatriz` respeita o modo leitura (`BOARD-LEITURA-003`). | `board.html` |
+| BOARD-MATRIZ-TAREFA-005 | Apagar a matriz e reabrir a tarefa traz uma matriz **vazia** de volta — o board dessa tarefa é a matriz. O conteúdo apagado não volta. | `js/board.js` |
+
 ---
 
 ### 1.9 Referências — `BOARD-REF`
@@ -558,6 +570,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.43.0 | 2026-09-30 | Nova §1.8.2 **`BOARD-MATRIZ-TAREFA`**: as tarefas SWOT, Impacto × Esforço e Tabela comparativa abrem o board com a matriz vazia do modelo, sem "Pesquisar". Prova em `ferramentas/provar-matriz-tarefa.mjs`. |
 | 1.42.0 | 2026-09-28 | Nova §1.8.1 **`BOARD-PESQUISA-MATRIZ`**: pesquisa que pede matriz (SWOT, CSD, Impacto × Esforço, comparativa) volta como quadro-matriz no board, com as fontes e a conclusão em documentos ao lado. Enum `QuadroTipo` ganha `matriz` e `quadros` ganha `modelo` (migração `20260928120000_quadro_matriz`). |
 | 1.41.0 | 2026-09-23 | Nova `BOARD-REF-010`: o botão "Pesquisar" volta ao board de Referência e busca sites, logotipos e documentos de marca dos concorrentes, pelo mesmo código da geração (`BOARD-REF-009`), acrescentando sem duplicar. `BOARD-REF-001` ajustada. |
 | 1.40.0 | 2026-09-23 | Nova `BOARD-REF-009`: a tarefa de Referência gerada pelo "Gerar com ajuda da IA" chega com sites, logotipos e documentos de marca dos concorrentes, buscados na web e baixados com as travas de `api/src/rede/baixar.ts`. |

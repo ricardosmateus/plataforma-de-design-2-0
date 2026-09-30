@@ -169,7 +169,10 @@
     /* `referencias_visuais` abre o MESMO board.html: é o board que,
        lendo o tipo da tarefa, desenha os quadros "Sites" e "Imagens"
        no lugar dos post-its (BOARD-REF). */
-    if (t.tipo === 'pesquisa' || t.tipo === 'referencias_visuais') {
+    /* ATV-TAR-CRIA-009: SWOT, Impacto × Esforço e Comparativa também
+       abrem o board — lá a tarefa nasce com a matriz vazia. */
+    if (t.tipo === 'pesquisa' || t.tipo === 'referencias_visuais' ||
+        t.tipo === 'swot' || t.tipo === 'impacto_esforco' || t.tipo === 'comparativa') {
       linkAcessar = 'board.html' + contexto + '&tarefa=' + encodeURIComponent(t.id);
     } else if (t.tipo === 'matriz_csd') {
       /* MATRIZ-003: a matriz agora lê e grava — precisa dos quatro ids,

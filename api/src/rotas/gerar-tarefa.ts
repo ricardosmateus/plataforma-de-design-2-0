@@ -67,7 +67,14 @@ import { registrar } from '../creditos/registro.js';
 import { tetoUsdMicros, custoUsdMicros } from '../creditos/precos.js';
 import { usdParaMicrosBrl, comissaoSobre, cotacaoParaMilesimos } from '../creditos/dinheiro.js';
 import { reservar, liberar, consumir, SaldoInsuficiente } from '../creditos/reserva.js';
-import { abrirContexto, podeEscrever, criarTarefaNoFim, tarefaParaResposta, TIPOS_VALIDOS } from './tarefas.js';
+import { abrirContexto, podeEscrever, criarTarefaNoFim, tarefaParaResposta } from './tarefas.js';
+
+/* Só os tipos que o Senior Product Designer sabe propor. Até
+   30/09/2026 isto era TIPOS_VALIDOS inteiro — com SWOT, Impacto ×
+   Esforço e Comparativa na lista de tarefas, a rota passaria a aceitar
+   "gerar" para tipos que o prompt não conhece. A tela já não mostra o
+   botão fora da Pesquisa (ATV-GERAR-023); a rota não depende disso. */
+const TIPOS_GERAVEIS = ['pesquisa', 'matriz_csd', 'referencias_visuais'] as const;
 import { pacoteInternoDa } from './pesquisa.js';
 import { avaliarTarefaGerada, custoDasChamadas, tetoAvaliacaoPartes, type ResultadoAvaliacaoDe } from '../ia/avaliacao/avaliar.js';
 import { avaliacaoTarefaLigada, modoAvaliacaoTarefa, dependenciasDoAmbiente } from '../ia/avaliacao/config.js';
@@ -79,7 +86,7 @@ type Erro = { campo: string | null; mensagem: string };
 const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensagem });
 
 const corpoGerar = z.object({
-  tipo: z.enum(TIPOS_VALIDOS, { errorMap: () => ({ message: 'Escolha um tipo válido para a tarefa.' }) }),
+  tipo: z.enum(TIPOS_GERAVEIS, { errorMap: () => ({ message: 'Este tipo de tarefa não é gerado com ajuda da IA.' }) }),
   orientacao: z.string().max(ORIENTACAO_MAX, `A orientação deve ter no máximo ${ORIENTACAO_MAX} caracteres.`).optional(),
 });
 
