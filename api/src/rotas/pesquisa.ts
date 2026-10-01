@@ -111,6 +111,7 @@ import { pedidoVisual } from '../referencias/analise-visual.js';
 import { investigarVisual, modeloDaAnalise } from '../referencias/analise-visual-rede.js';
 import { empresasQueCabem, juntarRespostas } from '../referencias/analise-visual-custo.js';
 import { cabeNoTeto, MENSAGEM_TETO_BUSCA, MENSAGEM_TETO_CADERNO } from '../pesquisa/teto.js';
+import { respostasValidas, textoDasRespostas } from '../pesquisa/respostas-do-time.js';
 
 /* Como a narração chama cada formato — frase que a pessoa lê. */
 const NOME_MATRIZ: Record<ModeloMatriz, string> = {
@@ -225,6 +226,12 @@ const corpoPergunta = z.object({
      Sem esta confirmação, a rota recusa quando a tarefa já tem
      investigação entregue (BOARD-PESQUISA-077). */
   refazer: z.boolean().optional(),
+  /* BOARD-PESQUISA-098: as respostas que o time escreveu nos post-its
+     de "Próximos passos". Campo próprio, porque a pergunta tem 500
+     caracteres e continua sendo o texto da tarefa. Os limites finos
+     (quantas, de que tamanho, sem o convite) ficam em
+     `respostasValidas` — aqui só se recusa o absurdo. */
+  respostas: z.array(z.object({ pergunta: z.string().max(2_000), resposta: z.string().max(4_000) })).max(20).optional(),
 });
 
 export async function rotasPesquisa(app: FastifyInstance) {
@@ -1072,7 +1079,13 @@ export async function rotasPesquisa(app: FastifyInstance) {
       }
 
       /* ---- 2. Planejar ---- */
-      const contexto = pacoteParaTexto(pacote);
+      /* BOARD-PESQUISA-099: as respostas do time entram no contexto do
+         planejador — é o que faz a pesquisa nova partir do que o time
+         respondeu, em vez de recomeçar do zero. */
+      const respostasDoTime = respostasValidas(corpo.data.respostas);
+      const blocoRespostas = textoDasRespostas(respostasDoTime);
+      if (respostasDoTime.length) passo(`Considerei ${respostasDoTime.length} resposta(s) do time à pesquisa anterior.`);
+      const contexto = pacoteParaTexto(pacote) + (blocoRespostas ? `\n\n${blocoRespostas}` : '');
       const tetoPlanoUsd = tetoUsdMicros(
         modeloPlanejador,
         SISTEMA_PLANEJADOR + contexto + roteado.pergunta,
@@ -1166,7 +1179,13 @@ export async function rotasPesquisa(app: FastifyInstance) {
       if (matriz) passo(`Vou entregar o resultado como ${NOME_MATRIZ[matriz]}.`);
 
       /* ---- 3. O plano, ANTES de gastar com busca (PES-007) ---- */
-      const perguntaDaBusca = textoDaBusca(roteado.pergunta, saidaPlano.plano.perguntas);
+      /* E no texto da busca, que é gravado e usado pela confirmação —
+         então as respostas chegam até a busca sem a rota de buscar
+         precisar recebê-las de novo. */
+      const perguntaDaBusca = textoDaBusca(
+        blocoRespostas ? `${roteado.pergunta}\n\n${blocoRespostas}` : roteado.pergunta,
+        saidaPlano.plano.perguntas,
+      );
       /* `tetoBuscaUsdMicros`, e não `tetoUsdMicros`: numa busca com
          ferramenta o resultado da web volta para o contexto, e o
          contexto inteiro é reenviado a cada rodada. Contar só o

@@ -2621,6 +2621,113 @@
       '&tipo=' + encodeURIComponent(proposta.tipo);
   }
 
+  /* ============================================================
+     Próximos passos — BOARD-PESQUISA-097 a 101
+     ============================================================
+     O pedido do Ricardo (30/09/2026): perguntas SÓ DEPOIS do resultado,
+     em post-its, e no fim do quadro um botão que faz uma pesquisa nova
+     com as respostas e o contexto anterior.
+
+     As perguntas saem das LACUNAS — o que a investigação não conseguiu
+     responder com fonte — e, quando a seção é numerada, são as
+     próprias perguntas do plano (`perguntaDaSecao`): já verificáveis,
+     já pagas, e literalmente o que ficou sem resposta. Sem lacuna, não
+     há quadro: pergunta inventada para encher espaço é ruído (B5).
+
+     O quadro é identificado pelo TÍTULO. O botão não é gravado — o
+     quadro é —, então ele é recolocado toda vez que o board é
+     desenhado (`decorarProximosPassos`, chamado pelo board.js). */
+  var TITULO_PROXIMOS = 'Próximos passos';
+  var MAX_PROXIMOS = 4;
+  var ROTULO_CONTINUAR = 'Continuar pesquisa com minhas respostas';
+
+  function perguntasDosProximosPassos(lacunas, perguntas) {
+    var vistas = {};
+    return (lacunas || []).map(function (l) {
+      return perguntaDaSecao(l && l.titulo, perguntas) ||
+        ('O que se sabe sobre ' + semNumero(l && l.titulo) + '?');
+    }).filter(function (p) {
+      var k = String(p || '').trim().toLowerCase();
+      if (!k || vistas[k]) return false;
+      vistas[k] = true;
+      return true;
+    }).slice(0, MAX_PROXIMOS);
+  }
+
+  /* O que a pessoa de fato respondeu: descrição que não é mais só o
+     convite. O servidor confere de novo (`respostasValidas`) — a tela
+     não é a única trava. */
+  function respostasDoQuadro(painel) {
+    var saida = [];
+    [].forEach.call(painel.querySelectorAll('article.idea'), function (card) {
+      var t = card.querySelector('.idea-title');
+      var d = card.querySelector('.idea-desc');
+      var pergunta = t ? t.textContent.trim() : '';
+      var resposta = d ? d.textContent.split(CONVITE).join(' ').trim() : '';
+      if (pergunta && resposta) saida.push({ pergunta: pergunta, resposta: resposta });
+    });
+    return saida;
+  }
+
+  function continuarComRespostas(painel) {
+    if (investigacoesAbertas > 0 || ocupado) return Promise.resolve(false);
+    var respostas = respostasDoQuadro(painel);
+    if (!respostas.length) {
+      avisarNaTela('Responda pelo menos uma pergunta nos post-its de "Próximos passos" antes de continuar.');
+      return Promise.resolve(false);
+    }
+    var desc = document.querySelector('.explainer-text');
+    var texto = desc ? desc.textContent.trim() : '';
+    if (!texto || !tarefaId) {
+      avisarNaTela('Abra a tarefa pela tela de atividades para pesquisar.');
+      return Promise.resolve(false);
+    }
+    var idN = narracao().abrir('Continuando a pesquisa', texto);
+    narracao().passo(idN, 'Com ' + respostas.length + ' resposta(s) do time em "Próximos passos".');
+    /* `refazer: true`: a tarefa já foi investigada, e continuar é o
+       gesto que diz "sim, de novo" (BOARD-PESQUISA-077). É um gasto
+       novo, autorizado por este clique (D12). */
+    return correrStream(
+      function () {
+        return garantirSessao().then(function (sid) {
+          return window.API.fluxo('/pesquisa/sessoes/' + sid + '/investigar', {
+            corpo: { pergunta: texto, refazer: true, respostas: respostas },
+          });
+        });
+      },
+      texto,
+      idN,
+      true
+    );
+  }
+
+  function decorarProximosPassos() {
+    if (document.body.classList.contains('is-readonly')) return 0;
+    var feitos = 0;
+    [].forEach.call(document.querySelectorAll('.ideas-panel'), function (painel) {
+      var t = painel.querySelector('.ideas-title');
+      if (!t || t.textContent.trim() !== TITULO_PROXIMOS) return;
+      if (painel.querySelector('.proximos-continuar')) return;
+      var rodape = document.createElement('div');
+      rodape.className = 'proximos-rodape';
+      rodape.style.cssText = 'padding:12px 16px 16px;display:flex;justify-content:flex-end';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn--primary proximos-continuar';
+      b.textContent = ROTULO_CONTINUAR;
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        continuarComRespostas(painel)
+          .catch(function () { return false; })
+          .then(function () { b.disabled = false; });
+      });
+      rodape.appendChild(b);
+      painel.appendChild(rodape);
+      feitos++;
+    });
+    return feitos;
+  }
+
   function saidasDeLacunas(lacunas, perguntas) {
     return (lacunas || []).slice(0, MAX_TAREFAS_OFERECIDAS).map(function (l, i) {
       return {
@@ -3125,6 +3232,24 @@
       }
 
       passo('Montei ' + criados + (criados === 1 ? ' quadro no board.' : ' quadros no board.'));
+      /* BOARD-PESQUISA-097: depois do resultado, e só se houver lacuna,
+         o quadro "Próximos passos". Antes do autosave, para ser gravado
+         junto com o resto. */
+      var cadernoCedo = r.caderno || { afirmacoes: r.afirmacoes || [], resposta: r.resposta };
+      var proximas = perguntasDosProximosPassos(
+        lacunasDe(cadernoCedo.resposta || r.resposta || '', cadernoCedo.afirmacoes || []),
+        r.perguntas || []
+      );
+      if (proximas.length && typeof window.criarQuadroResultado === 'function') {
+        var qProximos = window.criarQuadroResultado(TITULO_PROXIMOS, proximas.map(function (p) {
+          return { titulo: cortar(p, MAX_TITULO), descricao: CONVITE };
+        }));
+        if (qProximos) {
+          decorarProximosPassos();
+          passo('Deixei ' + proximas.length + ' pergunta(s) em "' + TITULO_PROXIMOS + '". ' +
+            'Responda nos post-its e use "' + ROTULO_CONTINUAR + '" para pesquisar de novo com elas.');
+        }
+      }
 
       /* MONTAR NÃO É GRAVAR, e até 16/09/2026 a narração tratava as
          duas como a mesma coisa: dizia "Montei 3 quadros no board" e
@@ -3421,6 +3546,11 @@
     emAndamento: function () {
       return investigacoesAbertas > 0;
     },
+
+    /* BOARD-PESQUISA-100: o board.js chama depois de desenhar os
+       quadros — o botão não é gravado, o quadro é. */
+    decorarProximosPassos: decorarProximosPassos,
+    continuarComRespostas: continuarComRespostas,
 
     /* Remonta no assistente a investigação anterior desta tarefa, A
        PEDIDO. Abrir a tarefa não faz mais isso sozinho (16/09/2026) —

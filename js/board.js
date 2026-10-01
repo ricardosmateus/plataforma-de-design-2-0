@@ -658,6 +658,12 @@
                e só com o board vazio, para nunca sobrepor o que já está
                gravado. Concluída não cria nada (criarQuadroMatriz respeita
                o modo leitura). */
+            /* BOARD-PESQUISA-100: o botão de "Próximos passos" não é
+               gravado — só o quadro —, então volta a cada carga. */
+            if (window.PesquisaPainel && typeof window.PesquisaPainel.decorarProximosPassos === 'function') {
+              window.PesquisaPainel.decorarProximosPassos();
+            }
+
             var modelo = modeloDaTarefa(achada);
             if (modelo) {
               var btnPesquisar = document.getElementById('btnGerarIA');

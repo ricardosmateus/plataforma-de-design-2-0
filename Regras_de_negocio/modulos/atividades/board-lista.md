@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.49.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.50.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -207,6 +207,11 @@ Substitui `BOARD-IA-001`, revogada. O painel vive em `js/pesquisa.js` e nas rota
 | BOARD-PESQUISA-094 | **Busca:** se a reserva da busca passar do teto, ela não sai. A conferência acontece no planejamento, antes de a busca ser oferecida, e de novo na confirmação, antes do stream e de qualquer reserva. Com o Haiku (~R$ 1,46) isso não acontece; com o Sonnet (~R$ 3,68), acontece sempre, e trocar o modelo da busca (D3) passa a exigir rever o teto. | `rotas/pesquisa.ts` |
 | BOARD-PESQUISA-095 | **Caderno:** antes de cada pergunta, soma o que a investigação já gastou (busca, análise visual e perguntas anteriores, pelo `consultaId`). Se a próxima pergunta passar do teto, ela é recusada antes de qualquer reserva. | `rotas/pesquisa.ts` |
 | BOARD-PESQUISA-096 | As mensagens do teto **não mostram valor**: dizem que o limite foi atingido e o que fazer (DIN-013, D11). | `pesquisa/teto.ts` |
+| BOARD-PESQUISA-097 | **"Próximos passos"**: depois do resultado, e só quando a investigação deixou lacunas, nasce um quadro com até 4 post-its, cada um com uma pergunta e a descrição "Responda aqui...". A pergunta é a do plano para a parte que ficou sem fonte (`perguntaDaSecao`). Sem lacuna, o quadro não nasce: pergunta para encher espaço é ruído (B5). | `js/pesquisa.js` (`perguntasDosProximosPassos`) |
+| BOARD-PESQUISA-098 | As respostas do time vão num **campo próprio** (`respostas`), ao lado da pergunta. A pergunta continua sendo o texto da tarefa, com os 500 caracteres de sempre: é ela que a regra "já foi investigada" (`077`) compara e que é gravada. O servidor só aceita o que foi respondido de verdade: o convite sozinho não é resposta (`061`/`062`). | `rotas/pesquisa.ts`, `pesquisa/respostas-do-time.ts` |
+| BOARD-PESQUISA-099 | As respostas entram no **contexto do planejador** e no **texto da busca**, com a instrução de não perguntar de novo o que já foi respondido. A busca usa o texto gravado no planejamento, então a rota de buscar não precisa recebê-las de novo. | `rotas/pesquisa.ts` |
+| BOARD-PESQUISA-100 | O botão **"Continuar pesquisa com minhas respostas"** fica no fim do quadro "Próximos passos", identificado pelo título. Ele não é gravado, só o quadro, então é recolocado a cada vez que o board é desenhado. Em tarefa concluída, não aparece. | `js/pesquisa.js` (`decorarProximosPassos`), `js/board.js` |
+| BOARD-PESQUISA-101 | **Sem nenhuma resposta, o botão não pesquisa** e diz o que falta. Com resposta, faz uma investigação nova (`refazer`), autorizada pelo clique (D12), com o teto de R$ 3 dela (`093`). Os quadros novos nascem ao lado dos anteriores (B4). | `js/pesquisa.js` (`continuarComRespostas`) |
 | BOARD-PESQUISA-047 | **A investigação pode ser perguntada.** Depois de entregue, ela oferece "Perguntar sobre estas fontes": a pergunta de acompanhamento é respondida **só com o que aquela busca já coletou**. Sem busca nova, sem conhecimento geral do modelo. `"Isso não está nas fontes desta investigação"` é resposta **certa** (`PES-008`), e a tela não a desenha como erro. | Fase 3a · construída 14/09/2026 |
 | BOARD-PESQUISA-048 | **O caderno não tem ferramenta.** A garantia de que nenhuma busca sai não é uma instrução ao modelo: a chamada é feita **sem `tools`**. Se tivesse, a pergunta de centavos poderia virar uma busca cara sem passar pelo portão (`037`) — e uma regra que depende de o modelo obedecer não é garantia, é pedido. | Decorre de 037 |
 | BOARD-PESQUISA-049 | **O caderno lê o que sobreviveu à curadoria**, não a resposta original. Quem apagou uma afirmação disse que aquilo não presta; devolver o texto original ao modelo o contrabandearia de volta na resposta seguinte. As **fontes** ficam todas — uma fonte é um documento que foi lido e pago, mesmo que a frase que ela sustentava tenha saído. **Depois de 15/09/2026** isso quase sempre quer dizer "a resposta inteira", porque quase nada é removido; o filtro fica porque as investigações curadas antes continuam tendo o que filtrar. | Decorre de 043 · conferida 15/09/2026 |
@@ -603,6 +608,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.50.0 | 2026-10-01 | Novas **BOARD-PESQUISA-097 a 101**: o quadro "Próximos passos" com as perguntas das lacunas, e o botão "Continuar pesquisa com minhas respostas", que faz uma pesquisa nova com as respostas do time no contexto. |
 | 1.49.0 | 2026-10-01 | Novas **BOARD-PESQUISA-093 a 096**: o teto de R$ 3 por investigação passa a ser aplicado de verdade (busca e caderno), num lugar só. Até aqui ele só existia em comentário. |
 | 1.48.0 | 2026-10-01 | Nova **BOARD-VISUAL-022**, do primeiro uso real: sem a imagem do logotipo, a forma não é descrita (o SVG da Loggi tinha virado "entregador em moto"). |
 | 1.47.0 | 2026-09-30 | Nova §1.8.3 **`BOARD-VISUAL`**: a análise visual de marcas no "Pesquisar" (leitura dos sites por código, Sonnet olhando o logotipo, trava contra o que não está no site, tabela comparativa, dentro do teto de R$ 3). |
