@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.48.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.49.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -203,6 +203,10 @@ Substitui `BOARD-IA-001`, revogada. O painel vive em `js/pesquisa.js` e nas rota
 | BOARD-PESQUISA-090 | A busca que não pesquisou **fecha pelo caminho de erro**: a narração diz o que houve, **nada vai para o quadro**, e a negociação não vira "afirmação sem fonte". A consulta e o texto ficam gravados, porque foram pagos e são a prova. | `rotas/pesquisa.ts` (investigar/buscar) |
 | BOARD-PESQUISA-091 | O prompt da busca **não autoriza** pedir esclarecimento: ele escolhe a leitura mais provável pelo contexto e diz qual usou. Quem confere é `BOARD-PESQUISA-088`, porque instrução não é garantia. | `pesquisa/provedor-claude-busca.ts` (`comContexto`) |
 | BOARD-PESQUISA-092 | **O botão "Pesquisar" gira enquanto houver investigação em andamento**, venha ela do clique ou de um botão da narração ("Investigar de novo", "Continuar a pesquisa"), e só volta quando o resultado já está no board. Enquanto gira, não aceita outro clique, porque ele abriria outra busca paga. Antes, o giro durava só a promessa do clique: numa tarefa já investigada (`077`), o clique terminava ao oferecer a escolha, e a investigação escolhida corria 30 a 60 s sem sinal. | `js/pesquisa.js` (`marcarInvestigacao`, evento `pesquisa:andamento`); `board.html`; prova em `ferramentas/provar-pesquisando.mjs` |
+| BOARD-PESQUISA-093 | **O teto de R$ 3 por investigação (D2) mora num lugar só**, `pesquisa/teto.ts`, usado pela busca, pela análise visual e pelo caderno. Até 01/10/2026 ele só existia em comentário: três trechos da rota diziam que o teto "continua valendo", e nenhuma linha o aplicava. | `api/src/pesquisa/teto.ts` |
+| BOARD-PESQUISA-094 | **Busca:** se a reserva da busca passar do teto, ela não sai. A conferência acontece no planejamento, antes de a busca ser oferecida, e de novo na confirmação, antes do stream e de qualquer reserva. Com o Haiku (~R$ 1,46) isso não acontece; com o Sonnet (~R$ 3,68), acontece sempre, e trocar o modelo da busca (D3) passa a exigir rever o teto. | `rotas/pesquisa.ts` |
+| BOARD-PESQUISA-095 | **Caderno:** antes de cada pergunta, soma o que a investigação já gastou (busca, análise visual e perguntas anteriores, pelo `consultaId`). Se a próxima pergunta passar do teto, ela é recusada antes de qualquer reserva. | `rotas/pesquisa.ts` |
+| BOARD-PESQUISA-096 | As mensagens do teto **não mostram valor**: dizem que o limite foi atingido e o que fazer (DIN-013, D11). | `pesquisa/teto.ts` |
 | BOARD-PESQUISA-047 | **A investigação pode ser perguntada.** Depois de entregue, ela oferece "Perguntar sobre estas fontes": a pergunta de acompanhamento é respondida **só com o que aquela busca já coletou**. Sem busca nova, sem conhecimento geral do modelo. `"Isso não está nas fontes desta investigação"` é resposta **certa** (`PES-008`), e a tela não a desenha como erro. | Fase 3a · construída 14/09/2026 |
 | BOARD-PESQUISA-048 | **O caderno não tem ferramenta.** A garantia de que nenhuma busca sai não é uma instrução ao modelo: a chamada é feita **sem `tools`**. Se tivesse, a pergunta de centavos poderia virar uma busca cara sem passar pelo portão (`037`) — e uma regra que depende de o modelo obedecer não é garantia, é pedido. | Decorre de 037 |
 | BOARD-PESQUISA-049 | **O caderno lê o que sobreviveu à curadoria**, não a resposta original. Quem apagou uma afirmação disse que aquilo não presta; devolver o texto original ao modelo o contrabandearia de volta na resposta seguinte. As **fontes** ficam todas — uma fonte é um documento que foi lido e pago, mesmo que a frase que ela sustentava tenha saído. **Depois de 15/09/2026** isso quase sempre quer dizer "a resposta inteira", porque quase nada é removido; o filtro fica porque as investigações curadas antes continuam tendo o que filtrar. | Decorre de 043 · conferida 15/09/2026 |
@@ -599,6 +603,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.49.0 | 2026-10-01 | Novas **BOARD-PESQUISA-093 a 096**: o teto de R$ 3 por investigação passa a ser aplicado de verdade (busca e caderno), num lugar só. Até aqui ele só existia em comentário. |
 | 1.48.0 | 2026-10-01 | Nova **BOARD-VISUAL-022**, do primeiro uso real: sem a imagem do logotipo, a forma não é descrita (o SVG da Loggi tinha virado "entregador em moto"). |
 | 1.47.0 | 2026-09-30 | Nova §1.8.3 **`BOARD-VISUAL`**: a análise visual de marcas no "Pesquisar" (leitura dos sites por código, Sonnet olhando o logotipo, trava contra o que não está no site, tabela comparativa, dentro do teto de R$ 3). |
 | 1.46.0 | 2026-09-30 | Nova **BOARD-SALVA-008**: o board é gravado em lote, em três inserções, e não mais uma por item. |

@@ -110,6 +110,7 @@ import { textoDaBusca, avaliarSeRespondeu } from '../pesquisa/entrega.js';
 import { pedidoVisual } from '../referencias/analise-visual.js';
 import { investigarVisual, modeloDaAnalise } from '../referencias/analise-visual-rede.js';
 import { empresasQueCabem, juntarRespostas } from '../referencias/analise-visual-custo.js';
+import { cabeNoTeto, MENSAGEM_TETO_BUSCA, MENSAGEM_TETO_CADERNO } from '../pesquisa/teto.js';
 
 /* Como a narração chama cada formato — frase que a pessoa lê. */
 const NOME_MATRIZ: Record<ModeloMatriz, string> = {
@@ -1199,6 +1200,17 @@ export async function rotasPesquisa(app: FastifyInstance) {
       }
       const estimativaBusca = comissaoSobre(usdParaMicrosBrl(tetoBuscaUsd, cotacao)).totalMicros;
 
+      /* BOARD-PESQUISA-094: o teto de R$ 3 por investigação (D2), que
+         até 01/10/2026 só existia em comentário. Com o Haiku a reserva
+         da busca fica em ~R$ 1,46 e nunca chega aqui; com o Sonnet ela
+         é ~R$ 3,68, e a busca não sai. */
+      if (!cabeNoTeto({ gastoMicros: 0, estimativaMicros: estimativaBusca }).cabe) {
+        passo(MENSAGEM_TETO_BUSCA);
+        enviar('erro', { mensagem: MENSAGEM_TETO_BUSCA, status: 409 });
+        await fecharInvestigacao(invId, { estado: 'parada', fecho: MENSAGEM_TETO_BUSCA });
+        return resposta.raw.end();
+      }
+
       anotarPlano(invId, {
         perguntas: saidaPlano.plano.perguntas,
         ja_sabido: saidaPlano.plano.jaSabido,
@@ -1357,6 +1369,15 @@ export async function rotasPesquisa(app: FastifyInstance) {
     const agora = comissaoSobre(usdParaMicrosBrl(tetoBuscaUsd, cotacao)).totalMicros;
     const prometido = inv.estimativaMicros ?? agora;
     const estimativaBusca = Math.min(agora, prometido);
+
+    /* BOARD-PESQUISA-094 de novo, na confirmação: entre planejar e
+       buscar a cotação pode ter subido, ou o modelo da busca pode ter
+       sido trocado. Confere ANTES de qualquer stream e de qualquer
+       reserva. */
+    if (!cabeNoTeto({ gastoMicros: 0, estimativaMicros: estimativaBusca }).cabe) {
+      await fecharInvestigacao(invId, { estado: 'parada', fecho: MENSAGEM_TETO_BUSCA });
+      return resposta.code(409).send(erro(null, MENSAGEM_TETO_BUSCA));
+    }
 
     /* ---- Daqui para baixo é stream ---- */
     resposta.hijack();
@@ -1779,6 +1800,21 @@ export async function rotasPesquisa(app: FastifyInstance) {
       MAX_TOKENS_CADERNO,
     );
     const estimativa = tetoUsd === null ? 0 : comissaoSobre(usdParaMicrosBrl(tetoUsd, cotacao)).totalMicros;
+
+    /* BOARD-PESQUISA-095: o teto vale aqui, de verdade. O comentário
+       acima prometia isso desde 14/09/2026 sem nenhuma linha que o
+       fizesse — e o caderno, sem portão, é justamente onde o gasto
+       cresce sem ninguém notar. Soma o que esta investigação já gastou:
+       busca, análise visual e as perguntas anteriores, que são todas
+       registradas com o `consultaId`. */
+    const gastoAteAqui = await db.consumoPesquisa.aggregate({
+      where: { consultaId },
+      _sum: { totalMicros: true },
+    });
+    const gastoMicros = Number(gastoAteAqui._sum.totalMicros ?? 0);
+    if (!cabeNoTeto({ gastoMicros, estimativaMicros: estimativa }).cabe) {
+      return resposta.code(409).send(erro(null, MENSAGEM_TETO_CADERNO));
+    }
 
     const operacao = randomUUID();
     let reservado = 0;

@@ -18,11 +18,11 @@
 import { custoUsdMicros, custoBuscasUsdMicros } from '../creditos/precos.js';
 import { BUSCAS_EMPRESAS, EMPRESAS_MAX, MAX_TOKENS_ANALISE, MAX_TOKENS_EMPRESAS } from './analise-visual-rede.js';
 
-/* D2 (14/09/2026): R$ 3 por investigação. O plano registra
-   `TETO_INVESTIGACAO_MICROS` como implementado, mas a constante não
-   foi achada no código em 30/09/2026 — então a análise visual traz o
-   seu, com o mesmo valor, e respeita a soma: busca + visual ≤ teto. */
-export const TETO_INVESTIGACAO_MICROS = 3_000_000;
+/* O teto da investigação mora em pesquisa/teto.ts desde 01/10/2026
+   (BOARD-PESQUISA-093): um lugar só para a busca, a análise visual e
+   o caderno. Reexportado aqui para quem já importava daqui. */
+import { TETO_INVESTIGACAO_MICROS } from '../pesquisa/teto.js';
+export { TETO_INVESTIGACAO_MICROS };
 
 /* O pior caso de entrada, medido pelo que vai em cada chamada:
    descoberta = prompt + resultados de até 5 buscas, que voltam ao
