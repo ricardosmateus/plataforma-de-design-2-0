@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.46.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.47.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -427,6 +427,28 @@ Decidido em 30/09/2026 com o Ricardo. Os quadros-matriz de §1.8.1 deixam de exi
 | BOARD-MATRIZ-TAREFA-004 | Tarefa **concluída** e vazia não ganha matriz: `criarQuadroMatriz` respeita o modo leitura (`BOARD-LEITURA-003`). | `board.html` |
 | BOARD-MATRIZ-TAREFA-005 | Apagar a matriz e reabrir a tarefa traz uma matriz **vazia** de volta — o board dessa tarefa é a matriz. O conteúdo apagado não volta. | `js/board.js` |
 
+### 1.8.3 Análise visual de marcas — `BOARD-VISUAL`
+
+Decidido em 30/09/2026 com o Ricardo (plano `planejamento-jev-board.md` §1.2). Quando a tarefa pede logo, cores ou tipografia, o "Pesquisar" faz a busca em texto **e** lê os sites oficiais das empresas, e as duas respostas vão juntas para o board.
+
+| ID | Regra | Onde |
+|---|---|---|
+| BOARD-VISUAL-001 | A evidência visual (cores, fontes e logotipo) é extraída **por código** do próprio site, e nunca pela IA: é contra ela que a análise é conferida. | `referencias/leitura-visual.ts` |
+| BOARD-VISUAL-005 | Site que não abre, que leva a outra marca ou sem logotipo legível volta **com aviso** e sem dado inventado, e a empresa continua na tabela, dizendo isso. | `leitura-visual-rede.ts`, `analise-visual.ts` |
+| BOARD-VISUAL-006 | O logotipo é **desta marca**: o nome dela no arquivo ou no alt, no link da página inicial, no cabeçalho. Logo de parceiro, de cliente e foto ficam de fora (`011`). | `leitura-visual.ts` (`logosDaMarca`) |
+| BOARD-VISUAL-007 | Folha de estilo de framework, tema ou plugin é ignorada inteira, reconhecida pelo endereço e pelo cabeçalho, nunca pelos seletores. | `leitura-visual.ts` |
+| BOARD-VISUAL-012 | **Gatilho:** logo, logotipo, identidade visual, paleta, cores da marca, tipografia, mood board, referências visuais. "Fonte" sozinha **não** dispara. | `analise-visual.ts` (`pedidoVisual`) |
+| BOARD-VISUAL-013 | **A trava:** a análise só cita cor e fonte que estão na evidência; o que o modelo citar fora dela sai e fica registrado em "O que não deu para ler". | `analise-visual.ts` (`interpretarAnalise`) |
+| BOARD-VISUAL-014 | A resposta é uma **tabela** que o board já transforma em quadro comparativo: uma coluna por empresa; Logotipo, Cores, Tipografia e O que comunica. | `analise-visual.ts`, `js/pesquisa.js` (sem mudança) |
+| BOARD-VISUAL-015 | Até **8 empresas**, descobertas pela busca; só entra site cujo domínio apareceu nos resultados; a própria empresa fica de fora. | `analise-visual-rede.ts` |
+| BOARD-VISUAL-016 | O **Sonnet** olha o logotipo (imagem, ou código quando é SVG). Modelo sem preço na tabela não roda. | `analise-visual-rede.ts` |
+| BOARD-VISUAL-017 | **Só é pago o que rodou:** site que não abriu ou que levou a outra marca não chama o modelo. | `analise-visual-rede.ts` |
+| BOARD-VISUAL-018 | **Dentro do teto:** a análise roda **depois** de a busca ser cobrada, e o espaço é calculado contra o que a busca **gastou**. Cabe o maior número de empresas (8 a 2) em que busca + análise ≤ R$ 3; menos de 2, não roda. | `analise-visual-custo.ts`, `rotas/pesquisa.ts` |
+| BOARD-VISUAL-019 | **Um resultado só:** a resposta da busca e, depois, a seção "Análise visual"; as fontes e as afirmações da análise vêm depois das da busca, com índices e posições deslocados. | `analise-visual-custo.ts` (`juntarRespostas`) |
+| BOARD-VISUAL-020 | **Reserva própria**, liberada mesmo se a análise falhar, e débito do custo real; uma linha de consumo por chamada, com o mesmo `operacaoId` (DIN-014). | `rotas/pesquisa.ts` |
+| BOARD-VISUAL-021 | **Falhar não derruba a busca:** sem crédito, sem espaço no teto ou com erro, a pesquisa em texto é entregue, com um passo na narração dizendo o que não deu. | `rotas/pesquisa.ts` |
+
+
 ---
 
 ### 1.9 Referências — `BOARD-REF`
@@ -576,6 +598,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.47.0 | 2026-09-30 | Nova §1.8.3 **`BOARD-VISUAL`**: a análise visual de marcas no "Pesquisar" (leitura dos sites por código, Sonnet olhando o logotipo, trava contra o que não está no site, tabela comparativa, dentro do teto de R$ 3). |
 | 1.46.0 | 2026-09-30 | Nova **BOARD-SALVA-008**: o board é gravado em lote, em três inserções, e não mais uma por item. |
 | 1.45.0 | 2026-09-30 | Nova **BOARD-PESQUISA-092**: o botão "Pesquisar" reflete qualquer investigação em andamento, e não só a promessa do clique. |
 | 1.44.0 | 2026-09-30 | Novas **BOARD-PESQUISA-088 a 091**: a busca que devolve negociação em vez de pesquisa (0 fontes, pergunta de volta) vira `falhou` e não vai ao quadro; as perguntas do plano vão primeiro à busca; o prompt deixa de autorizar esclarecimento. `010` revista por B7: o que o provedor cobrou é repassado. Caso real: tarefa `93a6236f…`, 4 buscas cobradas sem resultado. |

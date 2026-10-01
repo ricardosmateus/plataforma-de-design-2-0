@@ -98,7 +98,7 @@ export function urlsDaBusca(c: CorpoClaude): Set<string> {
   return vistas;
 }
 
-export function interpretarEmpresas(bruto: string, vistas: Set<string>, propria: string): Array<{ nome: string; site: string }> {
+export function interpretarEmpresas(bruto: string, vistas: Set<string>, propria: string, max = EMPRESAS_MAX): Array<{ nome: string; site: string }> {
   const t = String(bruto ?? '');
   const i = t.indexOf('{');
   const f = t.lastIndexOf('}');
@@ -110,7 +110,7 @@ export function interpretarEmpresas(bruto: string, vistas: Set<string>, propria:
   const hosts = new Set<string>();
   const propriaNorm = propria.trim().toLowerCase();
   for (const item of Array.isArray(o?.empresas) ? o!.empresas as unknown[] : []) {
-    if (saida.length >= EMPRESAS_MAX) break;
+    if (saida.length >= Math.min(max, EMPRESAS_MAX)) break;
     const e = item as { nome?: unknown; site?: unknown };
     const nome = typeof e.nome === 'string' ? e.nome.replace(/\s+/g, ' ').trim().slice(0, 80) : '';
     if (!nome || nomes.has(nome.toLowerCase()) || nome.toLowerCase() === propriaNorm) continue;
@@ -126,7 +126,7 @@ export function interpretarEmpresas(bruto: string, vistas: Set<string>, propria:
 }
 
 export async function descobrirEmpresas(
-  p: { tarefa: string; empresaNome: string; empresaDescricao: string | null },
+  p: { tarefa: string; empresaNome: string; empresaDescricao: string | null; maxEmpresas?: number },
   modelo: string,
   chamar: Chamar = chamarClaude,
 ): Promise<{ empresas: Array<{ nome: string; site: string }>; uso: UsoModelo | null; motivo?: string }> {
@@ -144,7 +144,7 @@ export async function descobrirEmpresas(
   });
   if (!r.ok) return { empresas: [], uso: null, motivo: r.motivo };
   const c = r.corpo as CorpoClaude;
-  return { empresas: interpretarEmpresas(textoDe(c), urlsDaBusca(c), p.empresaNome), uso: usoDe('empresas', modelo, c) };
+  return { empresas: interpretarEmpresas(textoDe(c), urlsDaBusca(c), p.empresaNome, p.maxEmpresas), uso: usoDe('empresas', modelo, c) };
 }
 
 /* ---------- 2 a 4. Ler, olhar, travar ---------- */
@@ -176,7 +176,7 @@ export type ResultadoVisual = ReturnType<typeof montarRespostaVisual> & {
 };
 
 export async function investigarVisual(
-  p: { tarefa: string; empresaNome: string; empresaDescricao: string | null; modeloEmpresas: string; modeloAnalise: string },
+  p: { tarefa: string; empresaNome: string; empresaDescricao: string | null; modeloEmpresas: string; modeloAnalise: string; maxEmpresas?: number },
   deps: { chamar?: Chamar; lerSite?: (site: string, nomes: string[]) => Promise<LeituraVisual> } = {},
 ): Promise<ResultadoVisual> {
   const chamar = deps.chamar ?? chamarClaude;

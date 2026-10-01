@@ -152,8 +152,12 @@ export type MarcaAnalisada = {
   analise: AnaliseMarca | null;
 };
 
-export type FonteVisual = { url: string; titulo: string; trecho: string };
-export type AfirmacaoVisual = { texto: string; fonteIds: number[]; semFonte: boolean; inicio: number };
+/* O mesmo formato de `Fonte` e `Afirmacao` da busca (pesquisa/provedor.ts):
+   `inicios` diz onde a fonte aparece na resposta — é por ele que o board
+   leva a fonte para o quadro certo ("Fontes da tabela comparativa") — e
+   `trechos` mantém a afirmação auditável. */
+export type FonteVisual = { url: string; titulo: string; trecho: string; inicios: number[] };
+export type AfirmacaoVisual = { texto: string; fonteIds: number[]; trechos: string[]; semFonte: boolean; inicio: number };
 
 /* Uma célula de tabela markdown não pode ter "|" nem quebra de linha:
    seria outra coluna, ou o fim da tabela, no parser do navegador. */
@@ -174,6 +178,7 @@ function dataCurta(iso: string): string {
  */
 export function montarRespostaVisual(marcas: MarcaAnalisada[]): { resposta: string; fontes: FonteVisual[]; afirmacoes: AfirmacaoVisual[] } {
   const fontes: FonteVisual[] = marcas.map((m) => ({
+    inicios: [] as number[],
     url: m.evidencia.site || m.siteInformado,
     titulo: `${m.nome} — site oficial`,
     trecho: [
@@ -213,11 +218,14 @@ export function montarRespostaVisual(marcas: MarcaAnalisada[]): { resposta: stri
     partes.push('', '## O que não deu para ler', '', ...avisos.map((a) => `- ${a}`));
   }
 
+  for (const f of fontes) f.inicios.push(inicioTabela);
+
   const afirmacoes: AfirmacaoVisual[] = marcas.flatMap((m, i) =>
     m.analise
       ? [{
           texto: `${m.nome}: ${[m.analise.cores.join(', '), m.analise.tipografia.join(', ')].filter(Boolean).join(' · ') || m.analise.tipoDeMarca}`,
           fonteIds: [i],
+          trechos: [fontes[i]!.trecho],
           semFonte: false,
           inicio: inicioTabela,
         }]

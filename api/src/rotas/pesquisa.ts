@@ -107,6 +107,9 @@ import {
 } from '../pesquisa/caderno.js';
 import { detectarMatriz, type ModeloMatriz } from '../pesquisa/matriz.js';
 import { textoDaBusca, avaliarSeRespondeu } from '../pesquisa/entrega.js';
+import { pedidoVisual } from '../referencias/analise-visual.js';
+import { investigarVisual, modeloDaAnalise } from '../referencias/analise-visual-rede.js';
+import { empresasQueCabem, juntarRespostas } from '../referencias/analise-visual-custo.js';
 
 /* Como a narração chama cada formato — frase que a pessoa lê. */
 const NOME_MATRIZ: Record<ModeloMatriz, string> = {
@@ -1486,19 +1489,107 @@ export async function rotasPesquisa(app: FastifyInstance) {
       /* Negociação não vira "afirmação sem fonte" no quadro. */
       const afirmacoes = veredito.respondeu ? (saida.afirmacoes ?? []) : [];
 
+      /* ---- A análise visual (BOARD-VISUAL-018 a 021) ----
+         Decisão do Ricardo (30/09/2026): quando a tarefa pede logo,
+         cores ou tipografia, "as duas, num resultado só" — a busca em
+         texto, e depois dela a análise visual dos sites.
+
+         Roda DEPOIS de a busca terminar e ser cobrada, para o espaço
+         que sobra no teto ser calculado contra o que a busca DE FATO
+         gastou (~R$ 0,69), e não contra a reserva dela (~R$ 1,46):
+         é isso que faz caber as 8 empresas sem que a soma passe de
+         R$ 3. Tem reserva própria, e o que ela não gastar volta.
+
+         Falhar aqui NUNCA derruba a busca: a pesquisa em texto já foi
+         paga e é entregue, com um passo dizendo o que não deu. */
+      let final: ReturnType<typeof juntarRespostas> = { resposta: saida.resposta, fontes: saida.fontes ?? [], afirmacoes };
+      let matrizFinal = inv.plano.matriz ?? null;
+      const registrosVisuais: Parameters<typeof registrarPesquisa>[0][] = [];
+      let operacaoVisual: string | null = null;
+      const modeloAnalise = modeloDaAnalise();
+      if (veredito.respondeu && pedidoVisual(inv.pergunta) && modeloAnalise) {
+        const cabe = empresasQueCabem({
+          reservadoBuscaMicros: custoBusca?.totalMicros ?? estimativaBusca,
+          modeloEmpresas: modeloBusca,
+          modeloAnalise,
+          emReais: (usd) => comissaoSobre(usdParaMicrosBrl(usd, cotacao)).totalMicros,
+        });
+        if (!cabe.empresas) {
+          passo('A análise visual não coube no teto desta investigação; entrego a pesquisa em texto.');
+        } else {
+          operacaoVisual = randomUUID();
+          let reservou = false;
+          try {
+            await reservar(usuarioId, cabe.estimativaMicros, operacaoVisual, 'pesquisa');
+            reservou = true;
+          } catch (e) {
+            if (!(e instanceof SaldoInsuficiente)) throw e;
+            passo('Sem créditos para a análise visual; entrego a pesquisa em texto.');
+          }
+          if (reservou) {
+            passo(`Analisando a identidade visual de até ${cabe.empresas} marcas nos sites oficiais.`);
+            let visual: Awaited<ReturnType<typeof investigarVisual>> | null = null;
+            try {
+              const empresa = sessao.empresaId ? await db.empresa.findUnique({ where: { id: sessao.empresaId }, select: { nome: true, descricao: true } }) : null;
+              visual = await investigarVisual({
+                tarefa: inv.pergunta,
+                empresaNome: empresa?.nome ?? '',
+                empresaDescricao: empresa?.descricao ?? null,
+                modeloEmpresas: modeloBusca,
+                modeloAnalise,
+                maxEmpresas: cabe.empresas,
+              });
+            } catch (e) {
+              req.log?.warn?.({ err: e, invId }, 'investigar/buscar: a análise visual falhou');
+            } finally {
+              await liberar(usuarioId, cabe.estimativaMicros, operacaoVisual, 'pesquisa');
+            }
+            /* Uma linha por chamada (DIN-014, o mesmo operacaoId da
+               reserva), e o débito do total real, uma vez. */
+            let custoVisual = 0;
+            for (const u of visual?.usos ?? []) {
+              const r = {
+                usuarioId,
+                sessaoId,
+                nivel: 'busca' as const,
+                provedor: u.etapa === 'empresas' ? 'visual-empresas' : 'visual-analise',
+                resultado: 'entregue' as const,
+                modelo: u.modelo,
+                tokensEntrada: u.entrada,
+                tokensSaida: u.saida,
+                ...(u.buscas ? { buscas: u.buscas } : {}),
+              };
+              registrosVisuais.push(r);
+              custoVisual += custoDe(r)?.totalMicros ?? 0;
+            }
+            if (custoVisual > 0) await consumir(usuarioId, custoVisual, operacaoVisual, 'pesquisa');
+
+            if (visual && visual.marcas.length) {
+              final = juntarRespostas(final, visual);
+              if (!matrizFinal) matrizFinal = 'comparativa';
+              const analisadas = visual.marcas.filter((m) => m.analise).length;
+              passo(`Análise visual: ${analisadas} de ${visual.marcas.length} marca(s) analisada(s).`);
+            } else {
+              passo('A análise visual não achou empresas com site para analisar; entrego a pesquisa em texto.');
+            }
+          }
+        }
+      }
+
       const gravado = await gravarInvestigacao({
         sessaoId,
         perguntaOriginal: inv.pergunta,
         perguntaResolvida: inv.perguntaBusca,
         resultado,
-        resposta: saida.resposta,
-        fontes: saida.fontes ?? [],
-        afirmacoes,
+        resposta: final.resposta,
+        fontes: final.fontes,
+        afirmacoes: final.afirmacoes,
         citadas: roteado.citadas,
         conhecidas,
         foco,
       });
       registrarPesquisa({ ...consumoBusca, consultaId: gravado.consultaId, operacaoId: operacaoBusca });
+      for (const r of registrosVisuais) registrarPesquisa({ ...r, consultaId: gravado.consultaId, operacaoId: operacaoVisual });
 
       const leituras = saida.custo?.leituras ?? 0;
       passo(
@@ -1550,15 +1641,16 @@ export async function rotasPesquisa(app: FastifyInstance) {
         investigacao_id: invId,
         consulta_id: gravado.consultaId,
         resultado,
-        resposta: saida.resposta,
-        fontes: saida.fontes ?? [],
+        /* Com a análise visual, quando houve (BOARD-VISUAL-019). */
+        resposta: final.resposta,
+        fontes: final.fontes,
         /* Cada uma com o id da linha gravada: é por ele que o
            rascunho devolve a decisão (`BOARD-PESQUISA-043`). */
-        afirmacoes: afirmacoes.map((a, i) => ({ ...a, id: gravado.idsAfirmacoes[i] ?? null })),
+        afirmacoes: final.afirmacoes.map((a, i) => ({ ...a, id: gravado.idsAfirmacoes[i] ?? null })),
         perguntas: inv.plano.perguntas,
         /* Dica para o navegador; quem decide é ele, pelos títulos que
            a resposta trouxe (js/pesquisa.js, `matrizDaResposta`). */
-        matriz: inv.plano.matriz ?? null,
+        matriz: matrizFinal,
         custo_micros: gastoTotal,
         custo_formatado: formatarReais(gastoTotal),
         erro: saida.erro ?? null,
