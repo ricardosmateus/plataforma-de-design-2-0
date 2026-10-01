@@ -74,7 +74,9 @@ const NOME_DO_TIPO: Record<TipoGeravel, string> = {
    1. PROPOR — a Skill traduzida para o modelo
    ------------------------------------------------------------
    Fixo, sem nada do cliente: o que muda vai na mensagem. */
-export const SISTEMA_TAREFA = `Você é um product designer sênior. Uma pessoa está dentro de uma ATIVIDADE de um projeto de design e escolheu criar uma tarefa de um TIPO específico. Sua tarefa: propor A MELHOR tarefa desse tipo para esta atividade, agora.
+/* O prompt até 01/10/2026. Fica no código só para a régua do gerador
+   comparar as versões seguintes com ele (scripts/avaliar-gerador.ts). */
+export const SISTEMA_TAREFA_ANTERIOR = `Você é um product designer sênior. Uma pessoa está dentro de uma ATIVIDADE de um projeto de design e escolheu criar uma tarefa de um TIPO específico. Sua tarefa: propor A MELHOR tarefa desse tipo para esta atividade, agora.
 
 Os tipos:
 - "Pesquisa": a plataforma vai pesquisar na web e no que a empresa já sabe. A DESCRIÇÃO é a pergunta que a busca vai responder: concreta, verificável, com o nome das empresas por extenso (nunca "ele", "dela", "deles"), pedindo fatos (quais, quantos, onde, quanto custa, desde quando).
@@ -95,8 +97,11 @@ Formato:
 - Responda SOMENTE com JSON: {"titulo":"...","descricao":"..."}`;
 
 /* ============================================================
-   O prompt CANDIDATO — ATV-GERAR-024 (01/10/2026), ainda em régua
+   O prompt de PRODUÇÃO — ATV-GERAR-024 (01/10/2026)
    ============================================================
+   Era o candidato. Virou o padrão depois da 2ª régua do gerador
+   (3 rodadas, 8 atividades): pesquisável 96% contra 42% do anterior,
+   segue direto 100% contra 88%, nenhum replanejamento.
    Mesmas regras do atual, e três acréscimos na Pesquisa, cada um de
    um erro visto na régua de desambiguação:
    - UMA leitura só: "Concorrentes" errou em todas as rodadas, com
@@ -105,14 +110,23 @@ Formato:
    - o RECORTE e a DECISÃO: quem, onde e para que serve a resposta;
    - só o que a Pesquisa ENTREGA: a tarefa do mood board (30/09) era
      detalhada e pedia um entregável que a busca não produz.
-   Só vira o padrão se ganhar do atual na régua (3 rodadas). */
-export const SISTEMA_TAREFA_CANDIDATO = SISTEMA_TAREFA.replace(
+   Ajustado depois da 1ª régua do gerador (01/10/2026), pela leitura das
+   tarefas: ~40% delas perguntavam o que as pessoas SENTEM (medos do
+   morador, objeções do síndico) — a web não responde, e isso vai para o
+   tipo de entrevista (decisão do Ricardo: opção b) —, e as duas versões
+   citavam empresas que ninguém informou ("Nexer", "Movido").
+   O ESTILO do candidato (completo: recorte e para que serve) foi
+   escolhido pelo Ricardo em 01/10/2026, lendo as tarefas lado a lado.
+   A régua compara cada versão nova com SISTEMA_TAREFA_ANTERIOR. */
+export const SISTEMA_TAREFA = SISTEMA_TAREFA_ANTERIOR.replace(
   `- "Pesquisa": a plataforma vai pesquisar na web e no que a empresa já sabe. A DESCRIÇÃO é a pergunta que a busca vai responder: concreta, verificável, com o nome das empresas por extenso (nunca "ele", "dela", "deles"), pedindo fatos (quais, quantos, onde, quanto custa, desde quando).`,
   `- "Pesquisa": a plataforma vai pesquisar na web e no que a empresa já sabe. A DESCRIÇÃO é a pergunta que a busca vai responder: concreta, verificável, com o nome das empresas por extenso (nunca "ele", "dela", "deles"), pedindo fatos (quais, quantos, onde, quanto custa, desde quando). E mais:
   · UMA leitura só: se uma palavra puder pedir duas pesquisas (concorrentes diretos ou indiretos; preço cobrado ou preço pago; como a empresa funciona ou se ela seria parceira), diga qual.
   · O RECORTE: de quem (empresas, público), onde (país, região, tipo de condomínio) e, se importar, de quando.
   · Para QUE serve: termine dizendo, em poucas palavras, que decisão da atividade a resposta ajuda a tomar.
-  · Só o que a Pesquisa ENTREGA: fatos com fonte, em texto, e — quando pedir logotipo, cores ou tipografia — a análise visual dos sites das empresas. Nunca peça mood board pronto, imagens, arquivos, apresentação ou opinião.`,
+  · Só o que a Pesquisa ENTREGA: fatos com fonte, em texto, e — quando pedir logotipo, cores ou tipografia — a análise visual dos sites das empresas. Nunca peça mood board pronto, imagens, arquivos, apresentação ou opinião.
+  · A web responde o que foi PUBLICADO. O que as pessoas sentem, pensam ou fariam (medos, objeções, motivações, preferências) não se descobre numa busca: descobre-se conversando com elas. Para a Pesquisa, pergunte o que já foi publicado sobre isso — estudos, levantamentos, números, regras, preços divulgados, reclamações públicas.
+  · Nomes de empresas: SÓ os que aparecem nesta mensagem (concorrentes conhecidos, tarefas, o que a empresa já sabe). Se não houver nenhum, descreva o tipo de empresa — nunca invente um nome.`,
 );
 
 export function montarMensagemTarefa(c: ContextoTarefa): string {
@@ -381,8 +395,7 @@ export type Medicao = { uso?: Uso; modelo?: string; requisicaoId?: string; busca
 export async function pedirTarefa(
   mensagem: string,
   /* Só para a régua do gerador (scripts/avaliar-gerador.ts), que
-     compara o prompt atual com o candidato. Em produção, sempre o
-     SISTEMA_TAREFA. */
+     compara versões do prompt. Em produção, sempre o SISTEMA_TAREFA. */
   sistema: string = SISTEMA_TAREFA,
 ): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string; status?: number } & Medicao> {
   if (env.IA_DRIVER !== 'anthropic' || !env.IA_API_KEY || !env.IA_MODELO) return { ok: false, motivo: 'sem-ia' };

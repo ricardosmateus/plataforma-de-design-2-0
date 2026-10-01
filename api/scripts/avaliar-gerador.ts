@@ -12,6 +12,9 @@
      (conferido por código, no texto da descrição).
    Não precisa de gabarito: é a própria pesquisa dizendo se entendeu.
 
+   1ª régua (01/10/2026): pesquisável 54% x 63%; 2ª, com o candidato
+   ajustado: 42% x 96% — e o candidato virou o prompt de produção.
+
    Uso (na pasta api):  npx tsx scripts/avaliar-gerador.ts --rodadas 3
    Custo por rodada: 16 gerações, 16 a ~30 planejamentos e ~50 chamadas
    ao JEV — da ordem de R$ 0,40 com o Haiku. Não grava nada no banco e
@@ -19,7 +22,7 @@
 
 import { env } from '../src/env.js';
 import { avaliarComJev } from '../src/ia/avaliacao/jev.js';
-import { pedirTarefa, interpretarTarefa, montarMensagemTarefa, SISTEMA_TAREFA, SISTEMA_TAREFA_CANDIDATO } from '../src/ia/gerar-tarefa.js';
+import { pedirTarefa, interpretarTarefa, montarMensagemTarefa, SISTEMA_TAREFA, SISTEMA_TAREFA_ANTERIOR } from '../src/ia/gerar-tarefa.js';
 import { planejarComModelo, instrucaoDeReplanejamento } from '../src/pesquisa/planejador.js';
 import { loteDeDesambiguacao, leituraEscolhida, loteDeAderencia, aderenciaDe, textoDoContextoDaTarefa, type ContextoDaTarefa } from '../src/pesquisa/desambiguar.js';
 import { decidirLeitura } from '../src/pesquisa/decidir-leitura.js';
@@ -49,7 +52,9 @@ for (const c of Object.values(CONTEXTOS)) {
   atividades.set(c.atividade, s);
 }
 
-const PROMPTS: Array<[string, string]> = [['atual', SISTEMA_TAREFA], ['candidato', SISTEMA_TAREFA_CANDIDATO]];
+/* `anterior` é o prompt até 01/10/2026; `atual` é o de produção. Para
+   testar uma versão nova, ela entra aqui como um terceiro item. */
+const PROMPTS: Array<[string, string]> = [['anterior', SISTEMA_TAREFA_ANTERIOR], ['atual', SISTEMA_TAREFA]];
 const PROIBIDO = /mood ?board|imagens|arquivo|apresenta[çc][ãa]o|opini[ãa]o/i;
 
 async function jevResponde(lote: Lote) {
@@ -114,8 +119,8 @@ async function avaliarUma(sistema: string, atividade: string, irmas: string[]): 
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : '—');
 console.log(`Régua do gerador — modelo: ${modelo}; JEV: ${jev.modelo}; ${atividades.size} atividades; ${RODADAS} rodada(s)\n`);
 
-const total: Record<string, Linha[]> = { atual: [], candidato: [] };
-const ultima: Record<string, Linha[]> = { atual: [], candidato: [] };
+const total: Record<string, Linha[]> = Object.fromEntries(PROMPTS.map(([n]) => [n, []]));
+const ultima: Record<string, Linha[]> = Object.fromEntries(PROMPTS.map(([n]) => [n, []]));
 let falhas = 0;
 for (let r = 0; r < RODADAS; r++) {
   for (const [nome, sistema] of PROMPTS) {
