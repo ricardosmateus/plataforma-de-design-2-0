@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.47.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.48.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -447,6 +447,7 @@ Decidido em 30/09/2026 com o Ricardo (plano `planejamento-jev-board.md` §1.2). 
 | BOARD-VISUAL-019 | **Um resultado só:** a resposta da busca e, depois, a seção "Análise visual"; as fontes e as afirmações da análise vêm depois das da busca, com índices e posições deslocados. | `analise-visual-custo.ts` (`juntarRespostas`) |
 | BOARD-VISUAL-020 | **Reserva própria**, liberada mesmo se a análise falhar, e débito do custo real; uma linha de consumo por chamada, com o mesmo `operacaoId` (DIN-014). | `rotas/pesquisa.ts` |
 | BOARD-VISUAL-021 | **Falhar não derruba a busca:** sem crédito, sem espaço no teto ou com erro, a pesquisa em texto é entregue, com um passo na narração dizendo o que não deu. | `rotas/pesquisa.ts` |
+| BOARD-VISUAL-022 | **Sem imagem, a forma não é descrita.** Só PNG, JPEG, GIF e WEBP vão ao modelo como imagem; o código SVG não vai. Sem imagem, o critério Logotipo diz que a forma não foi analisada, e o código substitui o que o modelo disser sobre ela. No primeiro uso real (01/10/2026), o logotipo SVG da Loggi foi descrito como "ilustração de entregador em moto". | `analise-visual.ts` (`vaiComImagem`, `interpretarAnalise`) |
 
 
 ---
@@ -598,6 +599,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.48.0 | 2026-10-01 | Nova **BOARD-VISUAL-022**, do primeiro uso real: sem a imagem do logotipo, a forma não é descrita (o SVG da Loggi tinha virado "entregador em moto"). |
 | 1.47.0 | 2026-09-30 | Nova §1.8.3 **`BOARD-VISUAL`**: a análise visual de marcas no "Pesquisar" (leitura dos sites por código, Sonnet olhando o logotipo, trava contra o que não está no site, tabela comparativa, dentro do teto de R$ 3). |
 | 1.46.0 | 2026-09-30 | Nova **BOARD-SALVA-008**: o board é gravado em lote, em três inserções, e não mais uma por item. |
 | 1.45.0 | 2026-09-30 | Nova **BOARD-PESQUISA-092**: o botão "Pesquisar" reflete qualquer investigação em andamento, e não só a promessa do clique. |

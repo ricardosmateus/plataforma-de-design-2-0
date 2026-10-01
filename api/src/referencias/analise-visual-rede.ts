@@ -16,7 +16,7 @@
 import { env } from '../env.js';
 import { precoDe } from '../creditos/precos.js';
 import { lerSiteVisual, type LeituraVisual } from './leitura-visual-rede.js';
-import { SISTEMA_VISUAL, mensagemDaMarca, interpretarAnalise, montarRespostaVisual, type MarcaAnalisada } from './analise-visual.js';
+import { SISTEMA_VISUAL, mensagemDaMarca, interpretarAnalise, montarRespostaVisual, vaiComImagem, type MarcaAnalisada } from './analise-visual.js';
 
 export const EMPRESAS_MAX = 8;            // decisão do Ricardo, 30/09/2026
 export const BUSCAS_EMPRESAS = 5;
@@ -166,7 +166,8 @@ export async function analisarMarca(
   });
   if (!r.ok) return { analise: null, uso: null };
   const c = r.corpo as CorpoClaude;
-  return { analise: interpretarAnalise(textoDe(c), leitura), uso: usoDe('analise', modelo, c) };
+  const viuImagem = vaiComImagem({ evidencia: leitura, logoBytes: leitura.logoBytes });
+  return { analise: interpretarAnalise(textoDe(c), leitura, viuImagem), uso: usoDe('analise', modelo, c) };
 }
 
 export type ResultadoVisual = ReturnType<typeof montarRespostaVisual> & {

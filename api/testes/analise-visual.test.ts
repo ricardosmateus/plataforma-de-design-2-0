@@ -39,12 +39,32 @@ test('mensagem: imagem do logotipo como anexo quando é PNG/JPEG/WEBP', () => {
   assert.match((b[1] as { text: string }).text, /^DADOS:\n.*"Pluto Sans DPD"/s);
 });
 
-test('mensagem: logotipo SVG vai como código; sem logotipo, só os dados', () => {
+/* BOARD-VISUAL-022, do primeiro uso real (01/10/2026): o código SVG
+   ia ao modelo, e o logotipo da Loggi foi descrito como "ilustração de
+   entregador em moto". Agora o SVG não vai, e os DADOS dizem por quê. */
+test('mensagem: logotipo SVG NÃO vai ao modelo; os dados dizem que a imagem não foi', () => {
   const evidencia = evidenciaReal('www.loggi.com');
   const comSvg = mensagemDaMarca({ nome: 'Loggi', evidencia, logoBytes: null, logoSvg: '<svg><path fill="#0055ff"/></svg>' });
-  assert.match((comSvg[0] as { text: string }).text, /^Código SVG do logotipo:/);
+  assert.equal(comSvg.length, 1, 'foi mais que os dados');
+  assert.ok(!(comSvg[0] as { text: string }).text.includes('<svg'), 'o código SVG foi ao modelo');
+  assert.match((comSvg[0] as { text: string }).text, /"imagem_do_logotipo":"não enviada: o logotipo do site é SVG"/);
   const semNada = mensagemDaMarca({ nome: 'Loggi', evidencia, logoBytes: null, logoSvg: null });
-  assert.equal(semNada.length, 1);
+  assert.match((semNada[0] as { text: string }).text, /não enviada: logotipo não encontrado/);
+});
+
+test('trava da forma: sem imagem, a descrição inventada é substituída (a resposta REAL sobre a Loggi)', () => {
+  const ev = evidenciaReal('www.loggi.com');
+  const real = JSON.stringify({
+    tipo_de_marca: 'símbolo + nome',
+    estilo: 'Moderno e tecnológico, com ilustração dinâmica de entregador em moto à esquerda e logotipo tipográfico clean à direita',
+    cores: ['#0055ff', '#0d1e3e'], tipografia: ['Montserrat', 'Sora'], comunica: 'Tecnologia.',
+  });
+  const a = interpretarAnalise(real, ev, false)!;
+  assert.equal(a.tipoDeMarca, 'não deu para ver');
+  assert.ok(!/moto|entregador|ilustra/i.test(a.estilo), a.estilo);
+  assert.deepEqual(a.cores, ['#0055ff', '#0d1e3e'], 'as cores, que vêm dos dados, continuam');
+  const comImagem = interpretarAnalise(real, ev, true)!;
+  assert.equal(comImagem.tipoDeMarca, 'símbolo + nome', 'com imagem, a descrição do modelo vale');
 });
 
 test('trava: cor e fonte fora da evidência real saem — e ficam registradas', () => {
