@@ -55,15 +55,31 @@ import { lerModeloMatriz, type ModeloMatriz } from './matriz.js';
    assunto, cobrava por isso. */
 export const MIN_PERGUNTAS = 1;
 export const MAX_PERGUNTAS = 6;
-export const MAX_TOKENS_PLANEJADOR = 900;
+/* 1.400 desde 01/10/2026: com `interpretacoes`, o plano pode trazer
+   duas ou três leituras, cada uma com as suas perguntas. */
+export const MAX_TOKENS_PLANEJADOR = 1_400;
+export const MAX_INTERPRETACOES = 3;
+export const MAX_PERGUNTAS_POR_LEITURA = 3;
 
 export type PerguntaPlanejada = {
   pergunta: string;
   porque: string;
 };
 
+/* Etapa 3 (01/10/2026, BOARD-PESQUISA-102): uma leitura possível da
+   tarefa, já com as perguntas que ela pede. Quem ESCOLHE entre elas é
+   o JEV (src/pesquisa/desambiguar.ts), e não o planejador: o Claude
+   investiga, o JEV julga. */
+export type Interpretacao = { id: string; leitura: string; perguntas: PerguntaPlanejada[] };
+
 export type PlanoInvestigacao = {
   perguntas: PerguntaPlanejada[];
+  /* Vazio no caso comum. Duas ou três quando a tarefa, MESMO com o
+     contexto, pode ser lida de jeitos que levam a pesquisas diferentes.
+     Enquanto a escolha pelo JEV não estiver ligada (fase 3d), as
+     `perguntas` continuam sendo as da primeira leitura — nada muda na
+     busca. */
+  interpretacoes?: Interpretacao[];
   /* O que o modelo reconheceu que já está no Bloco A e por isso NÃO
      virou pergunta. Vira passo na narração: é a prova visível de
      que ler o conhecimento interno economizou busca. */
@@ -96,13 +112,15 @@ REGRAS
 6. Escreva as perguntas em português do Brasil, na linguagem de quem vai ler a resposta — não em jargão de busca.
 7. Só preencha "nao_da_para_buscar" quando a tarefa for genuinamente interna (criar, definir, priorizar, escrever algo do próprio time) e não houver NENHUM fato externo por trás dela. Na dúvida, prefira perguntar.
 8. Preencha "matriz" SÓ quando a tarefa pedir o resultado nesse formato: "swot" (forças, fraquezas, oportunidades e ameaças — basta pedir duas delas juntas), "csd" (certezas, suposições e dúvidas), "impacto_esforco" (priorizar por impacto e esforço) ou "comparativa" (tabela ou matriz comparando empresas ou produtos lado a lado por critérios). Tarefa que só pesquisa ou compara em texto: null. Pedir uma matriz NÃO torna a tarefa interna: a matriz é a forma da resposta, e as perguntas continuam sendo os fatos verificáveis por trás dela.
+9. Preencha "interpretacoes" SÓ quando a tarefa, MESMO com tudo o que está no contexto (a empresa, a atividade, as outras tarefas, o Bloco A), puder ser lida de dois ou três jeitos que levariam a pesquisas DIFERENTES. Cada interpretação: uma "leitura" curta (uma frase dizendo o que seria pesquisado) e as "perguntas" verificáveis dela (até ${MAX_PERGUNTAS_POR_LEITURA}). NÃO escolha entre elas: outra etapa escolhe. Tarefa clara, ou que o contexto já resolve: "interpretacoes": [] — e esse é o caso comum. Quando houver interpretações, repita em "perguntas" as da leitura que lhe parecer mais provável.
 
 FORMATO — responda SÓ com este JSON, sem texto antes ou depois:
 {
   "perguntas": [{ "pergunta": "...", "porque": "..." }],
   "ja_sabido": ["..."],
   "nao_da_para_buscar": null,
-  "matriz": null
+  "matriz": null,
+  "interpretacoes": [{ "leitura": "...", "perguntas": [{ "pergunta": "...", "porque": "..." }] }]
 }`;
 
 export function perguntaDoPlanejador(tarefa: string, contexto: string): string {
@@ -171,9 +189,45 @@ export function interpretarPlano(bruto: string): PlanoInvestigacao | null {
      Tratar como recusa aqui esconderia falha de formato atrás de
      uma mensagem de produto — e a pessoa levaria a culpa por uma
      tarefa que estava boa. */
-  if (!perguntas.length && !naoDaParaBuscar) return null;
+  /* (A conferência de "plano vazio" vem depois das interpretações:
+     um plano só com interpretações é legível.) */
 
-  return { perguntas, jaSabido, naoDaParaBuscar, matriz: lerModeloMatriz(obj.matriz) };
+  /* BOARD-PESQUISA-102: as interpretações. Garantias em código, e não
+     só no prompt: menos de duas não é ambiguidade (o campo fica
+     vazio); no máximo MAX_INTERPRETACOES leituras, e
+     MAX_PERGUNTAS_POR_LEITURA perguntas em cada uma — cada pergunta é
+     uma busca paga, e cobrir duas leituras não pode dobrar o custo sem
+     limite. Os ids são dados aqui (a, b, c), e não pelo modelo. */
+  const interpretacoes: Interpretacao[] = [];
+  for (const item of Array.isArray(obj.interpretacoes) ? obj.interpretacoes : []) {
+    if (interpretacoes.length >= MAX_INTERPRETACOES) break;
+    if (!item || typeof item !== 'object') continue;
+    const i = item as Record<string, unknown>;
+    const leitura = texto(i.leitura).slice(0, 240);
+    if (!leitura) continue;
+    const vistasNaLeitura = new Set<string>();
+    const ps: PerguntaPlanejada[] = [];
+    for (const q of Array.isArray(i.perguntas) ? i.perguntas : []) {
+      if (!q || typeof q !== 'object') continue;
+      const p = texto((q as Record<string, unknown>).pergunta);
+      const chave = p.toLowerCase().replace(/[^a-zà-ú0-9]+/gi, ' ').trim();
+      if (!p || vistasNaLeitura.has(chave)) continue;
+      vistasNaLeitura.add(chave);
+      ps.push({ pergunta: p, porque: texto((q as Record<string, unknown>).porque) });
+      if (ps.length >= MAX_PERGUNTAS_POR_LEITURA) break;
+    }
+    if (!ps.length) continue;
+    interpretacoes.push({ id: 'abc'[interpretacoes.length]!, leitura, perguntas: ps });
+  }
+  const leituras = interpretacoes.length >= 2 ? interpretacoes : [];
+
+  /* Plano só com interpretações e sem `perguntas`: as da primeira
+     leitura. É o que mantém a busca igual à de hoje enquanto a escolha
+     não estiver ligada. */
+  const perguntasFinais = perguntas.length ? perguntas : leituras[0]?.perguntas ?? [];
+  if (!perguntasFinais.length && !naoDaParaBuscar) return null;
+
+  return { perguntas: perguntasFinais, jaSabido, naoDaParaBuscar, matriz: lerModeloMatriz(obj.matriz), interpretacoes: leituras };
 }
 
 /* ------------------------------------------------------------

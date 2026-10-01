@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.50.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.51.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -212,6 +212,7 @@ Substitui `BOARD-IA-001`, revogada. O painel vive em `js/pesquisa.js` e nas rota
 | BOARD-PESQUISA-099 | As respostas entram no **contexto do planejador** e no **texto da busca**, com a instrução de não perguntar de novo o que já foi respondido. A busca usa o texto gravado no planejamento, então a rota de buscar não precisa recebê-las de novo. | `rotas/pesquisa.ts` |
 | BOARD-PESQUISA-100 | O botão **"Continuar pesquisa com minhas respostas"** fica no fim do quadro "Próximos passos", identificado pelo título. Ele não é gravado, só o quadro, então é recolocado a cada vez que o board é desenhado. Em tarefa concluída, não aparece. | `js/pesquisa.js` (`decorarProximosPassos`), `js/board.js` |
 | BOARD-PESQUISA-101 | **Sem nenhuma resposta, o botão não pesquisa** e diz o que falta. Com resposta, faz uma investigação nova (`refazer`), autorizada pelo clique (D12), com o teto de R$ 3 dela (`093`). Os quadros novos nascem ao lado dos anteriores (B4). | `js/pesquisa.js` (`continuarComRespostas`) |
+| BOARD-PESQUISA-102 | **O planejador propõe as leituras de um pedido ambíguo** (`interpretacoes`), cada uma com as suas perguntas, **só** quando a tarefa, mesmo com o contexto da plataforma, pode ser lida de jeitos que levam a pesquisas diferentes. Ele não escolhe: quem escolhe é o JEV (o Claude investiga, o JEV julga). Garantias em código: menos de duas leituras não é ambiguidade; no máximo 3 leituras e 3 perguntas por leitura; os ids são dados pelo código. Até a fase em sombra, a busca usa as perguntas de sempre, e nada muda para o usuário. | `api/src/pesquisa/planejador.ts`; régua em `scripts/avaliar-leituras.ts` |
 | BOARD-PESQUISA-047 | **A investigação pode ser perguntada.** Depois de entregue, ela oferece "Perguntar sobre estas fontes": a pergunta de acompanhamento é respondida **só com o que aquela busca já coletou**. Sem busca nova, sem conhecimento geral do modelo. `"Isso não está nas fontes desta investigação"` é resposta **certa** (`PES-008`), e a tela não a desenha como erro. | Fase 3a · construída 14/09/2026 |
 | BOARD-PESQUISA-048 | **O caderno não tem ferramenta.** A garantia de que nenhuma busca sai não é uma instrução ao modelo: a chamada é feita **sem `tools`**. Se tivesse, a pergunta de centavos poderia virar uma busca cara sem passar pelo portão (`037`) — e uma regra que depende de o modelo obedecer não é garantia, é pedido. | Decorre de 037 |
 | BOARD-PESQUISA-049 | **O caderno lê o que sobreviveu à curadoria**, não a resposta original. Quem apagou uma afirmação disse que aquilo não presta; devolver o texto original ao modelo o contrabandearia de volta na resposta seguinte. As **fontes** ficam todas — uma fonte é um documento que foi lido e pago, mesmo que a frase que ela sustentava tenha saído. **Depois de 15/09/2026** isso quase sempre quer dizer "a resposta inteira", porque quase nada é removido; o filtro fica porque as investigações curadas antes continuam tendo o que filtrar. | Decorre de 043 · conferida 15/09/2026 |
@@ -608,6 +609,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.51.0 | 2026-10-01 | Nova **BOARD-PESQUISA-102**: o planejador propõe as leituras de um pedido ambíguo, e o JEV escolhe. Ainda sem efeito na busca. |
 | 1.50.0 | 2026-10-01 | Novas **BOARD-PESQUISA-097 a 101**: o quadro "Próximos passos" com as perguntas das lacunas, e o botão "Continuar pesquisa com minhas respostas", que faz uma pesquisa nova com as respostas do time no contexto. |
 | 1.49.0 | 2026-10-01 | Novas **BOARD-PESQUISA-093 a 096**: o teto de R$ 3 por investigação passa a ser aplicado de verdade (busca e caderno), num lugar só. Até aqui ele só existia em comentário. |
 | 1.48.0 | 2026-10-01 | Nova **BOARD-VISUAL-022**, do primeiro uso real: sem a imagem do logotipo, a forma não é descrita (o SVG da Loggi tinha virado "entregador em moto"). |

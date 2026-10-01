@@ -73,3 +73,59 @@ export function leituraEscolhida(respostas: Record<string, Resposta> | null | un
     confianca: r.confidence ?? null,
   };
 }
+
+/* ============================================================
+   O contexto da tarefa, em texto — para o PLANEJADOR (fase 3b)
+   ============================================================
+   O JEV recebe o contexto em campos do estado; o planejador recebe
+   texto. Os dois saem do mesmo `ContextoDaTarefa`, para o planejador
+   propor as leituras sabendo o mesmo que o JEV vai saber ao escolher.
+   Vai DEPOIS do pacote interno que a rota já monta (Blocos A e B). */
+export function textoDoContextoDaTarefa(c: ContextoDaTarefa | undefined): string {
+  if (!c) return '';
+  const partes: string[] = [];
+  if (c.projeto) partes.push(`Projeto: ${c.projeto}`);
+  if (c.atividade) partes.push(`Atividade em que a tarefa está: ${c.atividade}`);
+  if (c.tarefasIrmas?.length) partes.push(`Outras tarefas da mesma atividade: ${c.tarefasIrmas.join('; ')}`);
+  if (c.sobreAEmpresa?.length) partes.push(`O que a empresa já validou:\n${c.sobreAEmpresa.map((f) => `- ${f}`).join('\n')}`);
+  return partes.length ? `CONTEXTO DA TAREFA NA PLATAFORMA\n${partes.join('\n')}` : '';
+}
+
+/* ============================================================
+   Só para a RÉGUA do planejador (scripts/avaliar-leituras.ts)
+   ============================================================
+   A leitura certa do gabarito e as leituras que o planejador propôs
+   são frases diferentes. Quem diz se elas querem dizer o mesmo é o
+   JEV — juiz falível, e por isso o script imprime as frases para
+   leitura humana. Nada disto vai para o usuário. */
+export const CHAVE_CORRESPONDENCIA = 'corresponde';
+export const NENHUMA = 'nenhuma';
+
+export function loteDeCorrespondencia(certa: string, propostas: LeituraPossivel[]): Lote {
+  return {
+    state: { leitura_de_referencia: certa },
+    questions: {
+      [CHAVE_CORRESPONDENCIA]: {
+        type: 'choice',
+        instructions:
+          'Qual destas leituras propostas pede, na prática, a MESMA pesquisa que a leitura de referência? ' +
+          'Se nenhuma pede a mesma pesquisa, escolha "nenhuma".',
+        criteria: { ...Object.fromEntries(propostas.map((l) => [l.id, l.leitura])), [NENHUMA]: 'Nenhuma pede a mesma pesquisa' },
+      },
+    },
+  };
+}
+
+export const CHAVE_PLANO_NA_LEITURA = 'plano_na_leitura';
+
+export function lotePlanoNaLeitura(certa: string, perguntas: string[]): Lote {
+  return {
+    state: { leitura_de_referencia: certa, perguntas_do_plano: perguntas },
+    questions: {
+      [CHAVE_PLANO_NA_LEITURA]: {
+        type: 'noul',
+        instructions: 'Estas perguntas de pesquisa investigam o que a leitura de referência pede (e não outra coisa)?',
+      },
+    },
+  };
+}
