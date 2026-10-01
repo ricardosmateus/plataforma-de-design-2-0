@@ -112,7 +112,7 @@ REGRAS
 6. Escreva as perguntas em português do Brasil, na linguagem de quem vai ler a resposta — não em jargão de busca.
 7. Só preencha "nao_da_para_buscar" quando a tarefa for genuinamente interna (criar, definir, priorizar, escrever algo do próprio time) e não houver NENHUM fato externo por trás dela. Na dúvida, prefira perguntar.
 8. Preencha "matriz" SÓ quando a tarefa pedir o resultado nesse formato: "swot" (forças, fraquezas, oportunidades e ameaças — basta pedir duas delas juntas), "csd" (certezas, suposições e dúvidas), "impacto_esforco" (priorizar por impacto e esforço) ou "comparativa" (tabela ou matriz comparando empresas ou produtos lado a lado por critérios). Tarefa que só pesquisa ou compara em texto: null. Pedir uma matriz NÃO torna a tarefa interna: a matriz é a forma da resposta, e as perguntas continuam sendo os fatos verificáveis por trás dela.
-9. Preencha "interpretacoes" SÓ quando a tarefa, MESMO com tudo o que está no contexto (a empresa, a atividade, as outras tarefas, o Bloco A), puder ser lida de dois ou três jeitos que levariam a pesquisas DIFERENTES. Cada interpretação: uma "leitura" curta (uma frase dizendo o que seria pesquisado) e as "perguntas" verificáveis dela (até ${MAX_PERGUNTAS_POR_LEITURA}). NÃO escolha entre elas: outra etapa escolhe. Tarefa clara, ou que o contexto já resolve: "interpretacoes": [] — e esse é o caso comum. Quando houver interpretações, repita em "perguntas" as da leitura que lhe parecer mais provável.
+9. Preencha "interpretacoes" SÓ quando a tarefa, MESMO com tudo o que está no contexto (a empresa, a atividade, as outras tarefas, o Bloco A), puder ser lida de dois ou três jeitos que levariam a pesquisas DIFERENTES. Cada interpretação: uma "leitura" curta (uma frase dizendo o que seria pesquisado) e as "perguntas" verificáveis dela (até ${MAX_PERGUNTAS_POR_LEITURA}). NÃO escolha entre elas: outra etapa escolhe. Tarefa clara, ou que o contexto já resolve: "interpretacoes": [] — e esse é o caso comum. Quando houver interpretações, repita em "perguntas" as da leitura que lhe parecer mais provável. Um RECORTE não é outra leitura: "todos os condomínios" e "só os verticais" pedem a mesma pesquisa — faça a mais ampla e trate o recorte numa das perguntas.
 
 FORMATO — responda SÓ com este JSON, sem texto antes ou depois:
 {
@@ -123,8 +123,35 @@ FORMATO — responda SÓ com este JSON, sem texto antes ou depois:
   "interpretacoes": [{ "leitura": "...", "perguntas": [{ "pergunta": "...", "porque": "..." }] }]
 }`;
 
-export function perguntaDoPlanejador(tarefa: string, contexto: string): string {
-  return `${contexto}\n\n---\n\nTAREFA A INVESTIGAR:\n${tarefa}`;
+export function perguntaDoPlanejador(tarefa: string, contexto: string, instrucaoExtra?: string): string {
+  return `${contexto}\n\n---\n\nTAREFA A INVESTIGAR:\n${tarefa}` + (instrucaoExtra ? `\n\n---\n\n${instrucaoExtra}` : '');
+}
+
+/* ============================================================
+   Replanejar com lentes — BOARD-PESQUISA-103 (01/10/2026)
+   ============================================================
+   Quando o JEV julga que o plano não pesquisa o que a tarefa pede, o
+   planejador é chamado de novo com esta instrução. Nasceu da régua do
+   caminho inteiro (scripts/avaliar-leituras.ts), em dois defeitos:
+   - o plano DESVIOU puxado pelo contexto ("Síndicos" virou perfil
+     demográfico e processo de assembleia, porque "Sobre a empresa"
+     fala de assembleia) — a ficha tomando o lugar da tarefa, de novo;
+   - a ambiguidade foi vista só como "concorrente ou parceiro?", e
+     nunca como "como essa empresa faz isso hoje?" (Shopee, iFood).
+   As lentes são FIXAS e genéricas — valem para qualquer empresa, público
+   ou tema nomeado —, e não ajustes para os casos que as revelaram. */
+export function instrucaoDeReplanejamento(perguntasAnteriores: string[]): string {
+  return [
+    'REPLANEJAMENTO. Uma conferência julgou que o plano abaixo NÃO pesquisa o que a tarefa pede, como ela foi escrita:',
+    ...perguntasAnteriores.map((p) => `- ${p}`),
+    '',
+    'Faça um plano novo. Fique fiel às PALAVRAS da tarefa: o contexto serve para interpretar, nunca para trocar o assunto.',
+    'Se a tarefa nomeia uma empresa, um público ou um tema, considere estas leituras e use em "interpretacoes" as que levarem a pesquisas diferentes:',
+    '1. como essa empresa, público ou tema funciona HOJE, no mesmo ponto do problema da empresa que pergunta;',
+    '2. como concorrente ou alternativa ao que a empresa que pergunta faz;',
+    '3. como parceiro ou cliente dela.',
+    'Se a tarefa for de fato clara, devolva um plano sem interpretações, só mais fiel a ela.',
+  ].join('\n');
 }
 
 /* ------------------------------------------------------------
@@ -452,6 +479,8 @@ export async function planejarComModelo(entrada: {
   contexto: string;
   chave: string;
   modelo: string;
+  /* BOARD-PESQUISA-103: o replanejamento passa a instrução por aqui. */
+  instrucaoExtra?: string;
 }): Promise<SaidaPlanejador> {
   let resposta: Response;
   try {
@@ -467,7 +496,7 @@ export async function planejarComModelo(entrada: {
         max_tokens: MAX_TOKENS_PLANEJADOR,
         system: SISTEMA_PLANEJADOR,
         messages: [
-          { role: 'user', content: perguntaDoPlanejador(entrada.tarefa, entrada.contexto) },
+          { role: 'user', content: perguntaDoPlanejador(entrada.tarefa, entrada.contexto, entrada.instrucaoExtra) },
         ],
       }),
     });

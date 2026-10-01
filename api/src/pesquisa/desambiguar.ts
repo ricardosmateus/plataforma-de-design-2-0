@@ -129,3 +129,33 @@ export function lotePlanoNaLeitura(certa: string, perguntas: string[]): Lote {
     },
   };
 }
+
+/* ============================================================
+   A conferência do PLANO — BOARD-PESQUISA-103 (01/10/2026)
+   ============================================================
+   Quando o planejador não vê ambiguidade, o JEV confere se as
+   perguntas pesquisam o que a TAREFA pede. Na pesquisa real não há
+   gabarito: a referência é a própria tarefa, como foi escrita, na
+   atividade em que ela está. */
+export const META_DECISAO = 0.75; // E1, Ricardo, 01/10/2026
+export const CHAVE_ADERENCIA = 'aderencia';
+
+export function loteDeAderencia(p: { tarefa: string; contextoEmpresa: string; contexto?: ContextoDaTarefa; perguntas: string[] }): Lote {
+  const base = loteDeDesambiguacao({ tarefa: p.tarefa, contextoEmpresa: p.contextoEmpresa, leituras: [], contexto: p.contexto });
+  return {
+    state: { ...base.state, perguntas_do_plano: p.perguntas },
+    questions: {
+      [CHAVE_ADERENCIA]: {
+        type: 'noul',
+        instructions:
+          'Estas perguntas de pesquisa investigam o que a TAREFA pede, como ela foi escrita e na atividade em que está — ' +
+          'e não um assunto vizinho, puxado pelo que a empresa já sabe?',
+      },
+    },
+  };
+}
+
+export function aderenciaDe(respostas: Record<string, Resposta> | null | undefined): number | null {
+  const r = respostas?.[CHAVE_ADERENCIA];
+  return r && r.type === 'noul' && Number.isFinite(r.noul) ? r.noul : null;
+}

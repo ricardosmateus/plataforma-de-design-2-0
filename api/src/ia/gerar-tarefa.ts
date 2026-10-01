@@ -94,6 +94,27 @@ Formato:
 - "descricao": até 280 caracteres.
 - Responda SOMENTE com JSON: {"titulo":"...","descricao":"..."}`;
 
+/* ============================================================
+   O prompt CANDIDATO — ATV-GERAR-024 (01/10/2026), ainda em régua
+   ============================================================
+   Mesmas regras do atual, e três acréscimos na Pesquisa, cada um de
+   um erro visto na régua de desambiguação:
+   - UMA leitura só: "Concorrentes" errou em todas as rodadas, com
+     qualquer modelo, porque a palavra pede duas pesquisas (diretos ou
+     indiretos) e nada dizia qual;
+   - o RECORTE e a DECISÃO: quem, onde e para que serve a resposta;
+   - só o que a Pesquisa ENTREGA: a tarefa do mood board (30/09) era
+     detalhada e pedia um entregável que a busca não produz.
+   Só vira o padrão se ganhar do atual na régua (3 rodadas). */
+export const SISTEMA_TAREFA_CANDIDATO = SISTEMA_TAREFA.replace(
+  `- "Pesquisa": a plataforma vai pesquisar na web e no que a empresa já sabe. A DESCRIÇÃO é a pergunta que a busca vai responder: concreta, verificável, com o nome das empresas por extenso (nunca "ele", "dela", "deles"), pedindo fatos (quais, quantos, onde, quanto custa, desde quando).`,
+  `- "Pesquisa": a plataforma vai pesquisar na web e no que a empresa já sabe. A DESCRIÇÃO é a pergunta que a busca vai responder: concreta, verificável, com o nome das empresas por extenso (nunca "ele", "dela", "deles"), pedindo fatos (quais, quantos, onde, quanto custa, desde quando). E mais:
+  · UMA leitura só: se uma palavra puder pedir duas pesquisas (concorrentes diretos ou indiretos; preço cobrado ou preço pago; como a empresa funciona ou se ela seria parceira), diga qual.
+  · O RECORTE: de quem (empresas, público), onde (país, região, tipo de condomínio) e, se importar, de quando.
+  · Para QUE serve: termine dizendo, em poucas palavras, que decisão da atividade a resposta ajuda a tomar.
+  · Só o que a Pesquisa ENTREGA: fatos com fonte, em texto, e — quando pedir logotipo, cores ou tipografia — a análise visual dos sites das empresas. Nunca peça mood board pronto, imagens, arquivos, apresentação ou opinião.`,
+);
+
 export function montarMensagemTarefa(c: ContextoTarefa): string {
   const l: string[] = [];
   l.push(`Tipo escolhido: ${NOME_DO_TIPO[c.tipo]}`);
@@ -359,6 +380,10 @@ export type Medicao = { uso?: Uso; modelo?: string; requisicaoId?: string; busca
 
 export async function pedirTarefa(
   mensagem: string,
+  /* Só para a régua do gerador (scripts/avaliar-gerador.ts), que
+     compara o prompt atual com o candidato. Em produção, sempre o
+     SISTEMA_TAREFA. */
+  sistema: string = SISTEMA_TAREFA,
 ): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string; status?: number } & Medicao> {
   if (env.IA_DRIVER !== 'anthropic' || !env.IA_API_KEY || !env.IA_MODELO) return { ok: false, motivo: 'sem-ia' };
   let r: Response;
@@ -369,7 +394,7 @@ export async function pedirTarefa(
       body: JSON.stringify({
         model: env.IA_MODELO,
         max_tokens: MAX_TOKENS_PROPOSTA,
-        system: [{ type: 'text', text: SISTEMA_TAREFA, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
         /* Sem prefill desde 30/09/2026. O começo imposto (`{"titulo":`)
            foi seguido de dois jeitos errados em produção no mesmo dia —
            o objeto recomeçado dentro dele e a aspa do valor esquecida —
