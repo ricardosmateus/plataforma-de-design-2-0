@@ -11,3 +11,12 @@ test('o recorte fica DENTRO da pergunta, nunca uma pergunta para cada parte', ()
   assert.match(SISTEMA_PLANEJADOR, /nunca crie uma pergunta para cada parte/);
   assert.ok(!/trate o recorte numa das perguntas/.test(SISTEMA_PLANEJADOR), 'a redação que causou o defeito voltou');
 });
+
+/* A regra 10 (01/10/2026): na régua do planejador, "Pesquisar outras
+   logitechs" perdeu o nome em 3 de 4 rodadas — "concorrentes da
+   Logitech" virou "marcas de periféricos gamer", e a busca perde a
+   âncora. */
+test('o nome que a tarefa usa fica em pelo menos uma pergunta', () => {
+  assert.match(SISTEMA_PLANEJADOR, /10\. Se a tarefa nomeia uma empresa, um produto ou uma marca/);
+  assert.match(SISTEMA_PLANEJADOR, /ele é a âncora da busca/);
+});
