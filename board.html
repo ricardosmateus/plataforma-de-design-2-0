@@ -2482,6 +2482,21 @@ body.modal-open{overflow:hidden}
           </svg>
           <span id="btnGerarIALabel">Pesquisar</span>
         </button>
+        <!-- BOARD-CONVERSA-004: no lugar do "Pesquisar", numa Conversa com
+             usuários. Escreve o roteiro no quadro "Roteiro". -->
+        <button type="button" class="btn btn--primary" id="btnMontarRoteiro" hidden
+                title="A IA escreve o roteiro desta conversa a partir da tarefa e do que a empresa já sabe. Depois, edite à vontade.">
+          <!-- O MESMO carregamento do "Pesquisar" (`is-pesquisando`): o
+               ícone parado (`icon-busca`) dá lugar ao indicador girando.
+               O nome da classe vem do Pesquisar; reaproveitada para os
+               dois botões se comportarem igual. -->
+          <svg class="icon-busca" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
+          <svg class="icon-girando" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" opacity=".25"/>
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <span id="btnMontarRoteiroLabel">Montar roteiro com IA</span>
+        </button>
         <button type="button" class="btn btn--success" id="btnFinalizarTarefa">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3H3z"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M10 14h4"/></svg>
           <span id="btnFinalizarLabel">Finalizar tarefa</span>
@@ -4964,6 +4979,38 @@ body.modal-open{overflow:hidden}
     'O que evitar',
     'Perguntas que sugerem a resposta ("você usaria…?") e perguntas sobre o futuro, que as pessoas não sabem responder.'
   ].join('\n');
+
+  /* BOARD-CONVERSA-004: o board escreve o roteiro que a IA montou.
+     `roteiroEditado` diz se a pessoa já mexeu no esqueleto — aí o board
+     pergunta antes de substituir o trabalho dela. */
+  function painelDoRoteiro(){
+    return Array.prototype.find.call(document.querySelectorAll('.ideas-panel--doc'), function(p){
+      var t = p.querySelector('.ideas-title');
+      return t && t.textContent.trim() === 'Roteiro';
+    }) || null;
+  }
+  window.roteiroEditado = function(){
+    var p = painelDoRoteiro();
+    var corpo = p && p.querySelector('.doc-corpo');
+    var texto = corpo ? corpo.textContent.trim() : '';
+    return !!texto && texto !== ROTEIRO_VAZIO.trim();
+  };
+  window.escreverRoteiro = function(texto){
+    if(modoLeitura) return false;
+    var p = painelDoRoteiro();
+    if(!p){
+      /* O "Roteiro" foi apagado: volta, com o texto novo. */
+      p = criarQuadroDocumento('Roteiro', texto, []);
+      if(!p) return false;
+    } else {
+      var corpo = p.querySelector('.doc-corpo');
+      if(!corpo) return false;
+      corpo.textContent = texto;
+    }
+    atualizarColunas();
+    dispararAutosave();
+    return true;
+  };
 
   window.criarQuadrosDaConversa = function(){
     /* BOARD-LEITURA-003: tarefa concluída não recebe quadro novo. */

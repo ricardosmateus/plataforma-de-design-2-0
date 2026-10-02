@@ -92,6 +92,45 @@
   }
   function ehReferencias(t) { return !!t && t.tipo === 'referencias_visuais'; }
 
+  /* BOARD-CONVERSA-004: "Montar roteiro com IA". Aparece só na
+     Conversa e fora de tarefa concluída (BOARD-LEITURA-003). Se a pessoa
+     já editou o roteiro, pergunta antes de substituir. O texto é escrito
+     no quadro pelo board.html (`escreverRoteiro`), que grava. */
+  var montarRoteiroLigado = false;
+  function ligarMontarRoteiro(tarefa) {
+    var botao = document.getElementById('btnMontarRoteiro');
+    var rotulo = document.getElementById('btnMontarRoteiroLabel');
+    if (!botao) return;
+    botao.hidden = tarefa.status === 'concluida';
+    if (montarRoteiroLigado) return;
+    montarRoteiroLigado = true;
+    /* O mesmo estado do "Pesquisar": `is-pesquisando` troca o ícone pelo
+       indicador girando, e o CSS mantém o botão desativado sem apagá-lo
+       (trabalhando e indisponível são estados diferentes). */
+    function trabalhando(ligado) {
+      botao.disabled = ligado;
+      botao.classList.toggle('is-pesquisando', ligado);
+      botao.setAttribute('aria-busy', ligado ? 'true' : 'false');
+      if (rotulo) rotulo.textContent = ligado ? 'Montando roteiro…' : 'Montar roteiro com IA';
+    }
+    botao.addEventListener('click', function () {
+      if (botao.disabled) return;
+      if (typeof window.roteiroEditado === 'function' && window.roteiroEditado() &&
+          !window.confirm('Substituir o roteiro atual pelo que a IA montar?')) return;
+      trabalhando(true);
+      chamarComRenovacao(baseTarefas() + '/' + encodeURIComponent(tarefaId) + '/roteiro', { metodo: 'POST', corpo: {} })
+        .then(function (r) {
+          if (r && r.texto && typeof window.escreverRoteiro === 'function' && window.escreverRoteiro(r.texto)) {
+            aviso('Roteiro montado. Edite à vontade.');
+          }
+        }, function (e) {
+          if (tratarErroFatal(e)) return;
+          avisoErro(mensagemDeFalha(e, 'Não consegui montar o roteiro agora.'));
+        })
+        .then(function () { trabalhando(false); });
+    });
+  }
+
   /* BOARD-CONVERSA-003 (decisão do Ricardo: só o aviso, sem conferência
      por código). Identificado pelo título, como "Próximos passos". */
   var TITULO_OUVIMOS = 'O que ouvimos';
@@ -692,6 +731,7 @@
             if (achada && achada.tipo === 'conversa_usuarios') {
               var botaoPesquisar = document.getElementById('btnGerarIA');
               if (botaoPesquisar) botaoPesquisar.hidden = true;
+              ligarMontarRoteiro(achada);
               if (!((rq && rq.quadros) || []).length && typeof window.criarQuadrosDaConversa === 'function') {
                 window.criarQuadrosDaConversa();
               }

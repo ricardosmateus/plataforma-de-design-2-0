@@ -397,6 +397,9 @@ export async function pedirTarefa(
   /* Só para a régua do gerador (scripts/avaliar-gerador.ts), que
      compara versões do prompt. Em produção, sempre o SISTEMA_TAREFA. */
   sistema: string = SISTEMA_TAREFA,
+  /* BOARD-CONVERSA-004: o roteiro da conversa é mais longo que uma
+     proposta de tarefa. O gerador continua com o limite de sempre. */
+  maxTokens: number = MAX_TOKENS_PROPOSTA,
 ): Promise<{ ok: true; bruto: string } & Medicao | { ok: false; motivo: string; status?: number } & Medicao> {
   if (env.IA_DRIVER !== 'anthropic' || !env.IA_API_KEY || !env.IA_MODELO) return { ok: false, motivo: 'sem-ia' };
   let r: Response;
@@ -406,7 +409,7 @@ export async function pedirTarefa(
       headers: { 'content-type': 'application/json', 'x-api-key': env.IA_API_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: env.IA_MODELO,
-        max_tokens: MAX_TOKENS_PROPOSTA,
+        max_tokens: maxTokens,
         system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
         /* Sem prefill desde 30/09/2026. O começo imposto (`{"titulo":`)
            foi seguido de dois jeitos errados em produção no mesmo dia —

@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.53.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.54.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -445,8 +445,9 @@ Decidido em 01/10/2026 com o Ricardo (`planejamento-roteiro-de-entrevista.md`). 
 | ID | Regra | Onde |
 |---|---|---|
 | BOARD-CONVERSA-001 | Board **vazio** de uma Conversa nasce com dois quadros: **Roteiro** (documento, com o esqueleto: Objetivo, Com quem conversar, Perguntas em três blocos, O que evitar) e **O que ouvimos** (post-its, um por aprendizado). Os mesmos construtores do resto do board; só depois de `carregado` e só com o board vazio, como a matriz (`BOARD-MATRIZ-TAREFA-001`). Tarefa concluída não ganha quadro (`BOARD-LEITURA-003`). | `board.html` (`criarQuadrosDaConversa`), `js/board.js` |
-| BOARD-CONVERSA-002 | Na Conversa, **não há "Pesquisar"**: o que se busca aqui não está na web. O "Montar roteiro com IA" entra no lugar dele na fase E2. | `js/board.js` |
+| BOARD-CONVERSA-002 | Na Conversa, **não há "Pesquisar"**: o que se busca aqui não está na web. No lugar dele fica o **"Montar roteiro com IA"** (`BOARD-CONVERSA-004`). | `js/board.js` |
 | BOARD-CONVERSA-003 | **Aviso fixo** em "O que ouvimos": *"Registre o que foi dito, não quem disse: sem nome, apartamento ou contato."* Não é gravado e volta a cada carga. Decisão do Ricardo: só o aviso, sem conferência por código. O que for registrado vai para "Sobre a empresa" quando a atividade é finalizada. | `js/board.js` (`avisarDadosPessoais`) |
+| BOARD-CONVERSA-004 | **"Montar roteiro com IA"** (fase E2): a IA escreve o roteiro no quadro **Roteiro**, a partir da tarefa e do que a empresa já sabe (o mesmo contexto do gerador). O que volta é **conferido em código**: as quatro seções do esqueleto, na ordem; sem isso, o quadro não é tocado. Perguntas que induzem a resposta ("você usaria…?") são proibidas no prompt e, se aparecerem, registradas no log. Se a pessoa já editou o roteiro, o board **pergunta antes de substituir**; se o quadro foi apagado, ele volta. Não aparece em tarefa concluída (`BOARD-LEITURA-003`). Cobrado como qualquer chamada, com reserva própria (IA-AVAL-017). | `api/src/ia/roteiro-conversa.ts`, rota `…/tarefas/:tarefaId/roteiro` em `api/src/rotas/gerar-tarefa.ts`, `board.html` (`escreverRoteiro`, `roteiroEditado`), `js/board.js` |
 
 ### 1.8.3 Análise visual de marcas — `BOARD-VISUAL`
 
@@ -620,6 +621,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.54.0 | 2026-10-01 | Nova **BOARD-CONVERSA-004**: "Montar roteiro com IA" (fase E2); `002` atualizada. |
 | 1.53.0 | 2026-10-01 | Nova §1.8.2a **`BOARD-CONVERSA`**: o board da "Conversa com usuários" (fase E1). |
 | 1.52.0 | 2026-10-01 | Nova **BOARD-PESQUISA-103**: o JEV confere o plano contra a tarefa, e o planejador replaneja com lentes fixas quando ele é infiel. Ainda sem efeito na busca. |
 | 1.51.0 | 2026-10-01 | Nova **BOARD-PESQUISA-102**: o planejador propõe as leituras de um pedido ambíguo, e o JEV escolhe. Ainda sem efeito na busca. |

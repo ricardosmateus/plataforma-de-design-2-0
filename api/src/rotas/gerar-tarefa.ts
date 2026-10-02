@@ -83,6 +83,7 @@ import { proximoAposGerar, type Avaliacao } from '../ia/avaliacao/normalizar.js'
 import type { Chamada } from '../ia/avaliacao/chamada.js';
 import { nomesNaoInformados, instrucaoSemNomes, escolherProposta } from '../ia/nomes-nao-informados.js';
 import { instrucaoEsclarecer } from '../ia/esclarecer-tarefa.js';
+import { SISTEMA_ROTEIRO, MAX_TOKENS_ROTEIRO, montarMensagemRoteiro, conferirRoteiro } from '../ia/roteiro-conversa.js';
 
 type Erro = { campo: string | null; mensagem: string };
 const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensagem });
@@ -198,7 +199,9 @@ async function contextoDaTarefa(ctx: ContextoAberto, tipo: TipoGeravel, orientac
     concorrentesConhecidos: concorrentes,
     orientacao,
   });
-  return { projeto, concorrentes, mensagem, tarefas };
+  /* `conhecimento`: o que a empresa já sabe, em texto — o roteiro da
+     conversa (BOARD-CONVERSA-004) o usa sem montar nada de novo. */
+  return { projeto, concorrentes, mensagem, tarefas, conhecimento: pacoteParaTexto(pacote) };
 }
 
 export async function rotasGerarTarefa(app: FastifyInstance) {
@@ -704,5 +707,95 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
     }
     /* Os limites do modal: o que volta tem de caber nos campos. */
     return resposta.send({ titulo: proposta.titulo.slice(0, 260), descricao: proposta.descricao.slice(0, 280) });
+  });
+
+  /* ============================================================
+     "Montar roteiro com IA" — BOARD-CONVERSA-004 (fase E2)
+     ============================================================
+     Escreve o roteiro de uma tarefa "Conversa com usuários" a partir
+     dela e do contexto da atividade (o mesmo do gerador). Não grava o
+     quadro: devolve o texto, e o board o escreve no "Roteiro" — que a
+     pessoa edita à vontade. O que volta é CONFERIDO (as quatro seções,
+     na ordem) antes de sair. Cobrado como qualquer chamada. */
+  app.post('/empresas/:empresaId/projetos/:projetoId/ideias/:ideiaId/tarefas/:tarefaId/roteiro', async (req, resposta) => {
+    const ctx = await abrirContexto(req, false);
+    if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
+    if (!podeEscrever(ctx.papel)) {
+      return resposta.code(403).send(erro(null, 'Seu papel não permite editar tarefas.'));
+    }
+    if (!iaConfigurada()) {
+      return resposta.code(503).send(erro(null, 'O assistente de IA ainda não está configurado neste ambiente.'));
+    }
+    const { tarefaId } = req.params as { tarefaId: string };
+    const tarefa = await db.tarefa.findFirst({
+      where: { id: tarefaId, ideiaId: ctx.ideia.id },
+      select: { titulo: true, descricao: true, tipo: true, status: true },
+    });
+    if (!tarefa) return resposta.code(404).send(erro(null, 'Tarefa não encontrada.'));
+    if (tarefa.tipo !== 'conversa_usuarios') {
+      return resposta.code(400).send(erro(null, 'Só uma Conversa com usuários tem roteiro.'));
+    }
+    /* BOARD-LEITURA-003: tarefa concluída não muda. */
+    if (tarefa.status === 'concluida') {
+      return resposta.code(409).send(erro(null, 'Tarefa concluída não recebe roteiro novo. Reabra a tarefa para editar.'));
+    }
+
+    const contexto = await contextoDaTarefa(ctx, 'pesquisa', null);
+    if (!contexto) return resposta.code(404).send(erro(null, 'Idéia não encontrada.'));
+    const mensagem = montarMensagemRoteiro({
+      empresaNome: contexto.projeto.empresa.nome,
+      empresaDescricao: contexto.projeto.empresa.descricao ?? null,
+      projetoNome: contexto.projeto.nome ?? nomeDoTipo(contexto.projeto.tipo),
+      atividade: ctx.ideia.titulo,
+      tarefaTitulo: tarefa.titulo,
+      tarefaDescricao: tarefa.descricao,
+      conhecimento: contexto.conhecimento,
+    });
+
+    const tetoUsd = tetoUsdMicros(env.IA_MODELO as string, SISTEMA_ROTEIRO + '\n' + mensagem, MAX_TOKENS_ROTEIRO);
+    if (tetoUsd === null) {
+      return resposta.code(503).send(erro(null, 'O assistente está indisponível no momento. Tente mais tarde.'));
+    }
+    const teto = emReais(tetoUsd);
+    const op = randomUUID();
+    try {
+      await reservar(ctx.usuarioId, teto, op, 'assistente');
+    } catch (e) {
+      if (e instanceof SaldoInsuficiente) {
+        return resposta.code(402).send(erro(null, 'Saldo insuficiente para montar o roteiro. Adicione créditos para continuar.'));
+      }
+      throw e;
+    }
+
+    let r: Awaited<ReturnType<typeof pedirTarefa>>;
+    try {
+      r = await pedirTarefa(mensagem, SISTEMA_ROTEIRO, MAX_TOKENS_ROTEIRO);
+    } finally {
+      await liberar(ctx.usuarioId, teto, op, 'assistente');
+    }
+    const roteiro = r.ok ? conferirRoteiro(r.bruto) : null;
+    if (r.uso && r.modelo) {
+      registrar({
+        usuarioId: ctx.usuarioId,
+        empresaId: ctx.empresaId,
+        projetoId: ctx.projetoId,
+        ideiaId: ctx.ideia.id,
+        tipo: 'assistente',
+        resultado: roteiro ? 'entregue' : 'descartado',
+        modelo: r.modelo,
+        uso: r.uso,
+        requisicaoId: r.requisicaoId,
+        operacaoId: op,
+        cobravel: true,
+      });
+      const usd = custoUsdMicros(r.modelo, r.uso) ?? 0;
+      if (usd > 0) await consumir(ctx.usuarioId, emReais(usd), op, 'assistente');
+    }
+    if (!roteiro) {
+      req.log.warn({ motivo: r.ok ? 'sem-as-secoes' : r.motivo }, 'roteiro: não montado');
+      return resposta.code(502).send(erro(null, 'Não consegui montar o roteiro agora. Tente de novo.'));
+    }
+    if (roteiro.induzem.length) req.log.warn({ induzem: roteiro.induzem }, 'roteiro: perguntas que induzem a resposta');
+    return resposta.send({ texto: roteiro.texto });
   });
 }

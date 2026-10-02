@@ -15,10 +15,13 @@ const atividadeHtml = semExternos(readFileSync(raiz + '/atividade.html', 'utf8')
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 let f = 0; const ok = (n, c, x = '') => { console.log((c ? 'ok     ' : 'FALHOU ') + n + (c ? '' : '  ' + x)); if (!c) f++; };
 
-async function abrirBoard(tarefa, quadros) {
+const ROTEIRO_DA_IA = 'Objetivo\nEntender o medo de perder a encomenda.\n\nCom quem conversar\nMoradores.\n\nPerguntas\n1. Como é a sua rotina?\n\nO que evitar\nIndução.';
+async function abrirBoard(tarefa, quadros, opcoes = {}) {
   const dom = new JSDOM(boardHtml, { url: 'https://app.test/board?empresa=e&projeto=p&ideia=i&tarefa=' + tarefa.id, runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
-  const w = dom.window; const puts = [];
+  const w = dom.window; const puts = []; const posts = []; const mensagens = []; const confirmacoes = [];
+  w.confirm = (m) => { confirmacoes.push(m); return !!opcoes.confirmar; };
   w.API = { chamar(c, op = {}) {
+    if (op.metodo === 'POST' && /\/roteiro$/.test(c)) { posts.push(c); return opcoes.erroRoteiro ? Promise.reject(Object.assign(new Error('402'), { status: 402, dados: { mensagem: 'Saldo insuficiente para montar o roteiro.' } })) : Promise.resolve({ texto: ROTEIRO_DA_IA }); }
     if (op.metodo === 'PUT' && /\/quadros$/.test(c)) { puts.push(op.corpo); return Promise.resolve({ quadros: (op.corpo && op.corpo.quadros) || [] }); }
     if (c === '/empresas') return Promise.resolve({ empresas: [{ id: 'e', nome: 'E' }] });
     if (/\/empresas\/e\/projetos$/.test(c)) return Promise.resolve({ projetos: [{ id: 'p', nome: 'P' }] });
@@ -27,10 +30,15 @@ async function abrirBoard(tarefa, quadros) {
     return Promise.resolve({});
   } };
   w.console.log = () => {}; w.console.warn = () => {};
-  await espera(30); w.eval(boardJs); await espera(2500);
+  await espera(30);
+  const mostrar = w.mostrarMensagem;
+  w.mostrarMensagem = (m, t) => { mensagens.push([m, t]); if (mostrar) try { mostrar(m, t); } catch {} };
+  w.eval(boardJs); await espera(2500);
   const d = w.document;
   const paineis = [...d.querySelectorAll('.ideas-panel')].map((p) => ({ titulo: (p.querySelector('.ideas-title') || {}).textContent, tipo: p.dataset.tipo, aviso: !!p.querySelector('.conversa-aviso') }));
-  return { d, paineis, puts, pesquisarVisivel: !d.getElementById('btnGerarIA').hidden };
+  return { w, d, paineis, puts, posts, mensagens, confirmacoes, pesquisarVisivel: !d.getElementById('btnGerarIA').hidden,
+    montarVisivel: !!d.getElementById('btnMontarRoteiro') && !d.getElementById('btnMontarRoteiro').hidden,
+    corpoRoteiro: () => ((d.querySelector('.ideas-panel--doc .doc-corpo') || {}).textContent || '') };
 }
 const T = (tipo, status = 'pendente') => ({ id: 't1', titulo: 'Por que evitam o armário', descricao: 'Entender por que moradores evitam o armário', status, tipo });
 
@@ -57,6 +65,39 @@ ok('tarefa concluída e vazia: não cria nem grava nada', r.paineis.length === 0
 
 r = await abrirBoard(T('pesquisa'), []);
 ok('Pesquisa: nada muda — sem os quadros da conversa, "Pesquisar" visível', r.paineis.length === 0 && r.pesquisarVisivel);
+ok('Pesquisa: sem o "Montar roteiro com IA"', !r.montarVisivel);
+
+/* ---- E2: "Montar roteiro com IA" (BOARD-CONVERSA-004) ---- */
+r = await abrirBoard(T('conversa_usuarios'), []);
+ok('E2: "Montar roteiro com IA" aparece no lugar do "Pesquisar"', r.montarVisivel && !r.pesquisarVisivel);
+let antes = r.puts.length;
+r.d.getElementById('btnMontarRoteiro').click();
+ok('E2: com o esqueleto intacto, não pergunta nada', r.confirmacoes.length === 0);
+ok('E2: enquanto monta, "Montando roteiro…" e desativado', r.d.getElementById('btnMontarRoteiroLabel').textContent === 'Montando roteiro…' && r.d.getElementById('btnMontarRoteiro').disabled);
+const bt = r.d.getElementById('btnMontarRoteiro');
+ok('E2: o MESMO carregamento do "Pesquisar" — `is-pesquisando`, os dois ícones, aria-busy',
+  bt.classList.contains('is-pesquisando') && !!bt.querySelector('svg.icon-busca') && !!bt.querySelector('svg.icon-girando') && bt.getAttribute('aria-busy') === 'true');
+await espera(60);
+ok('E2: chama a rota do roteiro da tarefa', r.posts.length === 1 && /\/tarefas\/t1\/roteiro$/.test(r.posts[0]), JSON.stringify(r.posts));
+ok('E2: o roteiro da IA vai para o quadro "Roteiro"', r.corpoRoteiro() === ROTEIRO_DA_IA, r.corpoRoteiro().slice(0, 60));
+ok('E2: …e é GRAVADO', r.puts.length > antes && JSON.stringify(r.puts.at(-1)).includes('Entender o medo de perder a encomenda'));
+ok('E2: o botão volta ao normal — sem o carregamento', r.d.getElementById('btnMontarRoteiroLabel').textContent === 'Montar roteiro com IA' && !r.d.getElementById('btnMontarRoteiro').disabled && !r.d.getElementById('btnMontarRoteiro').classList.contains('is-pesquisando') && r.d.getElementById('btnMontarRoteiro').getAttribute('aria-busy') === 'false');
+
+r = await abrirBoard(T('conversa_usuarios'), [
+  { id: 'q1', tipo: 'documento', titulo: 'Roteiro', colunas: [{ titulo: '', registros: [{ id: 'r1', titulo: '', descricao: 'Meu roteiro, escrito à mão.' }] }] },
+], { confirmar: false });
+r.d.getElementById('btnMontarRoteiro').click();
+await espera(60);
+ok('E2: roteiro já editado — pergunta antes; "Cancelar" não chama nem substitui', r.confirmacoes.length === 1 && r.posts.length === 0 && r.corpoRoteiro() === 'Meu roteiro, escrito à mão.', `${r.confirmacoes.length} ${r.posts.length} ${r.corpoRoteiro()}`);
+
+r = await abrirBoard(T('conversa_usuarios'), [], { erroRoteiro: true });
+r.d.getElementById('btnMontarRoteiro').click();
+await espera(60);
+ok('E2: no erro, o carregamento também para', !r.d.getElementById('btnMontarRoteiro').classList.contains('is-pesquisando') && !r.d.getElementById('btnMontarRoteiro').disabled);
+ok('E2: erro do servidor vira aviso de erro, e o roteiro não muda', r.mensagens.some(([m, t]) => t === 'erro' && /Saldo insuficiente/.test(m)) && /O que queremos aprender/.test(r.corpoRoteiro()), JSON.stringify(r.mensagens));
+
+r = await abrirBoard(T('conversa_usuarios', 'concluida'), []);
+ok('E2: tarefa concluída — sem o "Montar roteiro com IA"', !r.montarVisivel);
 
 /* ---- O modal ---- */
 const dom = new JSDOM(atividadeHtml, { url: 'https://app.test/atividade?empresa=e&projeto=p&ideia=i', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: new VirtualConsole() });
