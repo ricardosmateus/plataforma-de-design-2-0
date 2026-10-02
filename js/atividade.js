@@ -172,7 +172,9 @@
     /* ATV-TAR-CRIA-009: SWOT, Impacto × Esforço e Comparativa também
        abrem o board — lá a tarefa nasce com a matriz vazia. */
     if (t.tipo === 'pesquisa' || t.tipo === 'referencias_visuais' ||
-        t.tipo === 'swot' || t.tipo === 'impacto_esforco' || t.tipo === 'comparativa') {
+        t.tipo === 'swot' || t.tipo === 'impacto_esforco' || t.tipo === 'comparativa' ||
+        /* ATV-TAR-CRIA-011: a conversa também abre o board. */
+        t.tipo === 'conversa_usuarios') {
       linkAcessar = 'board.html' + contexto + '&tarefa=' + encodeURIComponent(t.id);
     } else if (t.tipo === 'matriz_csd') {
       /* MATRIZ-003: a matriz agora lê e grava — precisa dos quatro ids,

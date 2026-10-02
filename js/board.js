@@ -92,6 +92,25 @@
   }
   function ehReferencias(t) { return !!t && t.tipo === 'referencias_visuais'; }
 
+  /* BOARD-CONVERSA-003 (decisão do Ricardo: só o aviso, sem conferência
+     por código). Identificado pelo título, como "Próximos passos". */
+  var TITULO_OUVIMOS = 'O que ouvimos';
+  var AVISO_DADOS_PESSOAIS = 'Registre o que foi dito, não quem disse: sem nome, apartamento ou contato.';
+  function avisarDadosPessoais() {
+    [].forEach.call(document.querySelectorAll('.ideas-panel'), function (painel) {
+      var t = painel.querySelector('.ideas-title');
+      if (!t || t.textContent.trim() !== TITULO_OUVIMOS) return;
+      if (painel.querySelector('.conversa-aviso')) return;
+      var p = document.createElement('p');
+      p.className = 'conversa-aviso';
+      p.setAttribute('role', 'note');
+      p.style.cssText = 'margin:0;padding:8px 16px 12px;font-size:13px;line-height:20px;color:var(--text-secondary)';
+      p.textContent = AVISO_DADOS_PESSOAIS;
+      var corpo = painel.querySelector('.ideas-body');
+      if (corpo) painel.insertBefore(p, corpo); else painel.appendChild(p);
+    });
+  }
+
   /* ATV-TAR-CRIA-009 / BOARD-MATRIZ-TAREFA: o tipo da tarefa que É uma
      matriz, e o modelo de quadro que ela abre. Mesmos nomes de
      MATRIZ_MODELOS (board.html) e de Quadro.modelo no banco. */
@@ -662,6 +681,21 @@
                gravado — só o quadro —, então volta a cada carga. */
             if (window.PesquisaPainel && typeof window.PesquisaPainel.decorarProximosPassos === 'function') {
               window.PesquisaPainel.decorarProximosPassos();
+            }
+
+            /* BOARD-CONVERSA-001 a 003: a tarefa "Conversa com usuários".
+               Sem "Pesquisar" — o que se busca aqui não está na web. Board
+               vazio ganha o "Roteiro" e "O que ouvimos", só depois de
+               `carregado` e só com o board vazio, pelos mesmos motivos da
+               matriz logo abaixo. E o aviso sobre dados pessoais, que não
+               é gravado: ele volta a cada carga. */
+            if (achada && achada.tipo === 'conversa_usuarios') {
+              var botaoPesquisar = document.getElementById('btnGerarIA');
+              if (botaoPesquisar) botaoPesquisar.hidden = true;
+              if (!((rq && rq.quadros) || []).length && typeof window.criarQuadrosDaConversa === 'function') {
+                window.criarQuadrosDaConversa();
+              }
+              avisarDadosPessoais();
             }
 
             var modelo = modeloDaTarefa(achada);

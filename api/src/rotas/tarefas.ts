@@ -39,7 +39,9 @@ const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensage
 /* ATV-TAR-CRIA-009 (30/09/2026): SWOT, Impacto × Esforço e Tabela
    comparativa são tipos próprios — o board delas nasce com a matriz
    vazia do modelo de mesmo nome (js/board.js). */
-export const TIPOS_VALIDOS = ['pesquisa', 'matriz_csd', 'referencias_visuais', 'swot', 'impacto_esforco', 'comparativa'] as const;
+/* ATV-TAR-CRIA-011 (01/10/2026): `conversa_usuarios` pede título e
+   descrição como a Pesquisa — por isso não entra em TEXTO_PADRAO. */
+export const TIPOS_VALIDOS = ['pesquisa', 'matriz_csd', 'referencias_visuais', 'swot', 'impacto_esforco', 'comparativa', 'conversa_usuarios'] as const;
 type TipoTarefa = (typeof TIPOS_VALIDOS)[number];
 
 /* ATV-TAR-CRIA-008: tipo cuja tarefa já se explica sozinha não pede

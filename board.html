@@ -4942,6 +4942,39 @@ body.modal-open{overflow:hidden}
      quando a busca termina. Reaproveita criarQuadro(), então já
      nasce 32px à direita do último quadro do board.
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     BOARD-CONVERSA-001 (01/10/2026): a tarefa "Conversa com usuários"
+     nasce com dois quadros — o "Roteiro" (documento, com o esqueleto de
+     um roteiro de entrevista) e "O que ouvimos" (post-its, um por
+     aprendizado). Os MESMOS construtores do resto do board, para os
+     dois gravarem, reabrirem e se comportarem como qualquer quadro.
+     ------------------------------------------------------------ */
+  var ROTEIRO_VAZIO = [
+    'Objetivo',
+    'O que queremos aprender com estas conversas, em uma frase.',
+    '',
+    'Com quem conversar',
+    'Quem são as pessoas, e como reconhecê-las.',
+    '',
+    'Perguntas',
+    '1. Aquecimento: perguntas fáceis, sobre a rotina da pessoa.',
+    '2. O assunto: o que ela faz, como faz e o que sente — peça exemplos de vezes reais.',
+    '3. Fechamento: o que mais ela gostaria de contar.',
+    '',
+    'O que evitar',
+    'Perguntas que sugerem a resposta ("você usaria…?") e perguntas sobre o futuro, que as pessoas não sabem responder.'
+  ].join('\n');
+
+  window.criarQuadrosDaConversa = function(){
+    /* BOARD-LEITURA-003: tarefa concluída não recebe quadro novo. */
+    if(modoLeitura && !restauroPendente) return null;
+    var roteiro = criarQuadroDocumento('Roteiro', ROTEIRO_VAZIO, []);
+    var ouvimos = criarQuadro('O que ouvimos', 1, ['']);
+    atualizarColunas();
+    dispararAutosave();
+    return [roteiro, ouvimos];
+  };
+
   window.criarQuadroResultado = function(titulo, itens){
     /* BOARD-LEITURA-003: tarefa concluída não recebe resultado novo —
        seria reescrever o que a conclusão congelou. `restauroPendente`

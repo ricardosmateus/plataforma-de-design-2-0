@@ -158,6 +158,9 @@ enum TipoTarefa {
   swot
   impacto_esforco
   comparativa
+  /* ATV-TAR-CRIA-011 (01/10/2026): "Conversa com usuários" — o que as
+     pessoas sentem, e que a web não responde. */
+  conversa_usuarios
 }
 
 // ------------------------------------------------------------

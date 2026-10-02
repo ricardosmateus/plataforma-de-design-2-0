@@ -1605,6 +1605,7 @@ body.modal-open{overflow:hidden}
       <button type="button" class="np-side-item" role="radio" data-tipo="swot" aria-checked="false" tabindex="-1">Matriz SWOT</button>
       <button type="button" class="np-side-item" role="radio" data-tipo="impacto_esforco" aria-checked="false" tabindex="-1">Impacto × Esforço</button>
       <button type="button" class="np-side-item" role="radio" data-tipo="comparativa" aria-checked="false" tabindex="-1">Tabela comparativa</button>
+      <button type="button" class="np-side-item" role="radio" data-tipo="conversa_usuarios" aria-checked="false" tabindex="-1">Conversa com usuários</button>
     </nav>
 
     <div class="np-divider" aria-hidden="true"></div>
@@ -2121,7 +2122,12 @@ var TIPOS_TAREFA = {
     rotuloTitulo: 'Título da pesquisa',
     /* ATV-GERAR-023: só a Pesquisa tem o que a IA configurar — a
        pergunta. Matriz CSD e Referência não mostram o botão. */
-    gerarComIa: true
+    gerarComIa: true,
+    /* ATV-TAR-CRIA-010: o servidor sabe esclarecer este tipo
+       (TIPOS_ESCLARECIVEIS). Um tipo novo com descrição só ganha o
+       "Deixar mais clara com IA" quando o gerador conhecer as regras
+       dele — senão a sugestão o reescreveria como outro tipo. */
+    esclarecivel: true
   },
   matriz_csd: {
     nome: 'Matriz CSD',
@@ -2155,6 +2161,16 @@ var TIPOS_TAREFA = {
     descricao: 'Compare empresas ou produtos lado a lado, critério por critério. Cada coluna é uma empresa e cada linha, um critério.',
     rotuloTitulo: 'Título da tabela comparativa',
     semCampos: true
+  },
+  /* ATV-TAR-CRIA-011 (01/10/2026): o que as pessoas sentem, fazem e
+     esperam — o que a web não responde. Pede título e descrição; o
+     board nasce com "Roteiro" e "O que ouvimos". O "Gerar com ajuda da
+     IA" e o "Deixar mais clara com IA" chegam na E3, quando o gerador
+     conhecer as regras deste tipo. */
+  conversa_usuarios: {
+    nome: 'Conversa com usuários',
+    descricao: 'Prepare e registre conversas com as pessoas que usam o serviço. Ajuda a descobrir o que elas sentem, fazem e esperam — o que nenhuma busca na web responde.',
+    rotuloTitulo: 'Título da conversa'
   },
   /* Texto definido pelo Ricardo em 23/09/2026. Atenção: ele promete
      mais do que existe hoje — o board aceita só sites e imagens, e a
@@ -2234,7 +2250,8 @@ function atualizarEsclarecer(){
   var campoDiv = document.getElementById('taskDescField');
   var botao = document.getElementById('taskEsclarecerBtn');
   if(!bloco || !campo || !campoDiv || !botao) return;
-  var vaga = !campoDiv.hidden && !campo.disabled && descricaoVaga(campo.value);
+  var info = (typeof TIPOS_TAREFA !== 'undefined') ? TIPOS_TAREFA[document.getElementById('taskTipo').value] : null;
+  var vaga = !!(info && info.esclarecivel) && !campoDiv.hidden && !campo.disabled && descricaoVaga(campo.value);
   var comErro = !document.getElementById('taskEsclarecerErro').hidden;
   bloco.hidden = !(vaga || comErro);
   botao.hidden = !vaga;

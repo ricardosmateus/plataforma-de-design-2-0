@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.52.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.53.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -438,6 +438,16 @@ Decidido em 30/09/2026 com o Ricardo. Os quadros-matriz de §1.8.1 deixam de exi
 | BOARD-MATRIZ-TAREFA-004 | Tarefa **concluída** e vazia não ganha matriz: `criarQuadroMatriz` respeita o modo leitura (`BOARD-LEITURA-003`). | `board.html` |
 | BOARD-MATRIZ-TAREFA-005 | Apagar a matriz e reabrir a tarefa traz uma matriz **vazia** de volta — o board dessa tarefa é a matriz. O conteúdo apagado não volta. | `js/board.js` |
 
+### 1.8.2a Conversa com usuários — `BOARD-CONVERSA`
+
+Decidido em 01/10/2026 com o Ricardo (`planejamento-roteiro-de-entrevista.md`). A tarefa `conversa_usuarios` (`ATV-TAR-CRIA-011`) prepara e registra conversas com as pessoas que usam o serviço.
+
+| ID | Regra | Onde |
+|---|---|---|
+| BOARD-CONVERSA-001 | Board **vazio** de uma Conversa nasce com dois quadros: **Roteiro** (documento, com o esqueleto: Objetivo, Com quem conversar, Perguntas em três blocos, O que evitar) e **O que ouvimos** (post-its, um por aprendizado). Os mesmos construtores do resto do board; só depois de `carregado` e só com o board vazio, como a matriz (`BOARD-MATRIZ-TAREFA-001`). Tarefa concluída não ganha quadro (`BOARD-LEITURA-003`). | `board.html` (`criarQuadrosDaConversa`), `js/board.js` |
+| BOARD-CONVERSA-002 | Na Conversa, **não há "Pesquisar"**: o que se busca aqui não está na web. O "Montar roteiro com IA" entra no lugar dele na fase E2. | `js/board.js` |
+| BOARD-CONVERSA-003 | **Aviso fixo** em "O que ouvimos": *"Registre o que foi dito, não quem disse: sem nome, apartamento ou contato."* Não é gravado e volta a cada carga. Decisão do Ricardo: só o aviso, sem conferência por código. O que for registrado vai para "Sobre a empresa" quando a atividade é finalizada. | `js/board.js` (`avisarDadosPessoais`) |
+
 ### 1.8.3 Análise visual de marcas — `BOARD-VISUAL`
 
 Decidido em 30/09/2026 com o Ricardo (plano `planejamento-jev-board.md` §1.2). Quando a tarefa pede logo, cores ou tipografia, o "Pesquisar" faz a busca em texto **e** lê os sites oficiais das empresas, e as duas respostas vão juntas para o board.
@@ -610,6 +620,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.53.0 | 2026-10-01 | Nova §1.8.2a **`BOARD-CONVERSA`**: o board da "Conversa com usuários" (fase E1). |
 | 1.52.0 | 2026-10-01 | Nova **BOARD-PESQUISA-103**: o JEV confere o plano contra a tarefa, e o planejador replaneja com lentes fixas quando ele é infiel. Ainda sem efeito na busca. |
 | 1.51.0 | 2026-10-01 | Nova **BOARD-PESQUISA-102**: o planejador propõe as leituras de um pedido ambíguo, e o JEV escolhe. Ainda sem efeito na busca. |
 | 1.50.0 | 2026-10-01 | Novas **BOARD-PESQUISA-097 a 101**: o quadro "Próximos passos" com as perguntas das lacunas, e o botão "Continuar pesquisa com minhas respostas", que faz uma pesquisa nova com as respostas do time no contexto. |
