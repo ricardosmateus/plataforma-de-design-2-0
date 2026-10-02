@@ -21,10 +21,19 @@ test('o banco conhece o tipo: enum e migração', () => {
   assert.match(sql, /"TipoTarefa" ADD VALUE[^;]*'conversa_usuarios'/);
 });
 
-test('E1: a IA ainda não gera nem esclarece este tipo (a E3 liga os dois)', () => {
+test('E3: a IA gera e esclarece este tipo — e o prompt conhece as regras dele', async () => {
   const rota = readFileSync(new URL('../src/rotas/gerar-tarefa.ts', import.meta.url), 'utf8');
   const geraveis = (rota.match(/const TIPOS_GERAVEIS = \[([^\]]*)\]/) ?? [])[1] ?? '';
   const esclareciveis = (rota.match(/const TIPOS_ESCLARECIVEIS = \[([^\]]*)\]/) ?? [])[1] ?? '';
-  assert.ok(geraveis && !geraveis.includes('conversa_usuarios'), 'o gerador já aceita conversa — a E3 entrou sem o prompt?');
-  assert.ok(esclareciveis && !esclareciveis.includes('conversa_usuarios'), 'o esclarecer já aceita conversa — a E3 entrou sem o prompt?');
+  assert.ok(geraveis.includes('conversa_usuarios'), 'o gerador não aceita conversa');
+  assert.ok(esclareciveis.includes('conversa_usuarios'), 'o esclarecer não aceita conversa');
+  const { SISTEMA_TAREFA } = await import('../src/ia/gerar-tarefa.js');
+  assert.match(SISTEMA_TAREFA, /- "Conversa com usuários": o time vai CONVERSAR/, 'liberado na rota sem a regra no prompt');
+  assert.match(SISTEMA_TAREFA, /COM QUEM conversar/);
+});
+
+test('E3: a Conversa NÃO é avaliada pelo JEV (os critérios de hoje são de outros tipos)', () => {
+  const rota = readFileSync(new URL('../src/rotas/gerar-tarefa.ts', import.meta.url), 'utf8');
+  assert.match(rota, /const tipoAvaliavel: TipoTarefaAvaliavel \| null = tipo === 'conversa_usuarios' \? null : tipo;/);
+  assert.match(rota, /const avaliar = tipoAvaliavel !== null && avaliacaoTarefaLigada\(\);/);
 });

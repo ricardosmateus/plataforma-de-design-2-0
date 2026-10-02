@@ -114,9 +114,12 @@ const botao = d.querySelector('#taskTipoLateral [data-tipo="conversa_usuarios"]'
 ok('modal: "Conversa com usuários" na lateral', !!botao && botao.textContent.trim() === 'Conversa com usuários');
 botao.click();
 ok('modal: pede título e descrição', !$('taskTitleField').hidden && !$('taskDescField').hidden && $('taskTitleLabel').textContent === 'Título da conversa');
-ok('modal: sem "Gerar com ajuda da IA" na E1', $('generateWithAIBtn').hidden);
+ok('modal (E3): com "Gerar com ajuda da IA"', !$('generateWithAIBtn').hidden);
 $('taskDesc').value = 'Concorrentes'; $('taskDesc').dispatchEvent(new w.Event('input', { bubbles: true }));
-ok('modal: sem o "Deixar mais clara com IA" na E1, mesmo com descrição vaga', $('taskEsclarecer').hidden && $('taskEsclarecerBtn').hidden);
+ok('modal (E3): descrição vaga — "Deixar mais clara com IA" no lugar do "Gerar"', !$('taskEsclarecer').hidden && !$('taskEsclarecerBtn').hidden && $('generateWithAIBtn').hidden);
+$('taskEsclarecerBtn').click();
+await espera(10);
+ok('modal (E3): o esclarecer vai com o tipo conversa_usuarios', sugestoes.at(-1) === 'conversa_usuarios', JSON.stringify(sugestoes));
 $('taskTitle').value = 'Por que evitam o armário';
 $('taskDesc').value = 'Entender por que moradores evitam o armário de coleta, falando com quem já recebeu encomenda nele.';
 $('taskForm').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true }));

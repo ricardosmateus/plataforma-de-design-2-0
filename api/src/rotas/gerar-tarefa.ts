@@ -74,11 +74,12 @@ import { abrirContexto, podeEscrever, criarTarefaNoFim, tarefaParaResposta } fro
    Esforço e Comparativa na lista de tarefas, a rota passaria a aceitar
    "gerar" para tipos que o prompt não conhece. A tela já não mostra o
    botão fora da Pesquisa (ATV-GERAR-023); a rota não depende disso. */
-const TIPOS_GERAVEIS = ['pesquisa', 'matriz_csd', 'referencias_visuais'] as const;
+/* `conversa_usuarios` desde a fase E3 (ATV-GERAR-026). */
+const TIPOS_GERAVEIS = ['pesquisa', 'matriz_csd', 'referencias_visuais', 'conversa_usuarios'] as const;
 import { pacoteInternoDa } from './pesquisa.js';
 import { avaliarTarefaGerada, custoDasChamadas, tetoAvaliacaoPartes, type ResultadoAvaliacaoDe } from '../ia/avaliacao/avaliar.js';
 import { avaliacaoTarefaLigada, modoAvaliacaoTarefa, dependenciasDoAmbiente } from '../ia/avaliacao/config.js';
-import { montarLoteTarefa, type ContextoAvaliacaoTarefa } from '../ia/avaliacao/perguntas-tarefa.js';
+import { montarLoteTarefa, type ContextoAvaliacaoTarefa, type TipoTarefaAvaliavel } from '../ia/avaliacao/perguntas-tarefa.js';
 import { proximoAposGerar, type Avaliacao } from '../ia/avaliacao/normalizar.js';
 import type { Chamada } from '../ia/avaliacao/chamada.js';
 import { nomesNaoInformados, instrucaoSemNomes, escolherProposta } from '../ia/nomes-nao-informados.js';
@@ -92,7 +93,7 @@ const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensage
    Decisão do Ricardo: todos os que têm descrição — hoje, só a
    Pesquisa (os outros nascem sem campos). Um tipo novo com descrição
    entra aqui. */
-const TIPOS_ESCLARECIVEIS = ['pesquisa'] as const;
+const TIPOS_ESCLARECIVEIS = ['pesquisa', 'conversa_usuarios'] as const;
 const corpoEsclarecer = z.object({
   tipo: z.enum(TIPOS_ESCLARECIVEIS, { errorMap: () => ({ message: 'Este tipo de tarefa não tem descrição para esclarecer.' }) }),
   titulo: z.string().trim().max(260).default(''),
@@ -240,7 +241,12 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
        Evidências com o MESMO recorte da Visão: idéias finalizadas do
        projeto (IA-AVAL-020). Material de consulta não confirma fato
        (IA-CONHEC-005). */
-    const avaliar = avaliacaoTarefaLigada();
+    /* ATV-GERAR-026: a Conversa NÃO é avaliada pelo JEV. Os critérios de
+       hoje (t1–t6) foram escritos e calibrados para os outros tipos — o
+       t1 ("é pesquisável?") reprovaria a conversa por ser exatamente o
+       que ela deve ser. Critérios próprios entram com calibração. */
+    const tipoAvaliavel: TipoTarefaAvaliavel | null = tipo === 'conversa_usuarios' ? null : tipo;
+    const avaliar = tipoAvaliavel !== null && avaliacaoTarefaLigada();
     const depsAvaliacao = avaliar ? dependenciasDoAmbiente() : null;
     const validadas = avaliar
       ? await db.ideia.findMany({
@@ -250,7 +256,8 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
         })
       : [];
     const baseAvaliacao: Omit<ContextoAvaliacaoTarefa, 'tarefa'> = {
-      tipo,
+      /* Sem `tipoAvaliavel`, `avaliar` é falso e esta base não é usada. */
+      tipo: tipoAvaliavel ?? 'pesquisa',
       projetoNome: projeto.nome ?? nomeDoTipo(projeto.tipo),
       empresaNome: projeto.empresa.nome,
       empresaDescricao: projeto.empresa.descricao ?? null,
@@ -512,11 +519,16 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
       /* O que a tela faz em seguida. */
       /* ATV-GERAR-018/019: `revisar` só com JEV + t1 baixo + `visivel`
          — e só quando a Fase 4 ensinar a tela a tratá-lo. */
-      proximo: proximoAposGerar(
-        tipo,
-        FASE_4_LIGADA ? modoAvaliacaoTarefa() : 'sombra',
-        avaliacaoJev && avaliacaoJev.avaliador === 'jev' ? avaliacaoJev.resultado : null,
-      ),
+      /* ATV-GERAR-026: a Conversa responde "abrir" — o board nasce com o
+         Roteiro (BOARD-CONVERSA-001). A tela ignora `proximo` desde
+         ATV-GERAR-021; o valor fica certo para quem voltar a lê-lo. */
+      proximo: tipoAvaliavel === null
+        ? 'abrir'
+        : proximoAposGerar(
+          tipoAvaliavel,
+          FASE_4_LIGADA ? modoAvaliacaoTarefa() : 'sombra',
+          avaliacaoJev && avaliacaoJev.avaliador === 'jev' ? avaliacaoJev.resultado : null,
+        ),
       referencias: coleta
         ? { concorrentes: concorrentesAchados, sites: coleta.sites, imagens: coleta.imagens, documentos: coleta.documentos }
         : null,

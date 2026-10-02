@@ -44,7 +44,9 @@ export function instrucaoEsclarecer(titulo: string, descricao: string): string {
     `Título: ${String(titulo ?? '').trim() || '(sem título)'}`,
     `Descrição: ${String(descricao ?? '').trim()}`,
     '',
-    'NÃO proponha outra tarefa. Reescreva ESTA, com a mesma intenção, seguindo as regras da Pesquisa: uma leitura só, o recorte e para que serve.',
+    /* Desde a E3 da Conversa: as regras do TIPO desta tarefa, que estão no
+       prompt do gerador — a Pesquisa e a Conversa pedem coisas diferentes. */
+    'NÃO proponha outra tarefa. Reescreva ESTA, com a mesma intenção, seguindo as regras do tipo dela (acima).',
     'Se ela puder ser lida de dois jeitos, escolha a leitura mais provável para esta atividade e deixe-a explícita.',
     'Mantenha os nomes que a pessoa usou, corrigindo só a grafia (por exemplo, "logitechs" → "Logitech").',
     'Responda no mesmo formato JSON; o título pode continuar o da pessoa.',

@@ -2164,13 +2164,15 @@ var TIPOS_TAREFA = {
   },
   /* ATV-TAR-CRIA-011 (01/10/2026): o que as pessoas sentem, fazem e
      esperam — o que a web não responde. Pede título e descrição; o
-     board nasce com "Roteiro" e "O que ouvimos". O "Gerar com ajuda da
-     IA" e o "Deixar mais clara com IA" chegam na E3, quando o gerador
-     conhecer as regras deste tipo. */
+     board nasce com "Roteiro" e "O que ouvimos". Desde a E3
+     (ATV-GERAR-026), o gerador conhece as regras deste tipo: ganha o
+     "Gerar com ajuda da IA" e o "Deixar mais clara com IA". */
   conversa_usuarios: {
     nome: 'Conversa com usuários',
     descricao: 'Prepare e registre conversas com as pessoas que usam o serviço. Ajuda a descobrir o que elas sentem, fazem e esperam — o que nenhuma busca na web responde.',
-    rotuloTitulo: 'Título da conversa'
+    rotuloTitulo: 'Título da conversa',
+    gerarComIa: true,
+    esclarecivel: true
   },
   /* Texto definido pelo Ricardo em 23/09/2026. Atenção: ele promete
      mais do que existe hoje — o board aceita só sites e imagens, e a

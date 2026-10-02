@@ -36,7 +36,8 @@ import { lerUso, type Uso } from '../creditos/precos.js';
 import { encurtar, limparOrientacao } from './gerar-ideias.js';
 import { contemResultadoDeFerramenta } from '../pesquisa/provedor-claude-busca.js';
 
-export type TipoGeravel = 'pesquisa' | 'matriz_csd' | 'referencias_visuais';
+/* `conversa_usuarios` desde a fase E3 (ATV-GERAR-026, 01/10/2026). */
+export type TipoGeravel = 'pesquisa' | 'matriz_csd' | 'referencias_visuais' | 'conversa_usuarios';
 
 export const TITULO_MAX = 260;
 export const DESCRICAO_MAX = 280;
@@ -68,6 +69,7 @@ const NOME_DO_TIPO: Record<TipoGeravel, string> = {
   pesquisa: 'Pesquisa',
   matriz_csd: 'Matriz CSD',
   referencias_visuais: 'Referência',
+  conversa_usuarios: 'Conversa com usuários',
 };
 
 /* ------------------------------------------------------------
@@ -127,7 +129,16 @@ export const SISTEMA_TAREFA = SISTEMA_TAREFA_ANTERIOR.replace(
   · Só o que a Pesquisa ENTREGA: fatos com fonte, em texto, e — quando pedir logotipo, cores ou tipografia — a análise visual dos sites das empresas. Nunca peça mood board pronto, imagens, arquivos, apresentação ou opinião.
   · A web responde o que foi PUBLICADO. O que as pessoas sentem, pensam ou fariam (medos, objeções, motivações, preferências) não se descobre numa busca: descobre-se conversando com elas. Para a Pesquisa, pergunte o que já foi publicado sobre isso — estudos, levantamentos, números, regras, preços divulgados, reclamações públicas.
   · Nomes de empresas: SÓ os que aparecem nesta mensagem (concorrentes conhecidos, tarefas, o que a empresa já sabe). Se não houver nenhum, descreva o tipo de empresa — nunca invente um nome.`,
+).replace(
+  /* ATV-GERAR-026 (01/10/2026): a "Conversa com usuários" (fase E3).
+     Entra depois da Referência; a régua do gerador a mede à parte
+     (`--tipo conversa_usuarios`), porque ela não é pesquisável — de
+     propósito. */
+  `o que se quer observar nelas.`,
+  `o que se quer observar nelas.
+- "Conversa com usuários": o time vai CONVERSAR com pessoas (moradores, clientes, parceiros) para descobrir o que elas sentem, fazem e esperam — o que nenhuma busca na web responde. A DESCRIÇÃO diz o que o time quer aprender e COM QUEM conversar (quem são as pessoas e como reconhecê-las). Não é uma pergunta para a web: nada de "quais empresas", "quanto custa" ou números de mercado. Título com verbo: "Entender…", "Descobrir…", "Conversar com…".`,
 );
+
 
 export function montarMensagemTarefa(c: ContextoTarefa): string {
   const l: string[] = [];

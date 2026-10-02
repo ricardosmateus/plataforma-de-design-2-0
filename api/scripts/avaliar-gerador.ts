@@ -16,6 +16,7 @@
    ajustado: 42% x 96% — e o candidato virou o prompt de produção.
 
    Uso (na pasta api):  npx tsx scripts/avaliar-gerador.ts --rodadas 3
+                        npx tsx scripts/avaliar-gerador.ts --rodadas 3 --tipo conversa_usuarios
    Custo por rodada: 16 gerações, 16 a ~30 planejamentos e ~50 chamadas
    ao JEV — da ordem de R$ 0,40 com o Haiku. Não grava nada no banco e
    não cobra saldo de ninguém. */
@@ -35,6 +36,9 @@ function opcao(nome: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 const RODADAS = Math.max(1, Math.min(5, Number(opcao('rodadas') ?? 1) || 1));
+/* `--tipo conversa_usuarios` (ATV-GERAR-026): mede o gerador da Conversa
+   com usuários, que tem outra régua — ela NÃO deve ser pesquisável. */
+const TIPO = opcao('tipo') ?? 'pesquisa';
 const chaveIa = env.IA_API_KEY;
 const modelo = env.IA_MODELO;
 const jev = { chave: env.TYPESAFE_API_KEY, baseUrl: env.TYPESAFE_BASE_URL, modelo: env.TYPESAFE_MODELO, timeoutMs: Math.max(env.TYPESAFE_TIMEOUT_MS, 20_000) };
@@ -133,6 +137,57 @@ async function avaliarUma(sistema: string, atividade: string, irmas: string[], r
 }
 
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : '—');
+/* ============================================================
+   A régua da CONVERSA COM USUÁRIOS (ATV-GERAR-026)
+   ============================================================
+   Uma conversa não é uma pergunta para a web: o que se mede é se a
+   tarefa gerada PEDE CONVERSA (só se responde falando com pessoas) e
+   se DIZ COM QUEM. O prompt é o de produção — o mesmo que a rota usa. */
+function loteConversa(titulo: string, descricao: string): Lote {
+  return {
+    state: { empresa: CONTEXTO_IHOUSELOG, tarefa: { titulo, descricao } },
+    questions: {
+      conversa: { type: 'noul', instructions: 'Esta tarefa só se responde CONVERSANDO com pessoas (o que elas sentem, fazem e esperam) — e não com uma busca na web?' },
+      publico: { type: 'noul', instructions: 'A descrição diz COM QUEM o time vai conversar (quem são as pessoas, ou como reconhecê-las)?' },
+    },
+  };
+}
+
+if (TIPO === 'conversa_usuarios') {
+  console.log(`Régua do gerador, CONVERSA COM USUÁRIOS — modelo: ${modelo}; JEV: ${jev.modelo}; ${atividades.size} atividades; ${RODADAS} rodada(s)\n`);
+  type L = { atividade: string; titulo: string; descricao: string; conversa: boolean; publico: boolean; nomes: string[] };
+  const todas: L[] = [];
+  let ultima: L[] = [];
+  let falhas = 0;
+  for (let r = 0; r < RODADAS; r++) {
+    const desta: L[] = [];
+    for (const [atividade, irmas] of atividades) {
+      const mensagem = montarMensagemTarefa({
+        tipo: 'conversa_usuarios', empresaNome: 'iHouseLog', empresaDescricao: CONTEXTO_IHOUSELOG, projetoNome: PROJETO,
+        atividadeTitulo: atividade, atividadeDescricao: null,
+        tarefas: [...irmas].map((t) => ({ titulo: t, tipo: 'pesquisa', status: 'pendente' })),
+        conhecimento: SOBRE_A_EMPRESA.map((f) => `- ${f}`).join('\n'), concorrentesConhecidos: [],
+      });
+      const g = await pedirTarefa(mensagem);
+      const proposta = g.ok ? interpretarTarefa(g.bruto) : null;
+      if (!proposta) { falhas++; continue; }
+      const j = await jevResponde(loteConversa(proposta.titulo, proposta.descricao));
+      const sim = (k: string) => { const x = j?.[k]; return !!x && x.type === 'noul' && x.noul >= 0.5; };
+      desta.push({ atividade, titulo: proposta.titulo, descricao: proposta.descricao, conversa: sim('conversa'), publico: sim('publico'),
+        nomes: nomesNaoInformados(`${proposta.titulo}. ${proposta.descricao}`, mensagem) });
+    }
+    todas.push(...desta);
+    ultima = desta;
+    console.log(`  rodada ${r + 1}: pede conversa ${pct(desta.filter((x) => x.conversa).length, desta.length)} · diz com quem ${pct(desta.filter((x) => x.publico).length, desta.length)} · com nome não informado ${desta.filter((x) => x.nomes.length).length}`);
+  }
+  console.log(`\nTotal: pede conversa ${pct(todas.filter((x) => x.conversa).length, todas.length)} · diz com quem ${pct(todas.filter((x) => x.publico).length, todas.length)} · com nome não informado ${todas.filter((x) => x.nomes.length).length} (n=${todas.length})${falhas ? ` · gerações que falharam: ${falhas}` : ''}`);
+  console.log('\nAs tarefas da última rodada, para LER:');
+  for (const l of ultima) {
+    console.log(`  · ${l.atividade}: ${l.titulo}\n      ${l.descricao}\n      ${l.conversa ? 'pede conversa' : 'NÃO PEDE CONVERSA'}${l.publico ? '' : ' · NÃO DIZ COM QUEM'}${l.nomes.length ? ` · NOMES NÃO INFORMADOS: ${l.nomes.join(', ')}` : ''}`);
+  }
+  process.exit(0);
+}
+
 console.log(`Régua do gerador — modelo: ${modelo}; JEV: ${jev.modelo}; ${atividades.size} atividades; ${RODADAS} rodada(s)\n`);
 
 const total: Record<string, Linha[]> = Object.fromEntries(PROMPTS.map(([n]) => [n, []]));

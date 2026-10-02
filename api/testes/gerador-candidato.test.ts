@@ -29,9 +29,12 @@ test('em produção: a Pesquisa fica com o publicado; nomes só os informados', 
   assert.match(SISTEMA_TAREFA, /SÓ os que aparecem nesta mensagem/);
 });
 
-test('fora da Pesquisa, nada muda: Matriz CSD, Referência e o formato são os mesmos', () => {
+test('fora da Pesquisa (e da Conversa, que é nova), nada muda: Matriz CSD, Referência e o formato são os mesmos', () => {
+  /* A regra da Conversa com usuários (ATV-GERAR-026) só existe no prompt
+     de produção; tirada ela, o resto tem de ser idêntico ao anterior. */
+  const semConversa = (s: string) => s.replace(/\n- "Conversa com usuários":[^\n]*/, '');
   const resto = (s: string) => s.slice(s.indexOf('- "Matriz CSD"'));
-  assert.equal(resto(SISTEMA_TAREFA), resto(SISTEMA_TAREFA_ANTERIOR));
+  assert.equal(resto(semConversa(SISTEMA_TAREFA)), resto(SISTEMA_TAREFA_ANTERIOR));
   assert.ok(SISTEMA_TAREFA.startsWith(SISTEMA_TAREFA_ANTERIOR.slice(0, SISTEMA_TAREFA_ANTERIOR.indexOf('- "Pesquisa"'))));
 });
 

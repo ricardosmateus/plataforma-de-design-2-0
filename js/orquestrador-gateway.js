@@ -655,7 +655,9 @@
        abre sozinho depois de gerar. */
     pesquisa: 'A IA está escrevendo a pergunta da pesquisa a partir do que a empresa já sabe.',
     matriz_csd: 'A IA está montando a tarefa da Matriz CSD.',
-    referencias_visuais: 'A IA está buscando os concorrentes na web e juntando sites, logotipos e documentos de marca. Isso pode levar até um minuto.'
+    referencias_visuais: 'A IA está buscando os concorrentes na web e juntando sites, logotipos e documentos de marca. Isso pode levar até um minuto.',
+    /* ATV-GERAR-026 */
+    conversa_usuarios: 'A IA está escrevendo a conversa: o que o time quer aprender e com quem conversar.'
   };
 
   function avisoGerando(tipo) {
