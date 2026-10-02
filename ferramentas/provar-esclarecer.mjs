@@ -1,8 +1,10 @@
 /* Uso: node ferramentas/provar-esclarecer.mjs [raiz do projeto]
    Se o jsdom não estiver no projeto: JSDOM_DE=<pasta com node_modules/jsdom>/ node … */
 /* Prova: "Deixar mais clara com IA" (ATV-TAR-CRIA-010) no atividade.html
-   de verdade, com o AtividadeAcoes substituído. Usa os mesmos casos de
-   vagueza do teste do servidor (api/testes/esclarecer-tarefa.test.ts). */
+   de verdade, com o AtividadeAcoes substituído. Desenho de 01/10/2026
+   (Ricardo): o botão fica no rodapé, no lugar do "Gerar com ajuda da
+   IA", e a sugestão entra direto na descrição. Os casos de vagueza são
+   os do teste do servidor (api/testes/esclarecer-tarefa.test.ts). */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 const require = createRequire(process.env.JSDOM_DE || import.meta.url);
@@ -24,52 +26,53 @@ const dom = new JSDOM(html, { url: 'https://app.test/atividade?empresa=e&projeto
 const w = dom.window; const d = w.document;
 if (!w.HTMLDialogElement.prototype.showModal) { w.HTMLDialogElement.prototype.showModal = function () { this.open = true; }; w.HTMLDialogElement.prototype.close = function () { this.open = false; }; }
 const chamadas = [];
-let resposta = { titulo: 'Concorrentes', descricao: 'Quais empresas no Brasil operam pontos de coleta em condomínios residenciais (concorrentes diretos) e quais marketplaces têm retirada própria (indiretos)? Para mapear com quem a iHouseLog disputa o e-commerce.' };
+const SUGESTAO = 'Quais empresas no Brasil operam pontos de coleta em condomínios residenciais (concorrentes diretos) e quais marketplaces têm retirada própria (indiretos)? Para mapear com quem a iHouseLog disputa o e-commerce.';
 let falhar = false;
-w.AtividadeAcoes = { esclarecer: (tipo, titulo, descricao) => { chamadas.push({ tipo, titulo, descricao }); return falhar ? Promise.reject(new Error('Saldo insuficiente para sugerir.')) : Promise.resolve(resposta); } };
+w.AtividadeAcoes = { esclarecer: (tipo, titulo, descricao) => { chamadas.push({ tipo, titulo, descricao }); return falhar ? Promise.reject(new Error('Saldo insuficiente para sugerir.')) : Promise.resolve({ titulo, descricao: SUGESTAO }); } };
 await espera(30);
 
-if (!d.getElementById('taskEsclarecer')) {
-  console.log('FALHOU o convite "Deixar mais clara com IA" não existe neste atividade.html');
+const $ = (id) => d.getElementById(id);
+if (!$('taskEsclarecerBtn') || !$('taskEsclarecerBtn').closest('.modal-footer')) {
+  console.log('FALHOU o "Deixar mais clara com IA" não está no rodapé do modal deste atividade.html');
   console.log('\n1 falha(s)');
   process.exit(1);
 }
 let f = 0; const ok = (n, c, x = '') => { console.log((c ? 'ok     ' : 'FALHOU ') + n + (c ? '' : '  ' + x)); if (!c) f++; };
-const $ = (id) => d.getElementById(id);
 const digitar = (t) => { $('taskDesc').value = t; $('taskDesc').dispatchEvent(new w.Event('input', { bubbles: true })); };
+const gerar = () => $('generateWithAIBtn');
 w.openTaskModal();
 
 for (const [t, vaga] of CASOS) {
   digitar(t);
-  ok(`convite ${vaga ? 'aparece' : 'não aparece'}: ${JSON.stringify(t).slice(0, 50)}`, $('taskEsclarecer').hidden === !vaga);
+  const certo = $('taskEsclarecer').hidden === !vaga && $('taskEsclarecerBtn').hidden === !vaga && gerar().hidden === vaga;
+  ok(`${vaga ? 'vaga: aviso + "Deixar mais clara" no lugar do "Gerar"' : 'não vaga: "Gerar com ajuda da IA", sem aviso'} — ${JSON.stringify(t).slice(0, 44)}`, certo,
+    `aviso ${!$('taskEsclarecer').hidden}, esclarecer ${!$('taskEsclarecerBtn').hidden}, gerar ${!gerar().hidden}`);
 }
+
+ok('o botão é ghost, no rodapé, com o ícone de IA; não há mais caixa nem link sublinhado',
+  $('taskEsclarecerBtn').className === 'btn btn--ghost' && !!$('taskEsclarecerBtn').querySelector('svg') &&
+  !$('taskSugestao') && !d.querySelector('.link--sublinhado#taskEsclarecerBtn'));
 
 $('taskTitle').value = 'Concorrentes';
 digitar('Concorrentes');
 $('taskEsclarecerBtn').click();
+ok('enquanto sugere: "Sugerindo…", desativado', $('taskEsclarecerRotulo').textContent === 'Sugerindo…' && $('taskEsclarecerBtn').disabled);
 await espera(20);
 ok('clique: chama o servidor com o tipo, o título e a descrição da pessoa', JSON.stringify(chamadas.at(-1)) === JSON.stringify({ tipo: 'pesquisa', titulo: 'Concorrentes', descricao: 'Concorrentes' }), JSON.stringify(chamadas.at(-1)));
-ok('a sugestão aparece AO LADO; o texto da pessoa continua o dela', !$('taskSugestao').hidden && $('taskSugestaoTexto').textContent === resposta.descricao && $('taskDesc').value === 'Concorrentes');
-
-$('taskSugestaoUsar').click();
-ok('"Usar esta": a descrição passa a ser a sugestão, e o convite some (já não é vaga)', $('taskDesc').value === resposta.descricao && $('taskEsclarecer').hidden);
+ok('a sugestão entra DIRETO na descrição', $('taskDesc').value === SUGESTAO);
+ok('…e, já não vaga, o aviso some e o "Gerar com ajuda da IA" volta', $('taskEsclarecer').hidden && $('taskEsclarecerBtn').hidden && !gerar().hidden);
 
 digitar('Preço');
-$('taskEsclarecerBtn').click();
-await espera(20);
-$('taskSugestaoManter').click();
-ok('"Manter a minha": o texto não muda e o convite some para este texto', $('taskDesc').value === 'Preço' && $('taskEsclarecer').hidden);
-digitar('Preço de entrega');
-ok('…e volta quando a pessoa muda a descrição', !$('taskEsclarecer').hidden);
-
 falhar = true;
 $('taskEsclarecerBtn').click();
 await espera(20);
-ok('erro do servidor aparece DENTRO do modal, e o botão volta', !$('taskEsclarecerErro').hidden && /Saldo insuficiente/.test($('taskEsclarecerErro').textContent) && !$('taskEsclarecerBtn').disabled);
+ok('erro do servidor aparece DENTRO do modal; a descrição não muda; o botão volta', !$('taskEsclarecerErro').hidden && /Saldo insuficiente/.test($('taskEsclarecerErro').textContent) && $('taskDesc').value === 'Preço' && !$('taskEsclarecerBtn').disabled && $('taskEsclarecerRotulo').textContent === 'Deixar mais clara com IA');
+digitar('Preço de entrega');
+ok('…e o erro some quando a pessoa mexe na descrição', $('taskEsclarecerErro').hidden);
 falhar = false;
 
 w.definirTipoTarefa('matriz_csd');
-ok('tipo sem descrição (Matriz CSD): o convite não aparece', $('taskEsclarecer').hidden);
+ok('tipo sem descrição (Matriz CSD): nem aviso, nem "Deixar mais clara", nem "Gerar"', $('taskEsclarecer').hidden && $('taskEsclarecerBtn').hidden && gerar().hidden);
 w.definirTipoTarefa('pesquisa');
 digitar('Concorrentes');
 const antes = chamadas.length;

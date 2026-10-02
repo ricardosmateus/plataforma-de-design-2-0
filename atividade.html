@@ -595,16 +595,21 @@ select:focus-visible{
   font-size:14px;line-height:22px;
 }
 .np-gerando[hidden]{display:none}
-/* ATV-TAR-CRIA-010: "Deixar mais clara com IA" — convite discreto
-   abaixo da descrição, e a sugestão ao lado do texto da pessoa. */
-.np-esclarecer{display:flex;flex-direction:column;gap:8px;margin-top:-4px}
-.np-esclarecer[hidden],.np-sugestao[hidden],.np-esclarecer-erro[hidden]{display:none}
-.np-esclarecer-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;line-height:20px;color:var(--text-secondary)}
-.np-sugestao{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-radius:var(--radius);background:var(--sky-100)}
-.np-sugestao-rotulo{font-size:12px;line-height:16px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
-.np-sugestao-texto{font-size:14px;line-height:22px;color:var(--text-primary);white-space:pre-line}
-.np-sugestao-acoes{display:flex;gap:8px;flex-wrap:wrap}
-.np-esclarecer-erro{font-size:13px;line-height:20px;color:var(--red-700, #b42318)}
+/* ATV-TAR-CRIA-010: "Deixar mais clara com IA". Abaixo da descrição,
+   só o aviso; o botão fica no rodapé, no lugar do "Gerar com ajuda da
+   IA" (decisão do Ricardo, 01/10/2026). */
+.np-esclarecer{display:flex;flex-direction:column;gap:4px;margin-top:-4px}
+.np-esclarecer[hidden],.np-esclarecer-erro[hidden]{display:none}
+.np-esclarecer-linha{font-size:13px;line-height:20px;color:var(--text-secondary)}
+.np-esclarecer-erro{font-size:13px;line-height:20px;color:var(--text-danger, var(--text-primary))}
+/* Ghost, do sistema de design (`css/components.css`). Copiado, e não
+   importado, pelo mesmo motivo do `.link` e do board.html: nenhuma
+   página do produto carrega aquele arquivo. Mesmos tokens da cópia do
+   board. */
+.btn--ghost{background:var(--surface-1);color:var(--text-secondary);border:1px solid var(--border-strong);box-shadow:var(--shadow-xs)}
+.btn--ghost:hover:not(:disabled){background:var(--surface-0);color:var(--text-primary)}
+.btn--ghost[hidden]{display:none}
+.modal-footer .btn--ghost{width:auto;height:44px;padding:0 18px;font-size:16px;line-height:24px}
 .np-gerando::before{
   content:"";flex-shrink:0;width:16px;height:16px;margin-top:3px;
   border-radius:50%;border:2px solid currentColor;border-right-color:transparent;
@@ -1639,22 +1644,10 @@ body.modal-open{overflow:hidden}
         </div>
 
         <!-- ATV-TAR-CRIA-010: só aparece quando a descrição está curta ou
-             vaga. A IA nunca troca o texto sozinha: a sugestão fica ao
-             lado, e a pessoa usa, edita ou ignora. Salvar sem usar salva
-             normalmente. -->
+             vaga. O botão que esclarece fica no rodapé, no lugar do
+             "Gerar com ajuda da IA". Salvar sem usá-lo salva normalmente. -->
         <div class="np-esclarecer" id="taskEsclarecer" hidden>
-          <div class="np-esclarecer-linha">
-            <span>Essa descrição pode ser lida de mais de um jeito.</span>
-            <button type="button" class="btn btn--ghost" id="taskEsclarecerBtn">Deixar mais clara com IA</button>
-          </div>
-          <div class="np-sugestao" id="taskSugestao" hidden>
-            <p class="np-sugestao-rotulo">Sugestão</p>
-            <p class="np-sugestao-texto" id="taskSugestaoTexto"></p>
-            <div class="np-sugestao-acoes">
-              <button type="button" class="btn btn--primary" id="taskSugestaoUsar">Usar esta</button>
-              <button type="button" class="btn btn--ghost" id="taskSugestaoManter">Manter a minha</button>
-            </div>
-          </div>
+          <p class="np-esclarecer-linha">Essa descrição pode ser lida de mais de um jeito.</p>
           <p class="np-esclarecer-erro" id="taskEsclarecerErro" role="status" hidden></p>
         </div>
 
@@ -1682,6 +1675,12 @@ body.modal-open{overflow:hidden}
           <button type="button" class="btn btn--secondary" id="generateWithAIBtn">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
             Gerar com ajuda da IA
+          </button>
+          <!-- ATV-TAR-CRIA-010: no lugar do "Gerar com ajuda da IA"
+               enquanto a descrição estiver curta ou vaga. -->
+          <button type="button" class="btn btn--ghost" id="taskEsclarecerBtn" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.5 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5Z"/></svg>
+            <span id="taskEsclarecerRotulo">Deixar mais clara com IA</span>
           </button>
         </div>
       </form>
@@ -2196,7 +2195,10 @@ function aplicarCamposDoTipo(info){
      uma tarefa NOVA. Lido pelo id a cada vez: js/orquestrador-gateway.js
      troca o nó do botão (clone) depois que esta página carrega. */
   var gerar = document.getElementById('generateWithAIBtn');
-  if(gerar) gerar.hidden = !(criando && info && info.gerarComIa);
+  /* `podeGerar` guarda a regra acima; quem decide o `hidden` final é
+     `atualizarEsclarecer`, porque a descrição vaga troca este botão
+     pelo "Deixar mais clara com IA" (ATV-TAR-CRIA-010). */
+  if(gerar) gerar.dataset.podeGerar = (criando && info && info.gerarComIa) ? '1' : '0';
   atualizarEsclarecer();
 }
 
@@ -2214,29 +2216,31 @@ function descricaoVaga(t){
   var n = texto.split(/\s+/).filter(Boolean).length;
   return n < 8 || (texto.indexOf('?') < 0 && n < 15);
 }
-/* "Manter a minha": o convite some para ESTE texto, e volta se a
-   pessoa mudar a descrição. */
-var descricaoDispensada = null;
-var sugestaoAtual = null;
-
 function limparSugestao(){
-  sugestaoAtual = null;
-  var caixa = document.getElementById('taskSugestao');
   var erroEl = document.getElementById('taskEsclarecerErro');
   var botao = document.getElementById('taskEsclarecerBtn');
-  if(caixa) caixa.hidden = true;
+  var rotulo = document.getElementById('taskEsclarecerRotulo');
   if(erroEl) erroEl.hidden = true;
-  if(botao){ botao.disabled = false; botao.textContent = 'Deixar mais clara com IA'; }
+  if(botao) botao.disabled = false;
+  if(rotulo) rotulo.textContent = 'Deixar mais clara com IA';
 }
 
+/* Descrição vaga: o aviso aparece, e o rodapé troca "Gerar com ajuda
+   da IA" por "Deixar mais clara com IA". Não vaga: o contrário — e o
+   "Gerar" volta a seguir a regra dele (`podeGerar`). */
 function atualizarEsclarecer(){
   var bloco = document.getElementById('taskEsclarecer');
   var campo = document.getElementById('taskDesc');
   var campoDiv = document.getElementById('taskDescField');
-  if(!bloco || !campo || !campoDiv) return;
-  var temSugestao = !document.getElementById('taskSugestao').hidden;
-  var vaga = !campoDiv.hidden && !campo.disabled && descricaoVaga(campo.value) && campo.value !== descricaoDispensada;
-  bloco.hidden = !(vaga || temSugestao);
+  var botao = document.getElementById('taskEsclarecerBtn');
+  if(!bloco || !campo || !campoDiv || !botao) return;
+  var vaga = !campoDiv.hidden && !campo.disabled && descricaoVaga(campo.value);
+  var comErro = !document.getElementById('taskEsclarecerErro').hidden;
+  bloco.hidden = !(vaga || comErro);
+  botao.hidden = !vaga;
+  /* Lido pelo id a cada vez: js/orquestrador-gateway.js troca o nó. */
+  var gerar = document.getElementById('generateWithAIBtn');
+  if(gerar) gerar.hidden = gerar.dataset.podeGerar !== '1' || vaga;
 }
 
 document.getElementById('taskDesc').addEventListener('input', function(){
@@ -2244,44 +2248,35 @@ document.getElementById('taskDesc').addEventListener('input', function(){
   atualizarEsclarecer();
 });
 
+/* A sugestão entra DIRETO na descrição (decisão do Ricardo,
+   01/10/2026): a pessoa pediu ao clicar, e continua podendo editar o
+   texto antes de salvar. */
 document.getElementById('taskEsclarecerBtn').addEventListener('click', function(){
   if(!window.AtividadeAcoes || !window.AtividadeAcoes.esclarecer) return;
   var botao = this;
+  var rotulo = document.getElementById('taskEsclarecerRotulo');
   var erroEl = document.getElementById('taskEsclarecerErro');
+  var campo = document.getElementById('taskDesc');
   botao.disabled = true;
-  botao.textContent = 'Sugerindo…';
+  rotulo.textContent = 'Sugerindo…';
   erroEl.hidden = true;
   window.AtividadeAcoes.esclarecer(
     document.getElementById('taskTipo').value,
     document.getElementById('taskTitle').value.trim(),
-    document.getElementById('taskDesc').value.trim()
+    campo.value.trim()
   ).then(function(r){
-    sugestaoAtual = r;
-    document.getElementById('taskSugestaoTexto').textContent = r && r.descricao ? r.descricao : '';
-    document.getElementById('taskSugestao').hidden = !(r && r.descricao);
+    if(r && r.descricao){
+      campo.value = r.descricao;
+      campo.focus();
+    }
   }, function(e){
     erroEl.textContent = (e && e.message) || 'Não consegui sugerir uma descrição agora.';
     erroEl.hidden = false;
   }).then(function(){
     botao.disabled = false;
-    botao.textContent = 'Deixar mais clara com IA';
+    rotulo.textContent = 'Deixar mais clara com IA';
     atualizarEsclarecer();
   });
-});
-
-document.getElementById('taskSugestaoUsar').addEventListener('click', function(){
-  if(!sugestaoAtual || !sugestaoAtual.descricao) return;
-  var campo = document.getElementById('taskDesc');
-  campo.value = sugestaoAtual.descricao;
-  limparSugestao();
-  atualizarEsclarecer();
-  campo.focus();
-});
-
-document.getElementById('taskSugestaoManter').addEventListener('click', function(){
-  descricaoDispensada = document.getElementById('taskDesc').value;
-  limparSugestao();
-  atualizarEsclarecer();
 });
 
 function pintarInfoTipo(tipo){
@@ -2340,7 +2335,6 @@ taskTipoLateral.addEventListener('keydown', function(e){
 function openTaskModal(){
   tarefaEditando = null;
   taskModalTitle.textContent = 'Nova tarefa';
-  descricaoDispensada = null;
   limparSugestao();
   definirTipoTarefa('pesquisa');
   taskModal.showModal();
@@ -2362,7 +2356,6 @@ function openEditTaskModal(task){
   /* ATV-TAR-EDIT-004: o tipo não muda depois de criado. A lateral
      mostra o tipo DESTA tarefa — o select antigo mostrava sempre
      "Pesquisa", até numa Matriz CSD — e fica travada. */
-  descricaoDispensada = null;
   limparSugestao();
   definirTipoTarefa(task.dataset.tipo, true);
   taskModal.showModal();
