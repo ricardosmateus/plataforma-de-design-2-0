@@ -53,8 +53,9 @@ test('a rota: o mesmo contexto do gerador, reserva antes, libera no finally, cob
   assert.ok(!/criarTarefaNoFim/.test(r.slice(0, r.indexOf('});'))), 'esclarecer não pode criar tarefa');
 });
 
-test('o gerador e a sugestão leem o MESMO contexto (uma função só)', () => {
-  assert.equal((rota.match(/await contextoDaTarefa\(ctx,/g) ?? []).length, 2);
+test('o gerador, a sugestão e o roteiro leem o MESMO contexto (uma função só)', () => {
+  /* Três rotas: gerar, esclarecer (ATV-TAR-CRIA-010) e roteiro (BOARD-CONVERSA-004). */
+  assert.equal((rota.match(/await contextoDaTarefa\(ctx,/g) ?? []).length, 3);
   /* A mensagem do gerador é montada num lugar só, dentro de
      contextoDaTarefa. (A rota da Matriz tem a dela, com outro propósito.) */
   assert.equal((rota.match(/montarMensagemTarefa\(\{/g) ?? []).length, 1, 'a montagem do contexto foi duplicada');
