@@ -595,6 +595,16 @@ select:focus-visible{
   font-size:14px;line-height:22px;
 }
 .np-gerando[hidden]{display:none}
+/* ATV-TAR-CRIA-010: "Deixar mais clara com IA" — convite discreto
+   abaixo da descrição, e a sugestão ao lado do texto da pessoa. */
+.np-esclarecer{display:flex;flex-direction:column;gap:8px;margin-top:-4px}
+.np-esclarecer[hidden],.np-sugestao[hidden],.np-esclarecer-erro[hidden]{display:none}
+.np-esclarecer-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;line-height:20px;color:var(--text-secondary)}
+.np-sugestao{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-radius:var(--radius);background:var(--sky-100)}
+.np-sugestao-rotulo{font-size:12px;line-height:16px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+.np-sugestao-texto{font-size:14px;line-height:22px;color:var(--text-primary);white-space:pre-line}
+.np-sugestao-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.np-esclarecer-erro{font-size:13px;line-height:20px;color:var(--red-700, #b42318)}
 .np-gerando::before{
   content:"";flex-shrink:0;width:16px;height:16px;margin-top:3px;
   border-radius:50%;border:2px solid currentColor;border-right-color:transparent;
@@ -1628,6 +1638,26 @@ body.modal-open{overflow:hidden}
           <textarea class="textarea" id="taskDesc" name="desc" required maxlength="280"></textarea>
         </div>
 
+        <!-- ATV-TAR-CRIA-010: só aparece quando a descrição está curta ou
+             vaga. A IA nunca troca o texto sozinha: a sugestão fica ao
+             lado, e a pessoa usa, edita ou ignora. Salvar sem usar salva
+             normalmente. -->
+        <div class="np-esclarecer" id="taskEsclarecer" hidden>
+          <div class="np-esclarecer-linha">
+            <span>Essa descrição pode ser lida de mais de um jeito.</span>
+            <button type="button" class="btn btn--ghost" id="taskEsclarecerBtn">Deixar mais clara com IA</button>
+          </div>
+          <div class="np-sugestao" id="taskSugestao" hidden>
+            <p class="np-sugestao-rotulo">Sugestão</p>
+            <p class="np-sugestao-texto" id="taskSugestaoTexto"></p>
+            <div class="np-sugestao-acoes">
+              <button type="button" class="btn btn--primary" id="taskSugestaoUsar">Usar esta</button>
+              <button type="button" class="btn btn--ghost" id="taskSugestaoManter">Manter a minha</button>
+            </div>
+          </div>
+          <p class="np-esclarecer-erro" id="taskEsclarecerErro" role="status" hidden></p>
+        </div>
+
         <!-- BOARD-ACESSO-001/002: é este campo que decide o que
              acontece ao acessar a tarefa. Antes o destino era escolhido
              comparando o TEXTO do título com "Matriz CSD" — o mesmo
@@ -2167,7 +2197,92 @@ function aplicarCamposDoTipo(info){
      troca o nó do botão (clone) depois que esta página carrega. */
   var gerar = document.getElementById('generateWithAIBtn');
   if(gerar) gerar.hidden = !(criando && info && info.gerarComIa);
+  atualizarEsclarecer();
 }
+
+/* ============================================================
+   ATV-TAR-CRIA-010 — "Deixar mais clara com IA"
+   ============================================================
+   `descricaoVaga` é CÓPIA de `ehDescricaoVaga` (api/src/ia/
+   esclarecer-tarefa.ts): as duas precisam dar o mesmo resultado, e são
+   testadas com os mesmos casos. Os elementos são lidos pelo id a cada
+   vez porque esta função roda já na carga da página, antes de qualquer
+   variável abaixo existir. */
+function descricaoVaga(t){
+  var texto = String(t || '').trim();
+  if(!texto) return false;
+  var n = texto.split(/\s+/).filter(Boolean).length;
+  return n < 8 || (texto.indexOf('?') < 0 && n < 15);
+}
+/* "Manter a minha": o convite some para ESTE texto, e volta se a
+   pessoa mudar a descrição. */
+var descricaoDispensada = null;
+var sugestaoAtual = null;
+
+function limparSugestao(){
+  sugestaoAtual = null;
+  var caixa = document.getElementById('taskSugestao');
+  var erroEl = document.getElementById('taskEsclarecerErro');
+  var botao = document.getElementById('taskEsclarecerBtn');
+  if(caixa) caixa.hidden = true;
+  if(erroEl) erroEl.hidden = true;
+  if(botao){ botao.disabled = false; botao.textContent = 'Deixar mais clara com IA'; }
+}
+
+function atualizarEsclarecer(){
+  var bloco = document.getElementById('taskEsclarecer');
+  var campo = document.getElementById('taskDesc');
+  var campoDiv = document.getElementById('taskDescField');
+  if(!bloco || !campo || !campoDiv) return;
+  var temSugestao = !document.getElementById('taskSugestao').hidden;
+  var vaga = !campoDiv.hidden && !campo.disabled && descricaoVaga(campo.value) && campo.value !== descricaoDispensada;
+  bloco.hidden = !(vaga || temSugestao);
+}
+
+document.getElementById('taskDesc').addEventListener('input', function(){
+  limparSugestao();
+  atualizarEsclarecer();
+});
+
+document.getElementById('taskEsclarecerBtn').addEventListener('click', function(){
+  if(!window.AtividadeAcoes || !window.AtividadeAcoes.esclarecer) return;
+  var botao = this;
+  var erroEl = document.getElementById('taskEsclarecerErro');
+  botao.disabled = true;
+  botao.textContent = 'Sugerindo…';
+  erroEl.hidden = true;
+  window.AtividadeAcoes.esclarecer(
+    document.getElementById('taskTipo').value,
+    document.getElementById('taskTitle').value.trim(),
+    document.getElementById('taskDesc').value.trim()
+  ).then(function(r){
+    sugestaoAtual = r;
+    document.getElementById('taskSugestaoTexto').textContent = r && r.descricao ? r.descricao : '';
+    document.getElementById('taskSugestao').hidden = !(r && r.descricao);
+  }, function(e){
+    erroEl.textContent = (e && e.message) || 'Não consegui sugerir uma descrição agora.';
+    erroEl.hidden = false;
+  }).then(function(){
+    botao.disabled = false;
+    botao.textContent = 'Deixar mais clara com IA';
+    atualizarEsclarecer();
+  });
+});
+
+document.getElementById('taskSugestaoUsar').addEventListener('click', function(){
+  if(!sugestaoAtual || !sugestaoAtual.descricao) return;
+  var campo = document.getElementById('taskDesc');
+  campo.value = sugestaoAtual.descricao;
+  limparSugestao();
+  atualizarEsclarecer();
+  campo.focus();
+});
+
+document.getElementById('taskSugestaoManter').addEventListener('click', function(){
+  descricaoDispensada = document.getElementById('taskDesc').value;
+  limparSugestao();
+  atualizarEsclarecer();
+});
 
 function pintarInfoTipo(tipo){
   var info = TIPOS_TAREFA[tipo];
@@ -2225,6 +2340,8 @@ taskTipoLateral.addEventListener('keydown', function(e){
 function openTaskModal(){
   tarefaEditando = null;
   taskModalTitle.textContent = 'Nova tarefa';
+  descricaoDispensada = null;
+  limparSugestao();
   definirTipoTarefa('pesquisa');
   taskModal.showModal();
   document.body.classList.add('modal-open');
@@ -2245,6 +2362,8 @@ function openEditTaskModal(task){
   /* ATV-TAR-EDIT-004: o tipo não muda depois de criado. A lateral
      mostra o tipo DESTA tarefa — o select antigo mostrava sempre
      "Pesquisa", até numa Matriz CSD — e fica travada. */
+  descricaoDispensada = null;
+  limparSugestao();
   definirTipoTarefa(task.dataset.tipo, true);
   taskModal.showModal();
   document.body.classList.add('modal-open');

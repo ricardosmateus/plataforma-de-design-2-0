@@ -81,9 +81,22 @@ import { avaliacaoTarefaLigada, modoAvaliacaoTarefa, dependenciasDoAmbiente } fr
 import { montarLoteTarefa, type ContextoAvaliacaoTarefa } from '../ia/avaliacao/perguntas-tarefa.js';
 import { proximoAposGerar, type Avaliacao } from '../ia/avaliacao/normalizar.js';
 import type { Chamada } from '../ia/avaliacao/chamada.js';
+import { nomesNaoInformados, instrucaoSemNomes, escolherProposta } from '../ia/nomes-nao-informados.js';
+import { instrucaoEsclarecer } from '../ia/esclarecer-tarefa.js';
 
 type Erro = { campo: string | null; mensagem: string };
 const erro = (campo: string | null, mensagem: string): Erro => ({ campo, mensagem });
+
+/* ATV-TAR-CRIA-010: os tipos cuja descrição a sugestão esclarece.
+   Decisão do Ricardo: todos os que têm descrição — hoje, só a
+   Pesquisa (os outros nascem sem campos). Um tipo novo com descrição
+   entra aqui. */
+const TIPOS_ESCLARECIVEIS = ['pesquisa'] as const;
+const corpoEsclarecer = z.object({
+  tipo: z.enum(TIPOS_ESCLARECIVEIS, { errorMap: () => ({ message: 'Este tipo de tarefa não tem descrição para esclarecer.' }) }),
+  titulo: z.string().trim().max(260).default(''),
+  descricao: z.string().trim().min(1, 'Escreva a descrição antes de pedir a sugestão.').max(280),
+});
 
 const corpoGerar = z.object({
   tipo: z.enum(TIPOS_GERAVEIS, { errorMap: () => ({ message: 'Este tipo de tarefa não é gerado com ajuda da IA.' }) }),
@@ -150,6 +163,44 @@ async function gravarNota(
   }
 }
 
+type ContextoAberto = Extract<Awaited<ReturnType<typeof abrirContexto>>, { ok: true }>;
+
+/* A empresa inteira + o lugar onde a pessoa está: o que o gerador lê
+   para propor uma tarefa, e o que a sugestão do modal lê para
+   esclarecer uma (ATV-TAR-CRIA-010). Um lugar só, para as duas saberem
+   sempre a mesma coisa. */
+async function contextoDaTarefa(ctx: ContextoAberto, tipo: TipoGeravel, orientacao: string | null) {
+  const projeto = await db.projeto.findFirst({
+    where: { id: ctx.projetoId, empresaId: ctx.empresaId },
+    select: { nome: true, tipo: true, empresa: { select: { nome: true, descricao: true } } },
+  });
+  if (!projeto) return null;
+
+  const [tarefas, pacote, concorrentes] = await Promise.all([
+    db.tarefa.findMany({
+      where: { ideiaId: ctx.ideia.id },
+      orderBy: { ordem: 'asc' },
+      select: { titulo: true, tipo: true, status: true },
+    }),
+    pacoteInternoDa({ empresaId: ctx.empresaId, projetoId: ctx.projetoId, tarefaId: null, ideiaId: ctx.ideia.id }),
+    concorrentesConhecidos(ctx.empresaId, projeto.empresa.nome),
+  ]);
+
+  const mensagem = montarMensagemTarefa({
+    tipo,
+    empresaNome: projeto.empresa.nome,
+    empresaDescricao: projeto.empresa.descricao ?? null,
+    projetoNome: projeto.nome ?? nomeDoTipo(projeto.tipo),
+    atividadeTitulo: ctx.ideia.titulo,
+    atividadeDescricao: ctx.ideia.descricao,
+    tarefas: tarefas.map((t) => ({ titulo: t.titulo, tipo: t.tipo, status: t.status })),
+    conhecimento: pacoteParaTexto(pacote),
+    concorrentesConhecidos: concorrentes,
+    orientacao,
+  });
+  return { projeto, concorrentes, mensagem, tarefas };
+}
+
 export async function rotasGerarTarefa(app: FastifyInstance) {
   app.post('/empresas/:empresaId/projetos/:projetoId/ideias/:ideiaId/tarefas/gerar', async (req, resposta) => {
     const ctx = await abrirContexto(req, false);
@@ -175,35 +226,12 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
       return resposta.code(503).send(erro(null, 'A busca na web ainda não está configurada neste ambiente.'));
     }
 
-    /* ---- O contexto: a empresa inteira + o lugar onde a pessoa está ---- */
-    const projeto = await db.projeto.findFirst({
-      where: { id: ctx.projetoId, empresaId: ctx.empresaId },
-      select: { nome: true, tipo: true, empresa: { select: { nome: true, descricao: true } } },
-    });
-    if (!projeto) return resposta.code(404).send(erro(null, 'Idéia não encontrada.'));
-
-    const [tarefas, pacote, concorrentes] = await Promise.all([
-      db.tarefa.findMany({
-        where: { ideiaId: ctx.ideia.id },
-        orderBy: { ordem: 'asc' },
-        select: { titulo: true, tipo: true, status: true },
-      }),
-      pacoteInternoDa({ empresaId: ctx.empresaId, projetoId: ctx.projetoId, tarefaId: null, ideiaId: ctx.ideia.id }),
-      concorrentesConhecidos(ctx.empresaId, projeto.empresa.nome),
-    ]);
-
-    const mensagem = montarMensagemTarefa({
-      tipo,
-      empresaNome: projeto.empresa.nome,
-      empresaDescricao: projeto.empresa.descricao ?? null,
-      projetoNome: projeto.nome ?? nomeDoTipo(projeto.tipo),
-      atividadeTitulo: ctx.ideia.titulo,
-      atividadeDescricao: ctx.ideia.descricao,
-      tarefas: tarefas.map((t) => ({ titulo: t.titulo, tipo: t.tipo, status: t.status })),
-      conhecimento: pacoteParaTexto(pacote),
-      concorrentesConhecidos: concorrentes,
-      orientacao: corpo.data.orientacao ?? null,
-    });
+    /* ---- O contexto: a empresa inteira + o lugar onde a pessoa está ----
+       Montado por `contextoDaTarefa`, o mesmo da sugestão do modal
+       (ATV-TAR-CRIA-010): a sugestão sabe o mesmo que o gerador. */
+    const contexto = await contextoDaTarefa(ctx, tipo, corpo.data.orientacao ?? null);
+    if (!contexto) return resposta.code(404).send(erro(null, 'Idéia não encontrada.'));
+    const { projeto, concorrentes, mensagem, tarefas } = contexto;
 
     /* ---- Avaliação (IA-AVAL-018) — o que vai ao avaliador ----
        Evidências com o MESMO recorte da Visão: idéias finalizadas do
@@ -305,7 +333,41 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
 
     /* ---- 2. A proposta ---- */
     const r = await pedirTarefa(mensagem);
-    const proposta = r.ok ? interpretarTarefa(r.bruto) : null;
+    let proposta = r.ok ? interpretarTarefa(r.bruto) : null;
+
+    /* ---- 2a. Nomes de empresa não informados (ATV-GERAR-025) ----
+       O prompt manda citar só as empresas que a mensagem traz; medido
+       na régua, 5 de 24 tarefas citavam outras. Os nomes não fazem
+       falta — a pesquisa descobre as empresas com o site verificado —,
+       então tenta UMA vez de novo, pedindo a categoria. Reserva própria,
+       só quando precisa: o caminho normal não muda. Sem saldo para a
+       segunda tentativa, fica a primeira proposta, sem erro. */
+    let refeita: { r: Awaited<ReturnType<typeof pedirTarefa>>; op: string; teto: number; trocou: boolean } | null = null;
+    if (proposta && tipo === 'pesquisa') {
+      const nomes = nomesNaoInformados(`${proposta.titulo}. ${proposta.descricao}`, mensagem);
+      if (nomes.length) {
+        const mensagem2 = `${mensagem}\n\n${instrucaoSemNomes(nomes)}`;
+        const op = randomUUID();
+        /* `tetoPropostaUsd` já foi conferido (sem preço, a rota responde
+           503 antes de chegar aqui): é a reserva de segurança. */
+        const teto = emReais(tetoUsdMicros(env.IA_MODELO as string, SISTEMA_TAREFA + '\n' + mensagem2, MAX_TOKENS_PROPOSTA) ?? tetoPropostaUsd);
+        let reservou = false;
+        try {
+          await reservar(ctx.usuarioId, teto, op, 'assistente');
+          reservou = true;
+        } catch (e) {
+          if (!(e instanceof SaldoInsuficiente)) throw e;
+          req.log.warn({ nomes }, 'gerar tarefa: nomes não informados, sem saldo para refazer');
+        }
+        if (reservou) {
+          const r2 = await pedirTarefa(mensagem2);
+          const escolha = escolherProposta(proposta, r2.ok ? interpretarTarefa(r2.bruto) : null, mensagem);
+          proposta = escolha.proposta;
+          refeita = { r: r2, op, teto, trocou: escolha.trocou };
+          req.log.warn({ nomes, trocou: escolha.trocou, ficaram: escolha.nomesQueFicaram }, 'gerar tarefa: nomes não informados');
+        }
+      }
+    }
     const conta: ContaAvaliacao = { usuarioId: ctx.usuarioId, empresaId: ctx.empresaId, projetoId: ctx.projetoId, ideiaId: ctx.ideia.id };
 
     /* ---- 2b. A avaliação pelo JEV, na requisição (IA-AVAL-019) ----
@@ -347,6 +409,27 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
       if (r.uso && r.modelo) usd += custoUsdMicros(r.modelo, r.uso) ?? 0;
       if (avaliacaoJev) usd += custoDasChamadas(avaliacaoJev.chamadas).usdMicros;
       if (usd > 0) await consumir(ctx.usuarioId, emReais(usd), opProposta, 'assistente');
+    }
+
+    /* A segunda tentativa (ATV-GERAR-025): o que o provedor cobrou é
+       repassado, tenha ela sido usada ou não (IA-AVAL-017), com a
+       operação dela. */
+    if (refeita) {
+      if (refeita.r.uso && refeita.r.modelo) {
+        registrar({
+          ...conta,
+          tipo: 'assistente',
+          resultado: refeita.trocou ? 'entregue' : 'descartado',
+          modelo: refeita.r.modelo,
+          uso: refeita.r.uso,
+          requisicaoId: refeita.r.requisicaoId,
+          operacaoId: refeita.op,
+          cobravel: true,
+        });
+      }
+      await liberar(ctx.usuarioId, refeita.teto, refeita.op, 'assistente');
+      const usd = refeita.r.uso && refeita.r.modelo ? custoUsdMicros(refeita.r.modelo, refeita.r.uso) ?? 0 : 0;
+      if (usd > 0) await consumir(ctx.usuarioId, emReais(usd), refeita.op, 'assistente');
     }
 
     /* O Claude só vai rodar se o JEV falhou numa proposta que existe.
@@ -548,5 +631,78 @@ export async function rotasGerarTarefa(app: FastifyInstance) {
       cards: cards.map((c) => ({ titulo: c.titulo, descricao: c.descricao, coluna: c.coluna, extra: c.tarefa === null })),
       colunas: TITULO_COLUNA,
     });
+  });
+
+  /* ============================================================
+     "Deixar mais clara com IA" — ATV-TAR-CRIA-010
+     ============================================================
+     A pessoa escreveu uma tarefa curta ou vaga no modal; a IA sugere a
+     mesma tarefa, mais clara. NÃO cria nada: devolve o texto, e a tela
+     o mostra ao lado do original para a pessoa usar, editar ou ignorar.
+     Cobrada como qualquer chamada (IA-AVAL-017), com reserva própria. */
+  app.post('/empresas/:empresaId/projetos/:projetoId/ideias/:ideiaId/tarefas/esclarecer', async (req, resposta) => {
+    const ctx = await abrirContexto(req, false);
+    if (!ctx.ok) return resposta.code(ctx.code).send(ctx.corpo);
+    if (!podeEscrever(ctx.papel)) {
+      return resposta.code(403).send(erro(null, 'Seu papel não permite criar tarefas.'));
+    }
+    if (!iaConfigurada()) {
+      return resposta.code(503).send(erro(null, 'O assistente de IA ainda não está configurado neste ambiente.'));
+    }
+    const corpo = corpoEsclarecer.safeParse(req.body ?? {});
+    if (!corpo.success) {
+      const p = corpo.error.issues[0];
+      return resposta.code(400).send(erro(typeof p?.path?.[0] === 'string' ? p.path[0] : null, p?.message ?? 'Dados inválidos.'));
+    }
+
+    const contexto = await contextoDaTarefa(ctx, corpo.data.tipo, null);
+    if (!contexto) return resposta.code(404).send(erro(null, 'Idéia não encontrada.'));
+    const mensagem = `${contexto.mensagem}\n\n---\n\n${instrucaoEsclarecer(corpo.data.titulo, corpo.data.descricao)}`;
+
+    const tetoUsd = tetoUsdMicros(env.IA_MODELO as string, SISTEMA_TAREFA + '\n' + mensagem, MAX_TOKENS_PROPOSTA);
+    if (tetoUsd === null) {
+      return resposta.code(503).send(erro(null, 'O assistente está indisponível no momento. Tente mais tarde.'));
+    }
+    const teto = emReais(tetoUsd);
+    const op = randomUUID();
+    try {
+      await reservar(ctx.usuarioId, teto, op, 'assistente');
+    } catch (e) {
+      if (e instanceof SaldoInsuficiente) {
+        return resposta.code(402).send(erro(null, 'Saldo insuficiente para sugerir. Adicione créditos para continuar.'));
+      }
+      throw e;
+    }
+
+    /* A reserva volta mesmo se a chamada lançar. */
+    let r: Awaited<ReturnType<typeof pedirTarefa>>;
+    try {
+      r = await pedirTarefa(mensagem);
+    } finally {
+      await liberar(ctx.usuarioId, teto, op, 'assistente');
+    }
+    const proposta = r.ok ? interpretarTarefa(r.bruto) : null;
+    if (r.uso && r.modelo) {
+      registrar({
+        usuarioId: ctx.usuarioId,
+        empresaId: ctx.empresaId,
+        projetoId: ctx.projetoId,
+        ideiaId: ctx.ideia.id,
+        tipo: 'assistente',
+        resultado: proposta ? 'entregue' : 'descartado',
+        modelo: r.modelo,
+        uso: r.uso,
+        requisicaoId: r.requisicaoId,
+        operacaoId: op,
+        cobravel: true,
+      });
+      const usd = custoUsdMicros(r.modelo, r.uso) ?? 0;
+      if (usd > 0) await consumir(ctx.usuarioId, emReais(usd), op, 'assistente');
+    }
+    if (!proposta) {
+      return resposta.code(502).send(erro(null, 'Não consegui sugerir uma descrição agora. Tente de novo.'));
+    }
+    /* Os limites do modal: o que volta tem de caber nos campos. */
+    return resposta.send({ titulo: proposta.titulo.slice(0, 260), descricao: proposta.descricao.slice(0, 280) });
   });
 }

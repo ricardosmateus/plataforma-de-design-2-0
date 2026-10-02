@@ -259,6 +259,20 @@
       });
     },
 
+    /* ATV-TAR-CRIA-010: "Deixar mais clara com IA". Não cria nada —
+       devolve a sugestão para o modal mostrar ao lado do original. Os
+       erros voltam para quem chamou, que os mostra DENTRO do modal (o
+       aviso da página ficaria atrás dele). */
+    esclarecer: function (tipo, titulo, descricao) {
+      return chamarComRenovacao(base() + '/esclarecer', {
+        metodo: 'POST',
+        corpo: { tipo: tipo || 'pesquisa', titulo: titulo || '', descricao: descricao || '' },
+      }, false).catch(function (e) {
+        if (tratarErroFatal(e)) throw e;
+        throw new Error(mensagemDeFalha(e, 'Não consegui sugerir uma descrição agora.'));
+      });
+    },
+
     /* ATV-GERAR-010: "Gerar com ajuda da IA" com o tipo escolhido na
        lateral. O SERVIDOR cria a tarefa (e, na Referência, os cards
        de referência); aqui só se desenha o card que voltou e se

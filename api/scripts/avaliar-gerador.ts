@@ -28,6 +28,7 @@ import { loteDeDesambiguacao, leituraEscolhida, loteDeAderencia, aderenciaDe, te
 import { decidirLeitura } from '../src/pesquisa/decidir-leitura.js';
 import { CONTEXTO_IHOUSELOG, CONTEXTOS, SOBRE_A_EMPRESA } from '../corpus/desambiguacao.js';
 import type { Lote } from '../src/ia/avaliacao/perguntas.js';
+import { nomesNaoInformados, instrucaoSemNomes, escolherProposta } from '../src/ia/nomes-nao-informados.js';
 
 function opcao(nome: string): string | undefined {
   const i = process.argv.indexOf(`--${nome}`);
@@ -73,9 +74,9 @@ function lotePesquisavel(tarefa: string): Lote {
   };
 }
 
-type Linha = { atividade: string; titulo: string; descricao: string; direto: boolean; pesquisavel: boolean; proibido: boolean; replanejou: boolean; leituras: number };
+type Linha = { atividade: string; titulo: string; descricao: string; direto: boolean; pesquisavel: boolean; proibido: boolean; replanejou: boolean; leituras: number; nomes: string[]; refez: boolean };
 
-async function avaliarUma(sistema: string, atividade: string, irmas: string[]): Promise<Linha | null> {
+async function avaliarUma(sistema: string, atividade: string, irmas: string[], refazer: boolean): Promise<Linha | null> {
   const mensagem = montarMensagemTarefa({
     tipo: 'pesquisa',
     empresaNome: 'iHouseLog',
@@ -88,8 +89,20 @@ async function avaliarUma(sistema: string, atividade: string, irmas: string[]): 
     concorrentesConhecidos: [],
   });
   const g = await pedirTarefa(mensagem, sistema);
-  const proposta = g.ok ? interpretarTarefa(g.bruto) : null;
+  let proposta = g.ok ? interpretarTarefa(g.bruto) : null;
   if (!proposta) return null;
+  /* ATV-GERAR-025: a mesma segunda tentativa que a rota faz, com as
+     mesmas funções — senão a régua mediria um caminho que a produção
+     não percorre. */
+  let refez = false;
+  if (refazer) {
+    const nomes = nomesNaoInformados(`${proposta.titulo}. ${proposta.descricao}`, mensagem);
+    if (nomes.length) {
+      const g2 = await pedirTarefa(`${mensagem}\n\n${instrucaoSemNomes(nomes)}`, sistema);
+      proposta = escolherProposta(proposta, g2.ok ? interpretarTarefa(g2.bruto) : null, mensagem).proposta;
+      refez = true;
+    }
+  }
 
   const ctx: ContextoDaTarefa = { projeto: PROJETO, atividade, tarefasIrmas: irmas, sobreAEmpresa: SOBRE_A_EMPRESA };
   const tarefa = proposta.descricao;
@@ -113,6 +126,9 @@ async function avaliarUma(sistema: string, atividade: string, irmas: string[]): 
     proibido: PROIBIDO.test(proposta.descricao),
     replanejou: !!d?.replanejou,
     leituras: d?.plano.interpretacoes?.length ?? 0,
+    /* ATV-GERAR-025: nomes de empresa que a mensagem não trazia. */
+    nomes: nomesNaoInformados(`${proposta.titulo}. ${proposta.descricao}`, mensagem),
+    refez,
   };
 }
 
@@ -126,13 +142,14 @@ for (let r = 0; r < RODADAS; r++) {
   for (const [nome, sistema] of PROMPTS) {
     const desta: Linha[] = [];
     for (const [atividade, irmas] of atividades) {
-      const l = await avaliarUma(sistema, atividade, [...irmas]);
+      /* Como na produção: só o prompt ATUAL tem a segunda tentativa. */
+      const l = await avaliarUma(sistema, atividade, [...irmas], nome === 'atual');
       if (!l) { falhas++; continue; }
       desta.push(l);
     }
     total[nome]!.push(...desta);
     ultima[nome] = desta;
-    console.log(`  rodada ${r + 1}, ${nome.padEnd(9)} segue direto ${pct(desta.filter((x) => x.direto).length, desta.length)} · pesquisável ${pct(desta.filter((x) => x.pesquisavel).length, desta.length)} · pede o que não se entrega ${desta.filter((x) => x.proibido).length}`);
+    console.log(`  rodada ${r + 1}, ${nome.padEnd(9)} segue direto ${pct(desta.filter((x) => x.direto).length, desta.length)} · pesquisável ${pct(desta.filter((x) => x.pesquisavel).length, desta.length)} · pede o que não se entrega ${desta.filter((x) => x.proibido).length} · com nome não informado ${desta.filter((x) => x.nomes.length).length}`);
   }
 }
 
@@ -140,7 +157,7 @@ console.log('\nTotal das rodadas:');
 for (const [nome] of PROMPTS) {
   const t = total[nome]!;
   const chars = t.length ? Math.round(t.reduce((a, x) => a + x.descricao.length, 0) / t.length) : 0;
-  console.log(`  ${nome.padEnd(9)} segue direto ${pct(t.filter((x) => x.direto).length, t.length)} · pesquisável ${pct(t.filter((x) => x.pesquisavel).length, t.length)} · com leituras ${t.filter((x) => x.leituras >= 2).length} · replanejadas ${t.filter((x) => x.replanejou).length} · pede o que não se entrega ${t.filter((x) => x.proibido).length} · descrição média ${chars} caracteres (n=${t.length})`);
+  console.log(`  ${nome.padEnd(9)} segue direto ${pct(t.filter((x) => x.direto).length, t.length)} · pesquisável ${pct(t.filter((x) => x.pesquisavel).length, t.length)} · com leituras ${t.filter((x) => x.leituras >= 2).length} · replanejadas ${t.filter((x) => x.replanejou).length} · pede o que não se entrega ${t.filter((x) => x.proibido).length} · com nome não informado ${t.filter((x) => x.nomes.length).length} · refeitas ${t.filter((x) => x.refez).length} · descrição média ${chars} caracteres (n=${t.length})`);
 }
 if (falhas) console.log(`  gerações que falharam: ${falhas}`);
 
@@ -148,6 +165,6 @@ console.log('\nAs tarefas da última rodada, para LER (o número não diz se a t
 for (const [nome] of PROMPTS) {
   console.log(`\n  [${nome}]`);
   for (const l of ultima[nome]!) {
-    console.log(`  · ${l.atividade}: ${l.titulo}\n      ${l.descricao}\n      ${l.direto ? 'segue direto' : l.leituras >= 2 ? `${l.leituras} leituras` : l.replanejou ? 'replanejada' : 'sem conferência'}${l.pesquisavel ? '' : ' · NÃO pesquisável'}${l.proibido ? ' · PEDE O QUE NÃO SE ENTREGA' : ''}`);
+    console.log(`  · ${l.atividade}: ${l.titulo}\n      ${l.descricao}\n      ${l.direto ? 'segue direto' : l.leituras >= 2 ? `${l.leituras} leituras` : l.replanejou ? 'replanejada' : 'sem conferência'}${l.pesquisavel ? '' : ' · NÃO pesquisável'}${l.proibido ? ' · PEDE O QUE NÃO SE ENTREGA' : ''}${l.nomes.length ? ` · NOMES NÃO INFORMADOS: ${l.nomes.join(', ')}` : ''}`);
   }
 }
