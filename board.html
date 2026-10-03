@@ -4021,6 +4021,11 @@ body.modal-open{overflow:hidden}
     // Desbloqueia a edição: remove o modo somente leitura e reativa as ações
     modoLeitura = false;
     document.body.classList.remove('is-readonly');
+    /* BOARD-LEITURA-008: o texto dos documentos, que nasceu não editável
+       na tarefa concluída, volta a ser editável. */
+    Array.prototype.forEach.call(document.querySelectorAll('#canvasStage .doc-corpo'), function(el){
+      el.setAttribute('contenteditable', 'true');
+    });
 
     // Remove o botão "Reabrir tarefa" do menu inferior e mantém só "Novo registro"
     if(btnReabrirTarefa && btnReabrirTarefa.parentNode){
@@ -4776,9 +4781,25 @@ body.modal-open{overflow:hidden}
        dizer "Tarefa concluída não recebe resultado novo".
 
        `restauroPendente` abre a exceção: repor no board uma pesquisa
-       que já era desta tarefa não é "resultado novo". */
-    if(modoLeitura && !restauroPendente) return null;
+       que já era desta tarefa não é "resultado novo".
 
+       BOARD-LEITURA-008 (02/10/2026): a trava é de QUADRO NOVO. Redesenhar
+       o que já está gravado passa por `montarQuadroDocumento`, sem ela —
+       o mesmo par de `criarQuadroMatriz`/`montarQuadroMatriz`. Antes, o
+       carregamento usava ESTA função, e toda pesquisa de tarefa
+       concluída abria com o board vazio, com os quadros no banco. */
+    if(modoLeitura && !restauroPendente) return null;
+    return montarQuadroDocumento(titulo, texto, fontes);
+  }
+
+  /* Monta um quadro-documento na tela, sem perguntar se a tarefa aceita
+     quadro novo: quem decide isso é `criarQuadroDocumento`. O
+     carregamento chama esta direto (BOARD-LEITURA-008). Em somente
+     leitura o texto nasce NÃO editável — sem isso, a pessoa digitava
+     num documento de tarefa concluída e perdia tudo, porque nada é
+     gravado nesse modo (BOARD-LEITURA-004); "Reabrir tarefa" devolve a
+     edição (`aplicarReabertura`). */
+  function montarQuadroDocumento(titulo, texto, fontes){
     var q = criarQuadro(titulo || 'Documento', 1, ['']);
     q.classList.add('ideas-panel--doc');
     q.dataset.tipo = 'documento';
@@ -4789,7 +4810,7 @@ body.modal-open{overflow:hidden}
 
     var texto_el = document.createElement('div');
     texto_el.className = 'doc-corpo';
-    texto_el.setAttribute('contenteditable', 'true');
+    texto_el.setAttribute('contenteditable', modoLeitura ? 'false' : 'true');
     texto_el.setAttribute('role', 'textbox');
     texto_el.setAttribute('aria-multiline', 'true');
     texto_el.setAttribute('aria-label', 'Conteúdo do documento');
@@ -5858,7 +5879,9 @@ body.modal-open{overflow:hidden}
           var regs = ((q.colunas || [])[0] || {}).registros || [];
           var corpo = regs[0] || {};
           var refs = regs.filter(function(r){ return r.titulo === 'Referências'; })[0];
-          criarQuadroDocumento(
+          /* BOARD-LEITURA-008: MONTAR, e não criar — o quadro já existe
+             no banco, e tarefa concluída também o mostra. */
+          montarQuadroDocumento(
             q.titulo || corpo.titulo || 'Documento',
             corpo.descricao || '',
             refs ? (refs.descricao || '').split('\n').filter(Boolean) : []

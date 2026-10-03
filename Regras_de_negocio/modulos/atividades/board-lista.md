@@ -1,6 +1,6 @@
 # Regras de Negócio — Quadro de Trabalho de uma Tarefa
 
-> **Versão:** 1.54.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
+> **Versão:** 1.55.0 · **Status:** Implementado · BOARD-PESQUISA-012 a 087 **construídas**
 > **Conferido em:** 15/09/2026, contra `board.html`, `js/board.js`, `js/pesquisa.js`, `js/ia.js`, `api/src/rotas/pesquisa.ts`, `api/src/pesquisa/investigacao.ts` e `api/prisma/schema.prisma`
 > **Módulo:** Atividades · **Página:** `board.html`
 > **Gerado sob:** `Skills/regra_de_negocio.skill`
@@ -130,6 +130,7 @@ A trava não impede esvaziar um quadro de propósito — depois da carga, apagar
 | BOARD-LEITURA-007 | **A trava de somente leitura mora em cada porta que cria conteúdo, não numa só.** Toda função que cria quadro ou card checa o modo **na própria entrada**. Guarda em uma irmã e não na outra é pior que guarda em nenhuma: a tela desenha o que o servidor vai recusar, a narração confirma o que não aconteceu, e o defeito só aparece na próxima visita — como o quadro em branco achado em 16/09/2026, em que `criarQuadroDocumento` não tinha a guarda que `criarQuadroResultado` já tinha. | Achado em uso real pelo Ricardo · corrigido 16/09/2026 |
 | BOARD-LEITURA-005 | O único caminho para voltar a editar é **reabrir a tarefa** (`BOARD-TAREFA-001`). Reabrir devolve a tela ao estado editável na hora, sem recarregar. | Decisão A32 |
 | BOARD-LEITURA-006 | O modo vem do **`status` da tarefa**, não de um parâmetro na URL. Ver `BOARD-ACESSO-005`. | Decisão A27 |
+| BOARD-LEITURA-008 | **Tarefa concluída mostra todos os quadros gravados**, inclusive os de documento (os da pesquisa). A trava de `BOARD-LEITURA-003`/`007` é de **quadro novo**: redesenhar o que já está no banco passa por `montarQuadroDocumento`, sem trava — o mesmo par de `criarQuadroMatriz`/`montarQuadroMatriz`. Em somente leitura, o texto do documento nasce **não editável** (nada é gravado nesse modo, `BOARD-LEITURA-004`), e "Reabrir tarefa" devolve a edição. **Defeito corrigido em 02/10/2026:** desde 16/09, o carregamento redesenhava documentos pela função que cria quadro novo; numa tarefa concluída, ela recusava, e a pesquisa abria com o board vazio, com os quadros no banco (caso real: 8 quadros gravados, nenhum na tela). | `board.html` (`montarQuadroDocumento`, `BoardView.quadros`, `aplicarReabertura`); prova em `ferramentas/provar-leitura-quadros.mjs` |
 
 **Por que congelar, e não apenas avisar.** Concluir uma tarefa é a afirmação de que aquele trabalho chegou a um resultado. Se o quadro continuasse editável, "concluída" viraria só um rótulo — o resultado poderia mudar depois de dado como pronto, e ninguém saberia se o que está na tela é o que foi concluído ou o que alguém mexeu depois. Travar a edição faz o status significar algo verificável.
 
@@ -621,6 +622,7 @@ registros
 
 | Versão | Data | Alteração |
 |---|---|---|
+| 1.55.0 | 2026-10-02 | Nova **BOARD-LEITURA-008**: tarefa concluída mostra os quadros de documento gravados (defeito desde 16/09: a pesquisa abria com o board vazio). |
 | 1.54.0 | 2026-10-01 | Nova **BOARD-CONVERSA-004**: "Montar roteiro com IA" (fase E2); `002` atualizada. |
 | 1.53.0 | 2026-10-01 | Nova §1.8.2a **`BOARD-CONVERSA`**: o board da "Conversa com usuários" (fase E1). |
 | 1.52.0 | 2026-10-01 | Nova **BOARD-PESQUISA-103**: o JEV confere o plano contra a tarefa, e o planejador replaneja com lentes fixas quando ele é infiel. Ainda sem efeito na busca. |
